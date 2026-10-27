@@ -1,4 +1,5 @@
 .honkmoon/
+.DS_Store
 _build/
 .mooncakes/
 dist/
