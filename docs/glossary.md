@@ -3,6 +3,11 @@
 - **cast entry**: a ship's source notes, written from its figure in the
   novel: traits, relationships by pennant, star, other names. Never shown to
   players or fed to the running game.
+- **epithet**: a ship's English name (`The Tigress`). Ships use epithets for
+  themselves and each other.
+- **conventional name**: a ship's Chinese name (`顧大嫂`), the source
+  figure's conventional name in Chinese. The interface uses it to identify
+  the ship; ships never use it.
 - **portrait**: a ship's private third-person character study, made from its
   cast entry. Every face is made from it.
 - **face**: a first-person file made from the portrait for one reader in the

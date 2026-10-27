@@ -91,8 +91,10 @@ variable is an error that names the template and line.
 | `face.user.md` | `entry` and `portrait` |
 
 The setting, world rules, portrait task, face preamble and `voice` task are the
-research pipeline's prompts verbatim, apart from the game's name and the
-portrait's mention of notes. `captain` merges the `self` and `command` tasks.
+research pipeline's prompts verbatim, apart from the game's name, the
+portrait's mention of notes, and the naming rule: a ship's Chinese
+conventional name identifies it in the interface, but generated ship text
+uses epithets only. `captain` merges the `self` and `command` tasks.
 `voyage` is the crossing-role task: it says the role is fixed for the crossing
 and that the readout is in words, and it takes the entry and portrait instead
 of earlier files.
