@@ -19,7 +19,7 @@ fn player(
 
 ///|
 fn npc(name : String, policy : Policy) -> Actor {
-  { name, policy, craft: Artist, cadence: Reactive, joins_at: 0L }
+  { name, policy, craft: Artist, cadence: Reactive, joins_at: 0L, }
 }
 
 ///|
@@ -49,9 +49,7 @@ pub fn scenarios() -> Array[Scenario] {
       actors: [
         player("you", Cooperative),
         npc("npc 1", Careful),
-        npc("npc 2", Careful),
-        npc("npc 3", Cooperative),
-        npc("npc 4", Selfish),
+        npc("npc 2", Steady),
       ],
     },
     {

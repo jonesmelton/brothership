@@ -43,9 +43,17 @@ pub fn Route::fit(self : Route) -> @core.Fit {
 /// once into billionths. The only floating-point step between a route and
 /// the game.
 pub fn Route::plan(self : Route) -> @core.Plan {
+  self.plan_with(coils=0)
+}
+
+///|
+/// The plan for a ship with `coils` levels of coils: each raises the γ cap
+/// by a fifth of the route's.
+pub fn Route::plan_with(self : Route, coils~ : Int64) -> @core.Plan {
   let a = self.accel_g * G
+  let cap = self.gamma_cap * (1.0 + coils.to_double() / 5.0)
   let eta = @fmath.acosh(1.0 + a * self.distance_ly / 2.0).min(
-    @fmath.acosh(self.gamma_cap),
+    @fmath.acosh(cap),
   )
   let gamma = @fmath.cosh(eta)
   let burn_d = (gamma - 1.0) / a

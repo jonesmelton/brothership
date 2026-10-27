@@ -11,11 +11,24 @@ pub(all) struct Outcome {
   craft_ticks : Int64
   checkins : Int32
   dead_checkins : Int32
+  live_checkins : Int32
   longest_dead : Int64
+  /// Demands met and missed.
+  met : Int32
+  missed : Int32
+  /// Work units made, by all crew.
+  work : Int64
+  /// Refit levels landed this crossing.
+  refits : Int64
 } derive(Debug, Eq)
 
 ///|
 pub fn Run::outcome(self : Run) -> Outcome {
+  let count = (status : @core.Status) => {
+    self.last.demands.filter(d => d.status == status).length()
+  }
+  let f = self.last.fit
+  let g = self.last.ship.fit
   {
     seed: self.seed,
     arrived_at: self.arrived_at,
@@ -26,7 +39,16 @@ pub fn Run::outcome(self : Run) -> Outcome {
     craft_ticks: self.craft_ticks,
     checkins: self.checkins,
     dead_checkins: self.dead_checkins,
+    live_checkins: self.live_checkins,
     longest_dead: self.longest_dead,
+    met: count(Met),
+    missed: count(Missed),
+    work: self.last.tallies.values().fold(init=0L, (n, t) => n + t.work),
+    refits: f.baffles +
+    f.plating +
+    f.injectors +
+    f.coils -
+    (g.baffles + g.plating + g.injectors + g.coils),
   }
 }
 

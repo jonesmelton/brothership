@@ -7,6 +7,8 @@ import {
 }
 
 // Values
+pub const BAND_MARGIN : Int64 = 50_000_000
+
 pub const BREACH_LOSS : Int64 = 250_000_000
 
 pub const CRAFT_UNIT : Int64 = 16
@@ -23,7 +25,7 @@ pub const MAX_BOUNDARIES : Int32 = 4096
 
 pub const MAX_LEVEL : Int64 = 3
 
-pub const MAX_RECRUITS : Int64 = 8
+pub const MAX_RECRUITS : Int64 = 6
 
 pub const PORT_REPAIR : Int64 = 250_000_000
 
@@ -37,9 +39,11 @@ pub const WATCH_HAND : Int64 = 5
 
 pub const WATCH_PENALTY : Int64 = 8
 
-pub const WORKS_PER_RECRUIT : Int64 = 2
+pub const WORKS_PER_RECRUIT : Int64 = 3
 
 pub const WORK_SIZE : Int64 = 345_600
+
+pub fn band_of(Int64) -> Int64
 
 pub fn demands_for(Plan, Int64, Int64) -> Array[Demand]
 
@@ -60,6 +64,7 @@ pub(all) suberror CrossingRejected {
   BadWatch(ticks~ : Int64, longest~ : Int64)
   OnWatch(crew~ : Int32)
   Unbuildable(refit~ : Refit)
+  BadOrder(phase~ : Phase)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) suberror Rejected {
@@ -80,6 +85,7 @@ pub(all) struct Crossing {
   phase : Phase
   left : Int64
   hull : Int64
+  band : Int64
   fit : Fit
   hands : Map[Int32, Hand]
   tallies : Map[Int32, Tally]
@@ -88,7 +94,6 @@ pub(all) struct Crossing {
   arrived_at : Int64?
 } derive(Eq, @debug.Debug)
 pub fn Crossing::apply(Self, CrossingEvent) -> Self raise CrossingRejected
-pub fn Crossing::band(Self) -> Int64
 pub fn Crossing::cap(Self) -> Int64
 pub fn Crossing::count(Self, Post) -> Int64
 pub fn Crossing::dock(Self) -> Ship?
@@ -107,6 +112,7 @@ pub(all) enum CrossingEvent {
   Left(crew~ : Int32)
   Crafted(crew~ : Int32, craft~ : Craft)
   Watched(crew~ : Int32, ticks~ : Int64)
+  Ordered(crew~ : Int32, order~ : Order?)
   Refitting(refit~ : Refit?)
   Asked(post~ : Post?)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
@@ -131,6 +137,7 @@ pub(all) struct Fit {
   baffles : Int64
   plating : Int64
   injectors : Int64
+  coils : Int64
   refit : Refit?
   progress : Int64
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
@@ -144,6 +151,7 @@ pub(all) struct Hand {
   craft : Craft
   rank : Int64
   watch : Watch?
+  order : Order?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn Hand::quarters(Self) -> Int64
 
@@ -166,6 +174,11 @@ pub fn Optimistic::predicted(Self) -> State
 pub fn Optimistic::propose(Self, Event) -> (Self, Proposal) raise Rejected
 pub fn Optimistic::resync(Self, Snapshot) -> Self
 pub fn Optimistic::settle(Self, Receipt) -> Self
+
+pub(all) struct Order {
+  phase : Phase
+  post : Post
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum Phase {
   Burn
@@ -211,6 +224,7 @@ pub(all) enum Refit {
   Baffles
   Plating
   Injectors
+  Coils
 } derive(Compare, Eq, Hash, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Ship {

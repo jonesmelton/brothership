@@ -9,7 +9,7 @@ pub(all) enum Policy {
   Mender
   /// The drive while it fires, the craft in the coast.
   Cooperative
-  /// Cooperative, but the hull whenever it is below half.
+  /// Cooperative, but the hull from below half until three quarters.
   Careful
   /// Any post, uniformly.
   Random
@@ -20,6 +20,9 @@ pub(all) enum Policy {
   /// Whatever an open demand needs, else what the ship asks, else
   /// cooperative.
   Dutiful
+  /// Ship posts only: an open demand's, else what the ship asks for, else
+  /// the drive while it fires and the hull otherwise. How recruits work.
+  Steady
   /// Weighs arrival, hull, its own works and regard, and the ship's refits,
   /// for every post with and without a watch.
   Thoughtful
@@ -36,6 +39,7 @@ pub let policies : Array[Policy] = [
   Hastener,
   Saboteur,
   Dutiful,
+  Steady,
   Thoughtful,
 ]
 
@@ -51,6 +55,7 @@ pub fn Policy::name(self : Policy) -> String {
     Hastener => "hastener"
     Saboteur => "saboteur"
     Dutiful => "dutiful"
+    Steady => "steady"
     Thoughtful => "thoughtful"
   }
 }
@@ -66,11 +71,24 @@ fn try_option(
   crew : Int32,
   post : @core.Post,
   watch : Int64,
+  order~ : @core.Order? = None,
 ) -> @core.Crossing {
   let c = c.apply(Posted(crew~, post~)) catch { _ => c }
+  let c = c.apply(Ordered(crew~, order~)) catch { _ => c }
   guard watch > 0L else { c }
   c.apply(Watched(crew~, ticks=watch)) catch {
     _ => c
+  }
+}
+
+///|
+/// The order a cooperative crew member leaves: to their craft when the
+/// coast begins, and back to the drive at turnover.
+pub fn handover(c : @core.Crossing) -> @core.Order? {
+  match c.phase {
+    Burn if c.plan.coast > 0L => Some({ phase: Coast, post: Craft, })
+    Coast => Some({ phase: Approach, post: Drive, })
+    _ => None
   }
 }
 
@@ -88,7 +106,10 @@ pub(all) struct Prospect {
 
 ///|
 fn refit_units(f : @core.Fit) -> Int64 {
-  (f.baffles + f.plating + f.injectors) * 100L * @core.HOUR * @core.CRAFT_UNIT +
+  (f.baffles + f.plating + f.injectors + f.coils) *
+  100L *
+  @core.HOUR *
+  @core.CRAFT_UNIT +
   f.progress
 }
 
@@ -118,23 +139,23 @@ fn Prospect::worth(self : Prospect) -> Int64 {
 }
 
 ///|
-/// Differences smaller than these are not worth a player's attention: five
-/// minutes of arrival, two percent of hull, a tenth of a work, half an hour
-/// of regard, a crew-hour of refit.
+/// Differences smaller than these are not worth a player's attention: a
+/// quarter hour of arrival, five percent of hull, a quarter of a work, an
+/// hour of regard, two crew-hours of refit.
 fn Prospect::beats(self : Prospect, other : Prospect) -> Bool {
   let gains = [
-    other.arrival - self.arrival >= 300L,
-    self.hull - other.hull >= @core.HULL_FULL / 50L,
-    self.work - other.work >= @core.WORK_SIZE / 10L,
-    self.regard - other.regard >= @core.REGARD_HOUR / 2L,
-    self.refit - other.refit >= @core.HOUR * @core.CRAFT_UNIT,
+    other.arrival - self.arrival >= 900L,
+    self.hull - other.hull >= @core.HULL_FULL / 20L,
+    self.work - other.work >= @core.WORK_SIZE / 4L,
+    self.regard - other.regard >= @core.REGARD_HOUR,
+    self.refit - other.refit >= 2L * @core.HOUR * @core.CRAFT_UNIT,
   ]
   let losses = [
-    self.arrival - other.arrival >= 300L,
-    other.hull - self.hull >= @core.HULL_FULL / 50L,
-    other.work - self.work >= @core.WORK_SIZE / 10L,
-    other.regard - self.regard >= @core.REGARD_HOUR / 2L,
-    other.refit - self.refit >= @core.HOUR * @core.CRAFT_UNIT,
+    self.arrival - other.arrival >= 900L,
+    other.hull - self.hull >= @core.HULL_FULL / 20L,
+    other.work - self.work >= @core.WORK_SIZE / 4L,
+    other.regard - self.regard >= @core.REGARD_HOUR,
+    other.refit - self.refit >= 2L * @core.HOUR * @core.CRAFT_UNIT,
   ]
   gains.any(g => g) && !losses.any(l => l)
 }
@@ -142,17 +163,27 @@ fn Prospect::beats(self : Prospect, other : Prospect) -> Bool {
 ///|
 /// Options no other option beats. Two or more mean the check-in offered a
 /// real trade.
-pub fn undominated(options : Array[Prospect]) -> Int {
+pub fn undominated(options : Array[Prospect]) -> Int32 {
   options.filter(o => !options.any(p => p.beats(o))).length()
 }
 
 ///|
-/// A check-in's choice: a post, and the length of watch to stand on it, or
-/// zero for none.
+/// A check-in's choice: a post, the length of watch to stand on it or zero
+/// for none, and a standing order for the next phase.
 pub(all) struct Choice {
   post : @core.Post
   watch : Int64
+  order : @core.Order?
 } derive(Debug, Eq)
+
+///|
+/// Whether `crew` should be on the hull: below `low`, or already mending
+/// and short of three quarters. The gap keeps a crew member from changing
+/// post at every band edge.
+fn mending(c : @core.Crossing, crew : Int32, low : Int64) -> Bool {
+  let on_hull = c.hands.get(crew).map(h => h.post == Hull).unwrap_or(false)
+  c.hull < low || (on_hull && c.hull < @core.HULL_FULL * 3L / 4L)
+}
 
 ///|
 fn Policy::decide(
@@ -163,7 +194,8 @@ fn Policy::decide(
   roll : UInt64,
 ) -> Choice {
   let firing = c.firing()
-  let post = (post : @core.Post) => { post, watch }
+  let post = (post : @core.Post) => { post, watch, order: None, }
+  let handing = (post : @core.Post) => { post, watch, order: handover(c), }
   let by_arrival = (later : Bool) => {
     let mut best = posts[0]
     let mut best_at = prospect(try_option(c, crew, best, watch), crew).arrival
@@ -180,10 +212,10 @@ fn Policy::decide(
     Selfish => post(Craft)
     Driver => post(Drive)
     Mender => post(Hull)
-    Cooperative => post(if firing { Drive } else { Craft })
+    Cooperative => handing(if firing { Drive } else { Craft })
     Careful =>
-      post(
-        if c.hull < @core.HULL_FULL / 2L {
+      handing(
+        if mending(c, crew, @core.HULL_FULL / 2L) {
           Hull
         } else if firing {
           Drive
@@ -197,22 +229,32 @@ fn Policy::decide(
     Saboteur => by_arrival(true)
     Dutiful =>
       match open_post(c) {
-        Some(p) => post(p)
+        Some(p) => handing(p)
         None =>
           match c.ask {
-            Some(p) => post(p)
-            None => post(if firing { Drive } else { Craft })
+            Some(p) => handing(p)
+            None => handing(if firing { Drive } else { Craft })
           }
       }
+    Steady => {
+      let ship_post = (p : @core.Post?) => p.filter(p => p != Craft)
+      match (ship_post(open_post(c)), ship_post(c.ask)) {
+        (Some(p), _) | (None, Some(p)) => post(p)
+        (None, None) => post(if firing { Drive } else { Hull })
+      }
+    }
     Thoughtful => {
-      let mut best = { post: Craft, watch: 0L }
+      let mut best = { post: Craft, watch: 0L, order: None, }
       let mut best_worth = -(1L << 62)
       for p in posts {
         for w in [0L, watch] {
-          let worth = prospect(try_option(c, crew, p, w), crew).worth()
-          if worth > best_worth {
-            best = { post: p, watch: w }
-            best_worth = worth
+          for order in [None, handover(c)] {
+            let option = try_option(c, crew, p, w, order~)
+            let worth = prospect(option, crew).worth()
+            if worth > best_worth {
+              best = { post: p, watch: w, order, }
+              best_worth = worth
+            }
           }
         }
       }

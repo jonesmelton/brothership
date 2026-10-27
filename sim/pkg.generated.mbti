@@ -12,6 +12,8 @@ pub const DEAD_LEVERAGE : Int64 = 300
 
 pub fn gamma(Int64) -> Double
 
+pub fn handover(@core.Crossing) -> @core.Order?
+
 pub fn histogram(Array[Int64], lo~ : Int64, hi~ : Int64, bins~ : Int32) -> Array[Int32]
 
 pub fn percentile(Array[Int64], Int32) -> Int64
@@ -20,7 +22,13 @@ pub let policies : Array[Policy]
 
 pub let posts : Array[@core.Post]
 
+pub fn profiles() -> Array[Profile]
+
+pub fn prospect(@core.Crossing, Int32) -> Prospect
+
 pub fn scenarios() -> Array[Scenario]
+
+pub fn undominated(Array[Prospect]) -> Int32
 
 // Errors
 
@@ -28,6 +36,7 @@ pub fn scenarios() -> Array[Scenario]
 pub(all) struct Actor {
   name : String
   policy : Policy
+  craft : @core.Craft
   cadence : Cadence
   joins_at : Int64
 } derive(Eq, @debug.Debug)
@@ -38,14 +47,29 @@ pub(all) enum Cadence {
   Every(every~ : Int64, jitter~ : Int64)
 } derive(Eq, @debug.Debug)
 
+pub(all) struct Choice {
+  post : @core.Post
+  watch : Int64
+  order : @core.Order?
+} derive(Eq, @debug.Debug)
+
 pub(all) struct Decision {
   t : Int64
   actor : Int32
   from : @core.Post?
   to : @core.Post
+  watch : Int64
   before : Int64
   after : Int64
   leverage : Int64
+  undominated : Int32
+  news : Int32
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Leg {
+  distance_ly : Double
+  run : Run
+  docked : @core.Ship
 } derive(Eq, @debug.Debug)
 
 pub(all) struct Outcome {
@@ -58,7 +82,12 @@ pub(all) struct Outcome {
   craft_ticks : Int64
   checkins : Int32
   dead_checkins : Int32
+  live_checkins : Int32
   longest_dead : Int64
+  met : Int32
+  missed : Int32
+  work : Int64
+  refits : Int64
 } derive(Eq, @debug.Debug)
 
 pub(all) enum Policy {
@@ -70,8 +99,28 @@ pub(all) enum Policy {
   Random
   Hastener
   Saboteur
+  Dutiful
+  Steady
+  Thoughtful
 } derive(Compare, Eq, Hash, ToJson, @debug.Debug, @json.FromJson)
 pub fn Policy::name(Self) -> String
+
+pub(all) struct Profile {
+  name : String
+  route : Route
+  values : @core.Values
+  temperament : Temperament
+} derive(Eq, @debug.Debug)
+pub fn Profile::default() -> Self
+pub fn Profile::ship(Self, seed~ : Int64) -> @core.Ship
+
+pub(all) struct Prospect {
+  arrival : Int64
+  hull : Int64
+  work : Int64
+  regard : Int64
+  refit : Int64
+} derive(Eq, @debug.Debug)
 
 pub(all) struct Route {
   distance_ly : Double
@@ -82,7 +131,9 @@ pub(all) struct Route {
   repair : Int64
 } derive(Eq, @debug.Debug)
 pub fn Route::default() -> Self
+pub fn Route::fit(Self) -> @core.Fit
 pub fn Route::plan(Self) -> @core.Plan
+pub fn Route::plan_with(Self, coils~ : Int64) -> @core.Plan
 
 pub(all) struct Run {
   seed : Int64
@@ -97,7 +148,10 @@ pub(all) struct Run {
   craft_ticks : Int64
   checkins : Int32
   dead_checkins : Int32
+  live_checkins : Int32
+  newsy_checkins : Int32
   longest_dead : Int64
+  last : @core.Crossing
 } derive(Eq, @debug.Debug)
 pub fn Run::outcome(Self) -> Outcome
 
@@ -115,12 +169,27 @@ pub(all) struct Sample {
 
 pub(all) struct Scenario {
   name : String
+  ship : Profile
   route : Route
   hull : Int64
   actors : Array[Actor]
 } derive(Eq, @debug.Debug)
 pub fn Scenario::batch(Self, first_seed? : Int64, runs~ : Int32) -> Array[Outcome]
+pub fn Scenario::crew(Self, @core.Ship) -> Array[Actor]
+pub fn Scenario::departing(Self, Int64) -> @core.Ship
+pub fn Scenario::fly(Self, @core.Ship, Int64) -> Run
 pub fn Scenario::run(Self, Int64) -> Run
+pub fn Scenario::voyage(Self, Array[Double], Int64) -> Array[Leg]
+
+pub(all) enum Temperament {
+  Bold
+  Careful
+  Social
+  Sly
+} derive(Compare, Eq, Hash, ToJson, @debug.Debug, @json.FromJson)
+pub fn Temperament::ask(Self, @core.Crossing) -> @core.Post?
+pub fn Temperament::name(Self) -> String
+pub fn Temperament::refit(Self, @core.Crossing) -> @core.Refit?
 
 // Type aliases
 
