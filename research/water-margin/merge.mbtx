@@ -1,0 +1,584 @@
+///|
+import {
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/x/fs",
+}
+
+///|
+let file_re : Regex = Regex::unsafe_from_string("\\[\\[File:[^\\]]*\\]\\]")
+
+///|
+let convert_re : Regex = Regex::unsafe_from_string(
+  "\\{\\{convert\\|([^|]+)\\|([^|}]+)[^}]*\\}\\}",
+)
+
+///|
+let template_re : Regex = Regex::unsafe_from_string("\\{\\{[^{}]*\\}\\}")
+
+///|
+let dash_re : Regex = Regex::unsafe_from_string("-\\{(.*?)\\}-")
+
+///|
+let link_re : Regex = Regex::unsafe_from_string(
+  "\\[\\[(?:[^|\\]]*\\|)?([^\\]]*)\\]\\]",
+)
+
+///|
+let ref_re : Regex = Regex::unsafe_from_string(
+  "<ref[^>]*/>|<ref[^>]*>.*?</ref>",
+)
+
+///|
+let br_re : Regex = Regex::unsafe_from_string(
+  "[[:space:]]*<br[[:space:]]*/?>[[:space:]]*",
+)
+
+///|
+let tag_re : Regex = Regex::unsafe_from_string("<[^>]+>")
+
+///|
+let nul_paren_re : Regex = Regex::unsafe_from_string("(\\u0000+)([(（])")
+
+///|
+let nul_sep_re : Regex = Regex::unsafe_from_string("([;,；，、])\\u0000+")
+
+///|
+let nul_re : Regex = Regex::unsafe_from_string("\\u0000+")
+
+///|
+let ws_re : Regex = Regex::unsafe_from_string("[[:space:]]+")
+
+///|
+let table_re : Regex = Regex::unsafe_from_string("\\{\\|.*?\\n\\|\\}")
+
+///|
+let attr_re : Regex = Regex::unsafe_from_string(
+  "^[[:space:]]*(?:[a-z-]+[[:space:]]*=[[:space:]]*(\"[^\"]*\"|[^[:space:]|]+)[[:space:]]*)+([|])([^|].*)?$",
+)
+
+///|
+let rowspan_re : Regex = Regex::unsafe_from_string(
+  "rowspan[[:space:]]*=[[:space:]]*\"?([0-9]+)",
+)
+
+///|
+let header_re : Regex = Regex::unsafe_from_string(
+  "^![[:space:]]*(?:[^|\\n]*\\|)?[[:space:]]*([^\\n]+)$",
+)
+
+///|
+let rank_re : Regex = Regex::unsafe_from_string("^([0-9]+)")
+
+///|
+let star_re : Regex = Regex::unsafe_from_string(
+  "^([^[:space:]]+) \\(([^[:space:]]+)\\); (.+?) \\(([^[:space:]]+)\\)",
+)
+
+///|
+let name_re : Regex = Regex::unsafe_from_string("^(.+?) \\((.+)\\)")
+
+///|
+let quote_re : Regex = Regex::unsafe_from_string("\"([^\"]+)\"")
+
+///|
+let zh_paren_re : Regex = Regex::unsafe_from_string(
+  "\\(([^)]*[\\u4e00-\\u9fff][^)]*)\\)",
+)
+
+///|
+let cjk_re : Regex = Regex::unsafe_from_string("[\\u4e00-\\u9fff]")
+
+///|
+let pinyin_re : Regex = Regex::unsafe_from_string(
+  "[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]",
+)
+
+///|
+fn split_all(s : String, sep : StringView) -> Array[String] {
+  let out = []
+  for part in s.split(sep) {
+    out.push(part.to_owned())
+  }
+  out
+}
+
+///|
+fn before_first(s : String, sep : StringView) -> String {
+  match s.find(sep) {
+    Some(i) => s[0:i].to_owned()
+    None => s
+  }
+}
+
+///|
+fn is_digits(s : String) -> Bool {
+  if s.length() == 0 {
+    false
+  } else {
+    let mut ok = true
+    for c in s.iter() {
+      if c < '0' || c > '9' {
+        ok = false
+      }
+    }
+    ok
+  }
+}
+
+///|
+/// Python's `str.split()` with no argument: whitespace runs, no empty items.
+fn split_whitespace(s : String) -> Array[String] {
+  let out = []
+  let mut current = ""
+  for c in s.iter() {
+    if c.is_whitespace() {
+      if current.length() > 0 {
+        out.push(current)
+        current = ""
+      }
+    } else {
+      current = current + c.to_string()
+    }
+  }
+  if current.length() > 0 {
+    out.push(current)
+  }
+  out
+}
+
+///|
+fn strip_markup(s : String, br : String) -> String {
+  let mut t = file_re.replace_by(s, _ => "").to_owned()
+  t = convert_re
+    .replace_by(t, m => "\{m.group(1).unwrap()} \{m.group(2).unwrap()}")
+    .to_owned()
+  t = template_re.replace_by(t, _ => "").to_owned()
+  t = dash_re.replace_by(t, m => m.group(1).unwrap()).to_owned()
+  t = link_re.replace_by(t, m => m.group(1).unwrap()).to_owned()
+  t = ref_re.replace_by(t, _ => "").to_owned()
+  t = br_re.replace_by(t, _ => "\u0000").to_owned()
+  t = tag_re.replace_by(t, _ => "").to_owned()
+  t = t.replace_all(old="'''", new="").replace_all(old="''", new="")
+  t = nul_paren_re.replace_by(t, m => " \{m.group(2).unwrap()}").to_owned()
+  t = nul_sep_re.replace_by(t, m => "\{m.group(1).unwrap()} ").to_owned()
+  t = nul_re.replace_by(t, _ => br).to_owned()
+  t = ws_re.replace_by(t, _ => " ").to_owned()
+  t.trim(chars=" ;").to_owned()
+}
+
+///|
+fn strip_attr(cell : String) -> String {
+  match attr_re.execute(cell) {
+    Some(m) =>
+      match m.group(3) {
+        Some(v) => v.to_owned()
+        None => ""
+      }
+    None => if cell.has_prefix("|") { cell[1:].to_owned() } else { cell }
+  }
+}
+
+///|
+fn tables(text : String) -> Array[String] {
+  let out = []
+  for m in table_re.find(text) {
+    out.push(m.content().to_owned())
+  }
+  out
+}
+
+///|
+fn rows(table : String) -> Array[Array[String]] raise {
+  let out : Array[Array[String]] = []
+  let chunks = split_all(table, "\n|-")
+  // rowspan state spans row separators
+  let pending : Map[Int32, (Int32, String)] = Map([])
+  for ci in 1..<chunks.length() {
+    let chunk = chunks[ci]
+    let lines : Array[String] = []
+    for line in split_all(chunk, "\n") {
+      if line.has_prefix("|") && !line.has_prefix("|}") {
+        lines.push(line)
+      }
+    }
+    if lines.length() == 0 {
+      continue
+    }
+    let cells : Array[String] = []
+    for l in lines {
+      for c in split_all(l[1:].to_owned(), "||") {
+        cells.push(c)
+      }
+    }
+    let row : Array[String] = []
+    let mut col = 0
+    let mut index = 0
+    while true {
+      while pending.contains(col) {
+        let (remaining, value) = pending.get(col).unwrap()
+        row.push(value)
+        if remaining <= 1 {
+          pending.remove(col)
+        } else {
+          pending[col] = (remaining - 1, value)
+        }
+        col += 1
+      }
+      if index >= cells.length() {
+        break
+      }
+      let c = cells[index]
+      index += 1
+      let span = match rowspan_re.execute(before_first(c, "[[")) {
+        Some(m) =>
+          match m.group(1) {
+            Some(v) => @string.parse_int(v)
+            None => 1
+          }
+        None => 1
+      }
+      let value = strip_attr(c)
+      if span > 1 {
+        pending[col] = (span - 1, value)
+      }
+      row.push(value)
+      col += 1
+    }
+    out.push(row)
+  }
+  out
+}
+
+///|
+fn group(m : @string.MatchResult, i : Int32) -> String {
+  m.group(i).unwrap().to_owned()
+}
+
+///|
+fn parse_en(en_text : String) -> Map[Int32, Map[String, String]] raise {
+  let en : Map[Int32, Map[String, String]] = Map([])
+  for t in tables(en_text) {
+    if t.find("Rank (L)") is None {
+      continue
+    }
+    let heavenly = t.find("Rank (HS)") is Some(_)
+    for raw_row in rows(t) {
+      let r : Array[String] = []
+      for c in raw_row {
+        r.push(strip_markup(c, "; "))
+      }
+      if r.length() == 0 || !is_digits(r[0]) {
+        continue
+      }
+      let rank = @string.parse_int(r[0])
+      let (star, name, nick, other, div, desig, origin, home, ch, weapon, fate) = if heavenly {
+        (r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9], r[10], r[11], r[13])
+      } else {
+        (r[2], r[3], r[4], "", r[5], r[6], r[7], r[8], r[9], r[10], "")
+      }
+      let (star_pinyin, star_zh, star_en) = match star_re.execute(star) {
+        Some(m) => (group(m, 1), group(m, 4), group(m, 3))
+        None => (star, "", "")
+      }
+      let name_match = name_re.execute(name)
+      let name_en = match name_match {
+        Some(m) => group(m, 1)
+        None => name
+      }
+      let name_parts = match name_match {
+        Some(m) => split_all(group(m, 2), ";").map(p => p.trim().to_owned())
+        None => []
+      }
+      let name_zh_variants : Array[String] = []
+      let mut name_pinyin = ""
+      for p in name_parts {
+        if cjk_re.execute(p) is Some(_) {
+          name_zh_variants.push(p)
+        }
+        if name_pinyin == "" && pinyin_re.execute(p) is Some(_) {
+          name_pinyin = p
+        }
+      }
+      let mut name_wade_giles = ""
+      if name_parts.length() > 0 {
+        let last = name_parts[name_parts.length() - 1]
+        if cjk_re.execute(last) is None {
+          name_wade_giles = last
+        }
+      }
+      let nick_en_all : Array[String] = []
+      for m in quote_re.find(nick) {
+        nick_en_all.push(group(m, 1))
+      }
+      let nick_zh_all : Array[String] = []
+      for m in zh_paren_re.find(nick) {
+        nick_zh_all.push(group(m, 1))
+      }
+      let nick_en_wp = if nick_en_all.length() > 0 {
+        nick_en_all.join(" | ")
+      } else {
+        nick
+      }
+      let rec : Map[String, String] = Map([])
+      rec["star_pinyin"] = star_pinyin
+      rec["star_zh"] = star_zh
+      rec["star_en"] = star_en
+      rec["name_en"] = name_en
+      rec["name_zh_variants"] = name_zh_variants.join(" ")
+      rec["name_pinyin"] = name_pinyin
+      rec["name_wade_giles"] = name_wade_giles
+      rec["nick_en_wp"] = nick_en_wp
+      rec["nick_zh_wp"] = nick_zh_all.join(" | ")
+      rec["nick_wp_raw"] = nick
+      rec["other_names_wp"] = other
+      rec["division"] = div
+      rec["designation"] = desig
+      rec["origin_occupation"] = origin
+      rec["home"] = home
+      rec["first_chapter"] = ch
+      rec["weapon"] = weapon
+      rec["fate_wp"] = fate
+      en[rank] = rec
+    }
+  }
+  en
+}
+
+///|
+fn parse_zh(zh_text : String) -> Map[Int32, Map[String, String]] raise {
+  let zh : Map[Int32, Map[String, String]] = Map([])
+  for t in tables(zh_text) {
+    if t.find("座次") is None {
+      continue
+    }
+    let header : Array[String] = []
+    for line in split_all(t, "\n") {
+      match header_re.execute(line) {
+        Some(m) => header.push(group(m, 1))
+        None => ()
+      }
+    }
+    for raw_row in rows(t) {
+      let r : Array[String] = []
+      for c in raw_row {
+        r.push(strip_markup(c, " "))
+      }
+      if r.length() == 0 {
+        continue
+      }
+      let rank = match rank_re.execute(r[0]) {
+        Some(m) => @string.parse_int(group(m, 1))
+        None => continue
+      }
+      if zh.contains(rank) {
+        continue
+      }
+      let rec : Map[String, String] = Map([])
+      let n = if header.length() < r.length() {
+        header.length()
+      } else {
+        r.length()
+      }
+      for i in 0..<n {
+        rec[header[i]] = r[i]
+      }
+      zh[rank] = rec
+    }
+  }
+  zh
+}
+
+///|
+fn parse_shapiro(sh_text : String) -> Map[Int32, (String, String)] raise {
+  let sh : Map[Int32, (String, String)] = Map([])
+  for line in split_all(sh_text, "\n") {
+    if line.length() == 0 {
+      continue
+    }
+    let parts = split_all(line, "—")
+    if parts.length() != 3 {
+      fail("bad shapiro line: \{line}")
+    }
+    let n = @string.parse_int(parts[0])
+    sh[n] = (parts[1], parts[2])
+  }
+  sh
+}
+
+///|
+/// `String::compare` sorts by length first; Python's `sorted` compares code
+/// points lexicographically.
+fn compare_code_points(a : String, b : String) -> Int32 {
+  let ac = a.to_array()
+  let bc = b.to_array()
+  let n = if ac.length() < bc.length() { ac.length() } else { bc.length() }
+  let mut i = 0
+  let mut result = 0
+  while i < n && result == 0 {
+    let ca = ac[i].to_int()
+    let cb = bc[i].to_int()
+    if ca < cb {
+      result = -1
+    } else if ca > cb {
+      result = 1
+    }
+    i += 1
+  }
+  if result != 0 {
+    result
+  } else if ac.length() < bc.length() {
+    -1
+  } else if ac.length() > bc.length() {
+    1
+  } else {
+    0
+  }
+}
+
+///|
+fn zh_field_names(zh : Map[Int32, Map[String, String]]) -> Array[String] {
+  let seen : Map[String, Unit] = Map([])
+  for rank in 1..<=108 {
+    match zh.get(rank) {
+      Some(rec) =>
+        for key in rec.keys() {
+          if key != "座次" {
+            seen[key] = ()
+          }
+        }
+      None => ()
+    }
+  }
+  let fields : Array[String] = []
+  for key in seen.keys() {
+    fields.push(key)
+  }
+  fields.sort_by(compare_code_points)
+  fields
+}
+
+///|
+fn column_value(
+  c : String,
+  rank : Int32,
+  e : Map[String, String],
+  z : Map[String, String],
+  sname : String,
+  snick : String,
+  conflicts : String,
+) -> String {
+  match c {
+    "rank" => rank.to_string()
+    "tier" => if rank <= 36 { "天罡" } else { "地煞" }
+    "name_zh" => z.get("姓名").unwrap_or("")
+    "name_hans" => {
+      let v = split_whitespace(e.get("name_zh_variants").unwrap_or(""))
+      if v.length() > 0 {
+        v[0]
+      } else {
+        ""
+      }
+    }
+    "name_hant" => {
+      let v = split_whitespace(e.get("name_zh_variants").unwrap_or(""))
+      if v.length() > 0 {
+        v[v.length() - 1]
+      } else {
+        ""
+      }
+    }
+    "nick_zh" => z.get("綽號").unwrap_or("")
+    "nick_en_shapiro" => snick
+    "name_shapiro" => sname
+    "conflicts" => conflicts
+    _ =>
+      if c.has_prefix("zh:") {
+        z.get(c[3:].to_owned()).unwrap_or("")
+      } else {
+        e.get(c).unwrap_or("")
+      }
+  }
+}
+
+///|
+fn main raise {
+  let args = @env.args()
+  if args.length() < 5 {
+    fail("usage: moon run merge.mbtx <en> <zh> <sh> <out>")
+  }
+  let en_text = @fs.read_file_to_string(args[1])
+  let zh_text = @fs.read_file_to_string(args[2])
+  let sh_text = @fs.read_file_to_string(args[3])
+  let out_path = args[4]
+
+  let en = parse_en(en_text)
+  let zh = parse_zh(zh_text)
+  let sh = parse_shapiro(sh_text)
+
+  let missing : Array[String] = []
+  for i in 1..<=108 {
+    if !en.contains(i) || !zh.contains(i) || !sh.contains(i) {
+      missing.push(i.to_string())
+    }
+  }
+  if missing.length() > 0 {
+    fail("missing heroes: \{missing.join(", ")}")
+  }
+
+  let zh_fields = zh_field_names(zh)
+  let cols : Array[String] = [
+    "rank", "tier", "name_zh", "name_hans", "name_hant", "nick_zh", "nick_en_wp",
+    "nick_en_shapiro", "name_en", "name_pinyin", "name_wade_giles", "name_zh_variants",
+    "name_shapiro", "star_zh", "star_pinyin", "star_en", "nick_wp_raw", "other_names_wp",
+    "division", "designation", "origin_occupation", "home", "first_chapter", "weapon",
+    "fate_wp",
+  ]
+  for f in zh_fields {
+    cols.push("zh:" + f)
+  }
+  cols.push("conflicts")
+
+  let lines : Array[String] = [cols.join("\t")]
+  for i in 1..<=108 {
+    let e = en.get(i).unwrap()
+    let z = zh.get(i).unwrap()
+    let (sname, snick) = sh.get(i).unwrap()
+
+    let conflicts : Array[String] = []
+    let zstar = z.get("星宿名").unwrap_or("")
+    let estar = e.get("star_zh").unwrap_or("")
+    if zstar != "" && estar != "" && zstar != estar {
+      conflicts.push("star zh=\{zstar} en=\{estar}")
+    }
+    let zname = z.get("姓名").unwrap_or("")
+    if zname != "" &&
+      !split_whitespace(e.get("name_zh_variants").unwrap_or("")).contains(zname) {
+      conflicts.push(
+        "name zh=\{zname} en=\{e.get("name_zh_variants").unwrap_or("")}",
+      )
+    }
+    let znick = z.get("綽號").unwrap_or("")
+    if znick != "" &&
+      !split_all(e.get("nick_zh_wp").unwrap_or(""), " | ").contains(znick) {
+      conflicts.push("nick zh=\{znick} en=\{e.get("nick_zh_wp").unwrap_or("")}")
+    }
+    let conflict_text = conflicts.join("; ")
+
+    let out : Array[String] = []
+    for c in cols {
+      let v = column_value(c, i, e, z, sname, snick, conflict_text)
+      if v.find("\t") is Some(_) ||
+        v.find("\n") is Some(_) ||
+        v.find("\r") is Some(_) {
+        fail("field \{c} of hero \{i} contains a tab or newline")
+      }
+      out.push(v)
+    }
+    lines.push(out.join("\t"))
+  }
+  @fs.write_string_to_file(out_path, lines.join("\n") + "\n")
+  println(
+    "\{en.length()} \{zh.length()} \{sh.length()} zh fields: \{zh_fields.join(", ")}",
+  )
+}
