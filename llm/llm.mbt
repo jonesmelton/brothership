@@ -239,38 +239,74 @@ fn reasoning_of(raw : Json) -> String? {
 }
 
 ///|
-/// Meta Model API reports usage but no price, so `cost_usd` is computed
-/// from the model's list rate. Rates are dollars per million tokens;
-/// reasoning tokens are billed as output and are included in
-/// `completion_tokens`.
-fn rate_of(model : String) -> (Double, Double)? {
+/// (cached input, input, output) list rates in dollars per million tokens.
+/// Meta Model API reports token counts but no price, so `cost_usd` is
+/// computed from these. Reasoning tokens are billed as output and are
+/// included in `completion_tokens`.
+priv struct Rates {
+  cached : Double
+  input : Double
+  output : Double
+}
+
+///|
+fn rate_of(model : String) -> Rates? {
   match model {
-    "muse-wonder-1.0" => Some((4.0, 20.0))
-    "muse-spark-1.3" | "muse-spark-1.2" | "muse-spark-1.1" => Some((1.25, 4.25))
+    "muse-wonder-1.0" => Some({ cached: 0.20, input: 4.0, output: 20.0, })
+    "muse-spark-1.3" | "muse-spark-1.2" | "muse-spark-1.1" =>
+      Some({ cached: 0.15, input: 1.25, output: 4.25, })
     "muse-spark-1.3-contributor" | "muse-spark-1.2-contributor" =>
-      Some((0.10, 0.20))
+      Some({ cached: 0.002, input: 0.10, output: 0.20, })
     _ => None
   }
+}
+
+///|
+/// Total and cached split of the input tokens in one response's `usage`.
+/// Recording both is the only per-call billing record: Meta Model API has
+/// no usage or billing endpoint, only the dashboard at dev.meta.ai/usage.
+fn prompt_tokens(raw : Json) -> (Int32, Int32) {
+  match raw {
+    { "usage": Object(u), .. } => {
+      let total = match u.get("prompt_tokens") {
+        Some(Number(n, ..)) => n.to_int()
+        _ => 0
+      }
+      let cached = match u.get("prompt_tokens_details") {
+        Some({ "cached_tokens": Number(n, ..), .. }) => n.to_int()
+        _ => 0
+      }
+      (total, cached)
+    }
+    _ => (0, 0)
+  }
+}
+
+///|
+/// Cost in dollars of one response, or `None` for a model with no rate.
+fn cost_of(model : String, raw : Json) -> Double? {
+  guard rate_of(model) is Some(rates) else { return None }
+  guard raw is { "usage": Object(u), .. } else { return None }
+  let int = (j : Json?) => if j is Some(Number(n, ..)) { n.to_int() } else { 0 }
+  let (prompt_total, cached) = prompt_tokens(raw)
+  let uncached = prompt_total - cached
+  let cost = cached.to_double() * rates.cached / 1_000_000.0 +
+    uncached.to_double() * rates.input / 1_000_000.0 +
+    int(u.get("completion_tokens")).to_double() * rates.output / 1_000_000.0
+  Some(cost)
 }
 
 ///|
 fn usage_of(model : String, raw : Json) -> Usage {
   guard raw is { "usage": Object(u), .. } else { return Usage::zero() }
   let int = (j : Json?) => if j is Some(Number(n, ..)) { n.to_int() } else { 0 }
-  let input = int(u.get("prompt_tokens"))
-  let output = int(u.get("completion_tokens"))
   {
-    input,
-    output,
+    input: int(u.get("prompt_tokens")),
+    output: int(u.get("completion_tokens")),
     reasoning: match u.get("completion_tokens_details") {
       Some({ "reasoning_tokens": Number(n, ..), .. }) => n.to_int()
       _ => 0
     },
-    cost_usd: match rate_of(model) {
-      Some((input_rate, output_rate)) =>
-        input.to_double() * input_rate / 1_000_000.0 +
-        output.to_double() * output_rate / 1_000_000.0
-      None => 0.0
-    },
+    cost_usd: cost_of(model, raw).unwrap_or(0.0),
   }
 }

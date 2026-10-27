@@ -7,7 +7,7 @@
 //
 // Replies are cached in .cache/llm, so rerunning only calls the model for
 // prompts that changed. The Meta Model API key is read from MODEL_API_KEY,
-// or else ~/.config/brothership/model-api.key. Get one at dev.meta.ai.
+// or else ~/.config/brothership/meta-api.key. Get one at dev.meta.ai.
 
 ///|
 let root = "content/cast"
@@ -18,7 +18,7 @@ async fn meta_key() -> String {
     return key
   }
   let home = @env.get_env_var("HOME").unwrap_or("")
-  let path = "\{home}/.config/brothership/model-api.key"
+  let path = "\{home}/.config/brothership/meta-api.key"
   guard @fs.exists(path) else {
     fail("set MODEL_API_KEY or write the key to \{path}")
   }

@@ -27,6 +27,35 @@ test "usage_of prices Muse Spark and reports zero for unknown models" {
 }
 
 ///|
+test "cached prompt tokens are priced at the cached rate" {
+  // One live contributor call: 15 prompt tokens, none cached, 25 completed
+  // of which 15 were reasoning. $0.10/$0.20 per million.
+  let live : Json = {
+    "usage": {
+      "completion_tokens": 25,
+      "prompt_tokens": 15,
+      "total_tokens": 40,
+      "completion_tokens_details": { "reasoning_tokens": 15 },
+      "prompt_tokens_details": { "cached_tokens": 0 },
+    },
+  }
+  let u = usage_of("muse-spark-1.3-contributor", live)
+  assert_eq(u.input, 15)
+  assert_eq(u.output, 25)
+  assert_eq(u.reasoning, 15)
+  assert_eq(u.cost_usd, 15.0 * 0.10 / 1_000_000.0 + 25.0 * 0.20 / 1_000_000.0)
+  // A fully cached million-token Wonder prompt costs the cached rate only.
+  let warm : Json = {
+    "usage": {
+      "prompt_tokens": 1_000_000,
+      "completion_tokens": 0,
+      "prompt_tokens_details": { "cached_tokens": 1_000_000 },
+    },
+  }
+  assert_eq(usage_of("muse-wonder-1.0", warm).cost_usd, 0.20)
+}
+
+///|
 test "usage_of tolerates a response without usage" {
   assert_eq(usage_of("muse-wonder-1.0", Json::null()), Usage::zero())
 }

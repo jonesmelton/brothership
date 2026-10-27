@@ -5,8 +5,10 @@ private portrait from it, and once you approve one, drafts the ship's faces
 (`captain`, `voice`, `voyage`) from that. Background: [docs/cast.md](../../docs/cast.md).
 
 Run from the repository root. The Meta Model API key comes from
-`MODEL_API_KEY`, or `~/.config/brothership/model-api.key`. Get one at
-dev.meta.ai.
+`MODEL_API_KEY`, or `~/.config/brothership/meta-api.key`. Get one at
+dev.meta.ai. Team usage and billing are at dev.meta.ai/usage; there is no
+usage API, so the per-draft cost printed by `run` (list rates in
+`llm/llm.mbt`) is the local record.
 
 ```sh
 # 1. optional: steer the portrait before it's drafted
