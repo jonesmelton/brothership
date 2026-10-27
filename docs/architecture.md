@@ -39,6 +39,36 @@ On a transport error the client drops its pending proposals and reloads the
 snapshot, so queued input is lost. Fixing that needs idempotent proposals on
 the server.
 
+## model latency
+
+Model text reaches a player seconds after whatever prompted it, and
+everything that shows model text has to be built around that wait. Every
+message passes at least two model calls in sequence before a player sees
+it: the ship writes it, then the gate (`llm/gate`) checks it.
+
+Measured 2026-10-27 on Meta Model API, one run of 18 gate checks of about
+930 input and 680 output tokens each:
+
+| model | median | range |
+| --- | --- | --- |
+| `muse-spark-1.3` | 2.1 s | 1.3 to 4.8 s |
+| `muse-spark-1.3-contributor` | 5 s | 2.6 to 23.5 s |
+
+Generation has not been measured. It writes more than a check does, so
+expect it to take longer.
+
+- A model call never sits between a player's input and its feedback. The
+  input is applied and committed at once; the message arrives later as its
+  own event in the log.
+- The interface shows that a message is pending, and announces it when it
+  lands with the priority of its event (`docs/accessibility.md`), not the
+  priority of the input that prompted it.
+- A call that fails or is blocked leaves no message. The event that
+  prompted it still stands, and the scripted policy covers any choice the
+  model would have made.
+- The harness and tests never wait on a model: they use the scripted
+  policies.
+
 ## api
 
 - `GET /api/snapshot` returns `@core.Snapshot`.

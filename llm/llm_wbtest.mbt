@@ -59,15 +59,3 @@ test "cached prompt tokens are priced at the cached rate" {
 test "usage_of tolerates a response without usage" {
   assert_eq(usage_of("muse-wonder-1.0", Json::null()), Usage::zero())
 }
-
-///|
-test "reasoning_of reads Groq's reasoning field as well as reasoning_content" {
-  let groq : Json = {
-    "choices": [{ "message": { "content": "{}", "reasoning": "think" } }],
-  }
-  assert_eq(reasoning_of(groq), Some("think"))
-  let meta : Json = {
-    "choices": [{ "message": { "reasoning_content": "think" } }],
-  }
-  assert_eq(reasoning_of(meta), Some("think"))
-}

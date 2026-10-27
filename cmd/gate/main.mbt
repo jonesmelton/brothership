@@ -1,55 +1,43 @@
 // Checks messages against the content gate's policy. Run from the repository
 // root.
 //
-//   moon run cmd/gate -- [--replay] [--model provider:model] [file...]
+//   moon run cmd/gate -- [--replay] [--model meta:model] [file...]
 //
 // With no files it checks every sample in content/gate/samples and fails if
 // a verdict disagrees with the sample's directory, clean or violation.
-// Replies are cached in .cache/llm. Keys are read from GROQ_API_KEY or
-// ~/.config/brothership/groq.key, and MODEL_API_KEY or
-// ~/.config/brothership/meta-api.key.
+// Replies are cached in .cache/llm. The Meta Model API key is read from
+// MODEL_API_KEY, or else ~/.config/brothership/meta-api.key.
 
 ///|
 let root = "content/gate"
 
 ///|
-let default_model = "groq:openai/gpt-oss-safeguard-20b"
+let default_model = "meta:muse-spark-1.3"
 
 ///|
-async fn key(env_var : String, file : String) -> String {
-  if @env.get_env_var(env_var) is Some(key) {
+async fn meta_key() -> String {
+  if @env.get_env_var("MODEL_API_KEY") is Some(key) {
     return key
   }
   let home = @env.get_env_var("HOME").unwrap_or("")
-  let path = "\{home}/.config/brothership/\{file}"
+  let path = "\{home}/.config/brothership/meta-api.key"
   guard @fs.exists(path) else {
-    fail("set \{env_var} or write the key to \{path}")
+    fail("set MODEL_API_KEY or write the key to \{path}")
   }
   @fs.read_file(path).text().trim().to_owned()
 }
 
 ///|
-async fn provider(name : String, mode : @cache.Mode) -> @llm.Backend {
-  let (base_url, env_var, file) = match name {
-    "groq" => ("https://api.groq.com/openai/v1", "GROQ_API_KEY", "groq.key")
-    "meta" => ("https://api.meta.ai/v1", "MODEL_API_KEY", "meta-api.key")
-    _ => fail("unknown provider \{name}, use groq or meta")
-  }
-  @llm.Backend::openai_compatible(
-    base_url~,
-    api_key=if mode is Live { key(env_var, file) } else { "" },
-  )
-}
-
-///|
 /// Milliseconds each uncached call took, by the call's user message.
 async fn backend(
-  model : String,
   mode : @cache.Mode,
   timings : Map[String, Int64],
 ) -> @llm.Backend {
-  let name = model.split(":").next().unwrap().to_owned()
-  let routed = @llm.Backend::route(Map([(name, provider(name, mode))]))
+  let meta = @llm.Backend::openai_compatible(
+    base_url="https://api.meta.ai/v1",
+    api_key=if mode is Live { meta_key() } else { "" },
+  )
+  let routed = @llm.Backend::route(Map([("meta", meta)]))
   let timed = @llm.Backend::new(routed.name, async fn(c) {
     let start = @async.now()
     let r = routed.call(c)
@@ -97,7 +85,7 @@ async fn main {
     policy=@fs.read_file("\{root}/policy.md").text(),
   )
   let timings = Map([])
-  let b = backend(model, mode, timings)
+  let b = backend(mode, timings)
   let lines : Array[String] = Array::make(files.length(), "")
   let wrong = Ref(0)
   @async.with_task_group(g => {

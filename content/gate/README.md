@@ -2,15 +2,15 @@
 
 `policy.md` is the classifier's system prompt for ship messages to crew. It
 is written from [docs/content.md](../../docs/content.md); when either changes,
-check the other by hand. The model is `gpt-oss-safeguard-20b` on Groq (see
-[docs/decisions.md](../../docs/decisions.md)).
+check the other by hand. The model is Muse Spark 1.3 (`meta:muse-spark-1.3`)
+on Meta Model API. A check takes about 2 seconds; see "model latency" in
+[docs/architecture.md](../../docs/architecture.md).
 
 `samples/clean/` and `samples/violation/` hold one message per file, labelled
 by directory. Add a sample whenever the gate gets a message wrong.
 
-Run from the repository root. The Groq key comes from `GROQ_API_KEY`, or
-`~/.config/brothership/groq.key`; the Meta key from `MODEL_API_KEY`, or
-`~/.config/brothership/meta-api.key`.
+Run from the repository root. The Meta Model API key comes from
+`MODEL_API_KEY`, or `~/.config/brothership/meta-api.key`.
 
 ```sh
 # check every sample; fails if any verdict disagrees with its directory
@@ -22,7 +22,7 @@ moon run cmd/gate -- path/to/message.md
 # cache only; a miss fails
 moon run cmd/gate -- --replay
 
-# another model, as provider:model (groq or meta)
+# the contributor SKU: much cheaper, about twice as slow; fine for sweeps
 moon run cmd/gate -- --model meta:muse-spark-1.3-contributor
 ```
 

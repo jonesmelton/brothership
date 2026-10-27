@@ -3,7 +3,7 @@ let policy = "the policy"
 
 ///|
 fn gate() -> @gate.Gate {
-  @gate.Gate::new(model="groq:openai/gpt-oss-safeguard-20b", policy~)
+  @gate.Gate::new(model="meta:muse-spark-1.3", policy~)
 }
 
 ///|
@@ -17,7 +17,7 @@ test "a message is wrapped in a tag whose id comes from its text" {
 ///|
 test "the call carries the policy as system and the wrapped message as user" {
   let c = gate().call("hello")
-  assert_eq(c.model, "groq:openai/gpt-oss-safeguard-20b")
+  assert_eq(c.model, "meta:muse-spark-1.3")
   assert_eq(c.system, [policy])
   assert_eq(c.user, @gate.wrap("hello"))
   assert_eq(c.reasoning_effort, Some("medium"))

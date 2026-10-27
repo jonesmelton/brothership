@@ -227,16 +227,13 @@ fn finish_of(raw : Json) -> String? {
 }
 
 ///|
-/// Reasoning is a provider extension the typed response drops: Meta sends
-/// `reasoning_content`, Groq sends `reasoning`.
+/// `reasoning_content` is a provider extension the typed response drops.
 fn reasoning_of(raw : Json) -> String? {
   match raw {
     {
       "choices": [{ "message": { "reasoning_content": String(s), .. }, .. }, ..],
       ..
-    }
-    | { "choices": [{ "message": { "reasoning": String(s), .. }, .. }, ..], .. } =>
-      Some(s)
+    } => Some(s)
     _ => None
   }
 }

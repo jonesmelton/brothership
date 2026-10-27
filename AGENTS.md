@@ -40,6 +40,10 @@ before handing off. Don't add make targets unless asked.
 Read @docs/architecture.md before changing package boundaries, the sync
 protocol, the store schema, or anything under `core`.
 
+Model calls take seconds, and every message a player sees waits on at least
+two of them. Read "model latency" in @docs/architecture.md before building
+anything that shows model text.
+
 Use `git` freely when assigned work within this project, commiting at reasonable task boundaries.
 
 When beginning a task that will put the repo in an unbuildable or unservable state for more than a handful of minutes, consider using a worktree to isolate it.
