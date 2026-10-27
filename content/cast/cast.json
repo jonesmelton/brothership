@@ -1,0 +1,11 @@
+{
+  "model": "hyper:deepseek-v4.1-flash-1017",
+  "samples": 2,
+  "portrait": { "name": "portrait", "max_tokens": 16000 },
+  "faces": [
+    { "name": "captain", "max_tokens": 12000, "max_words": 450 },
+    { "name": "voice", "max_tokens": 12000, "headings": 11 },
+    { "name": "voyage", "max_tokens": 12000, "max_words": 200, "max_lines": 15 }
+  ],
+  "banned": ["stars of destiny", "water margin"]
+}

@@ -1,3 +1,0 @@
-# cast entry
-
-{{ entry }}

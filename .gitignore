@@ -8,3 +8,4 @@ dist/
 .repos/
 research/*
 !research/water-margin/
+.cache/

@@ -10,10 +10,16 @@
 | `api`         | native    | Moonback routes over `store`.                                         |
 | `cmd/server`  | native    | Server entry: opens the store, serves the API and static assets.      |
 | `cmd/browser` | js        | Rabbita (TEA) client.                                                 |
+| `llm`         | js native | Model calls: `Call`, `Backend` and its wrappers (route, limit, retry). |
+| `llm/prompt`  | js native | Minijinja templates, strict undefined, set up for markdown.           |
+| `llm/cache`   | native    | Content-addressed reply cache, one json file per call.                |
+| `cast`        | native    | The cast pipeline: entry, portrait, faces. See `docs/cast.md`.        |
+| `cmd/cast`    | native    | Cast pipeline CLI over `content/cast`.                                |
 
 Stack: rabbita (frontend), warren (build and dev server), moonback on
 moonbitlang/async (server), moonbit-community/sqlite3 (vendored sqlite,
-async API), moonbitlang/quickcheck (property tests).
+async API), moonbitlang/quickcheck (property tests), gaato/openai and
+bobzhang/minijinja (model calls and prompt templates; see `docs/llm-tooling.md`).
 
 ## sync
 

@@ -1,0 +1,13 @@
+import {
+  "local/brothership/llm",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/json",
+}
+
+import {
+  "moonbitlang/async",
+} for "test"
+
+supported_targets = "native"
+
+warnings = "-79"

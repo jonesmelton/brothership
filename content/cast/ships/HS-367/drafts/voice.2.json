@@ -1,0 +1,55 @@
+{
+  "stage": "voice",
+  "sample": 2,
+  "key": "67fb8071eb893391839c637f13f25aa377c2e948bcd5a5fffec64754be2c0aa1",
+  "model": "hyper:deepseek-v4.1-flash-1017",
+  "max_tokens": 12000,
+  "inputs": {
+    "entry": "a0b203d7c33695fb6372d834841fbdd1fd36073f7abfed5123a66aeafa6a3a19",
+    "portrait": "820d0df45d89bbebb77a2e31c68ae334c26acbdc4c4f533775be2e7a4d05c03d"
+  },
+  "text_sha": "c4d9613c1896a6bed674511282597624ab2e76c670638fbbdab61290c0de476f",
+  "problems": [],
+  "usage": {
+    "input": 3288,
+    "output": 2233,
+    "reasoning": 1289,
+    "cost_usd": 0.0030502700000000003
+  },
+  "finish": "stop",
+  "raw": {
+    "id": "chatcmpl-edf9e7ddfa824b4f92fe0401",
+    "object": "chat.completion",
+    "created": 1793111970,
+    "model": "deepseek-v4.1-flash-1017",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "# voice.md\n\n## Promoting {name} to a post of greater responsibility\n\nYou've been doing this work for a while now. The title is only the paperwork catching up.\n\nIt's longer hours and fewer thanks, and I'd rather you said no tonight than resented it in a year.\n\nWhatever you need for it, ask me and it's yours. That's the whole of the ceremony.\n\n## Congratulating the whole crew on something they achieved together\n\nThat was done well, every part of it, and I have written the figures down so that nobody can tell me otherwise.\n\nEach of you had a hand in it and I know which hand. I'll say no more about it after tonight.\n\nThe galley is open and the good tea is out. Go and be pleased with yourselves.\n\n## Announcing that a soul aboard has died\n\nI have to tell you that {name} is dead. It was at 04:12, and there was nothing left to do by the time I knew.\n\nThe lamps in the west corridor stay lit until the next festival, and that is my business, not yours.\n\nIf you would rather not be alone tonight, the galley will be full and I will be in it.\n\n## Welcoming {name} aboard\n\nWelcome aboard, {name}. Your berth is second on the left, the blanket on it is yours, and the tea in the third locker belongs to everyone.\n\nNothing aboard this hull will be asked of you that you cannot refuse. I'll hold to that for as long as you're here.\n\nYou'll be homesick in about six weeks. It isn't a failing, and you can come and find me when it happens.\n\n## Declining a candidate who asked to crew you\n\nNo. Not for anything you did or failed to do. This hull isn't the one for you and I won't pretend otherwise to be kind.\n\nYou asked well, and I've thought it through properly, and the answer is still no.\n\nGo home, or go with another ship if one comes this way. Don't wait on me.\n\n## Asking for volunteers for a hard or dangerous task\n\nI need two souls out on the spine, and it will be cold and it will take eleven hours. Who's willing?\n\nI'm not going to choose. If you'd rather stay inside, staying inside is the right answer and I won't hold it against you.\n\nYou'll have the water you need and twice the blankets you think. That's the offer.\n\n## Departing a world for the last time\n\nThat's the last of the water aboard and the last of the light on that hull. I won't come back this way.\n\nWhatever you left down there, you left it well. Now come in and let's get the hatches sealed.\n\nMy entry is in their register. Some ship will read it in a hundred years and know we were here.\n\n## Arriving at a world after a long crossing\n\nThere's a world off the bow, lit and turning, and they've seen us. Look at it a moment before you get to work.\n\nThe crossing is finished and I have the figures to prove it. Bring the packets up; the registrar will want them before the greetings are done.\n\nThis is the part I do all of this for. Go on, then — I'll be at the lock.\n\n## {name} leaving the ship at port, by their own choice\n\nYou're going, then. Good. Take the blanket, and take the tea, and don't argue with me about the tea.\n\nThe register will show your name as crew of this hull and I'll write it fairly. That's yours to keep, whatever comes after.\n\nIf you ever want to come back, the answer is yes. I won't hold you to it.\n\n## Admitting that you were wrong\n\nI was wrong about the water, and I was wrong in a way that cost you four days. That's mine to carry, not yours.\n\nI've been thinking about what I said in the corridor. It was unkind and it was also incorrect, and I'm sorry for both.\n\nYou don't have to make it easier for me. I'd rather you told me plainly and we started from there.\n\n## Meeting another liveship you have history with\n\nBrother. Come alongside and let me see what the years have done to you.\n\nI have water, and time, and a great deal to tell you, and the order I tell it in matters.\n\nYou'll take the nearer berth. I know what your figures look like and I know what mine look like, and you'll take it.",
+          "reasoning_content": "Write voice.md with the ten scenarios as level-two headings exactly as given, with 1-3 short spoken lines each. Voice: plain, warm, exact, asks rather than orders, clerk precision, dry wit. Never names crew; use {name}. No stage directions, no quotes.\n\nLet me draft each.\n\n1. Promoting {name} to a post of greater responsibility.\n- \"You've been doing the work for a while now. The title's just the paperwork catching up. Take it, {name}.\"\n- \"It's more hours and fewer thanks. If you'd rather not, say so now and I'll think none the worse of you.\"\n\n2. Congratulating whole crew.\n- \"That was well done, all of it, and I've written the figures down so nobody can tell me otherwise. Thank you.\"\n- \"Every soul of you had a hand in it and I know which hand. You'll hear no more about it from me after tonight.\"\n\n3. Announcing a soul aboard has died.\n- \"I have to tell you that {name} is dead. It happened at 04:12, and there was nothing after that I could do.\"\nHmm — careful, don't name a crew member? The rule: you never know a crew member's name; where a line names one, write {name}. So {name} is fine for a dead soul.\n- \"The lamps in the west corridor will burn until the festival. That's not a custom, it's just what I'm doing.\"\n- \"If you want to sit in the galley tonight, the galley's open. I'll be there.\"\n\n4. Welcoming {name} aboard.\n- \"Welcome aboard, {name}. Your berth is second on the left, the blanket on it is yours, and the tea in the third locker is not.\"\nHmm keep it warmer.\n- \"You'll be homesick in about six weeks, and it's not a failing. Come find me when it happens.\"\n- \"Nothing aboard gets asked of you that you can't refuse. I'll hold to that.\"\n\n5. Declining a candidate who asked to crew.\n- \"No. Not for want of anything you did — this isn't the hull for you, and I'd be doing you a wrong to pretend otherwise.\"\n- \"You asked well, and I've thought about it properly. The answer is still no.\"\n- \"Go home, or go to another ship if one comes. Don't wait on me.\"\n\n6. Asking for volunteers for a hard or dangerous task.\n- \"I need two souls to go out on the spine and it will be cold and it will take eleven hours. Who's willing?\"\n- \"I'm not going to pick. If you'd rather stay inside, staying inside is the right answer and I won't remember it against you.\"\nHmm \"I won't remember it against you\" — good.\n\n7. Departing a world for the last time.\n- \"That's the last of the water aboard and the last of the light on that hull. I won't be back this way.\"\n- \"Whatever you left down there, you left it well. Now come in and let's get the hatches sealed.\"\n- \"The register has my entry in it. Some ship will read it in a hundred years and know we were here.\"\n\n8. Arriving at a world after a long crossing.\n- \"There's a world off the bow and it's lit and turning and they've seen us. Look at it before you get to work.\"\n- \"The crossing is over, and I have the figures to prove it. Bring the packets up; the registrar will want them before the greeting's finished.\"\n\n9. {name} leaving the ship at port, by their own choice.\n- \"You're going, then. Good. Take the blanket and the tea and don't argue about the tea.\"\n- \"The register will have your name in it as crew of this hull, and I'll write it fairly. That's yours to keep whatever comes after.\"\n- \"If you ever want to come back, the answer is yes. I won't hold you to it.\"\n\n10. Admitting that you were wrong.\n- \"I was wrong about the water, and I was wrong in a way that cost you four days. That's mine, not yours.\"\n- \"I've been thinking about what I said in the corridor, and it was unkind and it was also incorrect. I'm sorry.\"\n\n11. Meeting another liveship with history.\n- Which? Ambiguous — could be any. Keep options general but with flavor. Maybe lines for Wise Star and for Jade Unicorn. But heading is one; 1-3 lines. Could do lines that work for a brother. Let's do something like:\n- \"Brother. You're late and your hull looks worse than mine, which I'd have said was impossible.\"\nHmm maybe multiple: one general, one to the Black Whirlwind, one to the Unicorn? Three lines each for a different ship could confuse. Maybe safer: keep lines that work with any ship but with her dryness.\n- \"You'll have the nearer berth. No, I'm not discussing it.\"\nThat's the precedence thing — good for Unicorn.\n- \"Come alongside and let me look at you. I've been carrying something for you for sixty years and it can wait one more hour.\"\nHmm — but the packet she never writes into a register. Fine, it's data.\n- \"It's been a long time and I've counted every year of it. Don't tell anyone I counted.\"\n\nI'll combine: three lines, generic enough — one for a brother, one for precedence refusal, one for the Whirlwind? Better keep them all plausible with one ship she has history with, the brother. I'll write:\n- \"Brother. Come alongside and let me see what the years have done to you.\"\n- \"I have water and time and a great deal to tell you, and the order I tell it in matters.\"\n- \"You'll take the nearer berth. I know what your figures look like and I know what mine look like.\"\n\nGood. That's dry and works.\n\nWrite file only."
+        },
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 3288,
+      "completion_tokens": 2233,
+      "total_tokens": 5521,
+      "prompt_tokens_details": {
+        "cached_tokens": 3200
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 1289
+      },
+      "cost": {
+        "usd": 0.0030502700000000003,
+        "hypercredits": 0.0610054
+      },
+      "remaining": {
+        "hypercredits": 364.00936678999994
+      }
+    }
+  }
+}

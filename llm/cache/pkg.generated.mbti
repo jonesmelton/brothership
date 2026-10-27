@@ -1,0 +1,25 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "local/brothership/llm/cache"
+
+import {
+  "local/brothership/llm",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn cached(@llm.Backend, dir~ : String, mode? : Mode) -> @llm.Backend
+
+// Errors
+pub(all) suberror Miss {
+  Miss(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) enum Mode {
+  Live
+  Replay
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

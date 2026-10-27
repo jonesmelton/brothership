@@ -1,0 +1,82 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "local/brothership/cast"
+
+import {
+  "local/brothership/llm",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn check(Stage, Array[String], String) -> Array[String]
+
+pub fn clean(String, String) -> String
+
+// Errors
+
+// Types and methods
+pub(all) enum Canon {
+  Missing
+  Approved(Int32)
+  Edited(Int32)
+  ByHand
+  Stale(String)
+} derive(Eq, @debug.Debug)
+
+pub struct Cast {
+  // private fields
+}
+pub async fn Cast::advance(Self, String) -> Array[Outcome]
+pub async fn Cast::approve(Self, String, String, Int32) -> Unit
+pub async fn Cast::load(String, @llm.Backend) -> Self
+pub async fn Cast::ships(Self) -> Array[String]
+pub async fn Cast::status(Self, String) -> Array[StageStatus]
+
+pub(all) struct Config {
+  model : String
+  samples : Int32
+  portrait : Stage
+  faces : Array[Stage]
+  banned : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Draft {
+  stage : String
+  sample : Int32
+  key : String
+  model : String
+  max_tokens : Int32
+  temperature : Double?
+  inputs : Map[String, String]
+  text_sha : String
+  problems : Array[String]
+  usage : @llm.Usage
+  finish : String?
+  raw : Json
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum Outcome {
+  Drafted(Draft)
+  Failed(stage~ : String, sample~ : Int32, error~ : String)
+  Waiting(String)
+} derive(@debug.Debug)
+
+pub(all) struct Stage {
+  name : String
+  max_tokens : Int32
+  model : String?
+  temperature : Double?
+  max_words : Int32?
+  max_lines : Int32?
+  headings : Int32?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct StageStatus {
+  stage : String
+  canon : Canon
+  drafts : Int32
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

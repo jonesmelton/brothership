@@ -1,0 +1,18 @@
+import {
+  "gaato/openai",
+  "gaato/http-async" @http_async,
+  "gaato/sdk-runtime" @runtime,
+  "moonbitlang/async",
+  "moonbitlang/async/semaphore",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
+}
+
+import {
+  "moonbitlang/core/cmp",
+} for "test"
+
+supported_targets = "js + native"
+
+warnings = "-79"

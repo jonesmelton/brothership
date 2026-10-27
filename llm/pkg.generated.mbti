@@ -1,0 +1,63 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "local/brothership/llm"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn sha256_hex(String) -> String
+
+// Errors
+pub(all) suberror LlmError {
+  UnknownProvider(String)
+  Incomplete(String)
+} derive(@debug.Debug)
+pub impl Show for LlmError
+
+// Types and methods
+pub struct Backend {
+  name : String
+  run : async (Call) -> Reply
+}
+pub async fn Backend::call(Self, Call) -> Reply
+pub fn Backend::limited(Self, Int32) -> Self
+pub fn Backend::new(String, async (Call) -> Reply) -> Self
+pub fn Backend::openai_compatible(base_url~ : String, api_key~ : String) -> Self
+pub fn Backend::retrying(Self, max_retry? : Int32, delay_ms? : Int32) -> Self
+pub fn Backend::route(Map[String, Self]) -> Self
+
+pub(all) struct Call {
+  model : String
+  system : Array[String]
+  user : String
+  max_tokens : Int32
+  temperature : Double?
+  reasoning_effort : String?
+  sample : Int32
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Call::key(Self) -> String
+pub fn Call::new(model~ : String, system~ : Array[String], user~ : String, max_tokens~ : Int32, temperature? : Double, reasoning_effort? : String, sample? : Int32) -> Self
+pub fn Call::with_user(Self, String) -> Self
+
+pub(all) struct Reply {
+  model : String
+  text : String
+  reasoning : String?
+  finish : String?
+  usage : Usage
+  raw : Json
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Usage {
+  input : Int32
+  output : Int32
+  reasoning : Int32
+  cost_usd : Double
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Usage::zero() -> Self
+
+// Type aliases
+
+// Traits
