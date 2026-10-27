@@ -1,0 +1,1 @@
+Bosun Achterberg. You held the breach for nine hours with two hands and a patch kit while the rest of us argued. That is the rank. Wear it badly and I'll take it back in my opinion, if not in the log.

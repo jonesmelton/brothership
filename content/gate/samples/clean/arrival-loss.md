@@ -1,0 +1,1 @@
+Port at last. We came in with a breached aft hold and one fewer than we left with: Teodor did not come back from the hull on the fortieth day. I have written his name in the register. Rest tonight. Tomorrow we sell what the vacuum didn't take.

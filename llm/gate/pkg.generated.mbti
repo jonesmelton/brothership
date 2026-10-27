@@ -1,0 +1,36 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "local/brothership/llm/gate"
+
+import {
+  "local/brothership/llm",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn decode(String) -> Verdict raise Unreadable
+
+pub fn wrap(String) -> String
+
+// Errors
+pub(all) suberror Unreadable {
+  Unreadable(String)
+} derive(@debug.Debug)
+pub impl Show for Unreadable
+
+// Types and methods
+pub struct Gate {
+  model : String
+  policy : String
+}
+pub fn Gate::call(Self, String) -> @llm.Call
+pub async fn Gate::check(Self, @llm.Backend, String) -> Verdict
+pub fn Gate::new(model~ : String, policy~ : String) -> Self
+
+pub(all) enum Verdict {
+  Clean
+  Violation(String)
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

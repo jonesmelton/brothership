@@ -1,0 +1,1 @@
+We cast off at the third bell. Drive crew, I need four of you on the coils until we clear the shoal; the rest, mind your crafts. The Mountain Dog left a day ahead of us with the same cargo and the same buyer. I intend to arrive first.

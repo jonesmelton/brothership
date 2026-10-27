@@ -1,0 +1,12 @@
+import {
+  "local/brothership/llm",
+  "local/brothership/llm/cache",
+  "local/brothership/llm/gate" @llm_gate,
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+}
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")

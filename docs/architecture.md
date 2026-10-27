@@ -13,8 +13,10 @@
 | `llm`         | js native | Model calls: `Call`, `Backend` and its wrappers (route, limit, retry). |
 | `llm/prompt`  | js native | Minijinja templates, strict undefined, set up for markdown.           |
 | `llm/cache`   | native    | Content-addressed reply cache, one json file per call.                |
+| `llm/gate`    | js native | Classifies model text against a policy (`content/gate/policy.md`).    |
 | `cast`        | native    | The cast pipeline: entry, portrait, faces. See `docs/cast.md`.        |
 | `cmd/cast`    | native    | Cast pipeline CLI over `content/cast`.                                |
+| `cmd/gate`    | native    | Checks messages, or `content/gate/samples`, against the gate policy.  |
 
 Stack: rabbita (frontend), warren (build and dev server), moonback on
 moonbitlang/async (server), moonbit-community/sqlite3 (vendored sqlite,
