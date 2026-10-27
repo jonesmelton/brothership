@@ -14,6 +14,9 @@ pub struct Store {
 pub async fn Store::open(path : String) -> Store {
   let conn = @sqlite3.Connection::open_async(path)
   exec(conn, "pragma journal_mode = wal")
+  // Litestream checkpoints the WAL on its own schedule and briefly holds a
+  // lock; wait for it instead of failing a proposal with SQLITE_BUSY.
+  exec(conn, "pragma busy_timeout = 5000")
   exec(conn, "pragma synchronous = normal")
   exec(conn, "pragma foreign_keys = on")
   migrate(conn)
