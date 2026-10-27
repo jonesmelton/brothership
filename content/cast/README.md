@@ -37,4 +37,10 @@ Edit them by hand freely. To redraft one, delete it and `run` again. If
 you change `entry.md`, `notes.md` or the portrait, `status` marks the files
 made from them as stale.
 
+A ship's directory is named for its pennant. `pennants.tsv` maps each pennant
+to the hero's Chinese name and sobriquet; look a ship up there before
+creating its directory. `moon run scripts/pennants.mbtx` rebuilds the file,
+keeps every pennant already in it, and warns about directories that are not
+in it.
+
 Asking a ship a question isn't built yet.

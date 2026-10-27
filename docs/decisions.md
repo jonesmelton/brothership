@@ -31,3 +31,21 @@ Why: floats aren't bit-identical across js and native (libm, FMA contraction), a
 ints keep `core/math` provable. 64 bits covers the hackathon's ranges.
 Revisit if: a quantity is meant to grow past ~9e18 raw (then mantissa/exponent),
 or Int64 emulation on js becomes a hot spot.
+
+## 2026-10-27 · a crossing is linear stocks per phase, not a stepped simulation
+Burn, coast and approach each move one `Int64` stock at a rate that changes
+only at events in the log. Each route's plan (target η, coast distance) is
+computed offline in floats and stored as integers; the renderer computes γ
+and pace.
+Why: stepping needs deterministic transcendental functions on js and native,
+and breaks the linear time model that offline progress relies on.
+Revisit if: the drive setting needs to change distance covered, not just time
+taken.
+
+## 2026-10-27 · model output enters the game only as events in the log
+Ship asks, proposals and work descriptions are written to the log; replay
+never calls a model. Every model-driven choice has a scripted policy, used by
+the harness and as the fallback when a call fails.
+Why: replay must be deterministic, and the harness can't afford model calls.
+Revisit if: a feature needs model output recomputed when the game runs
+differently.
