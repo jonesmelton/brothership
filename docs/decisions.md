@@ -66,3 +66,12 @@ served by Groq, not a Meta model.
 Why: it follows a written policy and returns a verdict with evidence, it's
 cheap, and Groq runs it in about a second.
 Revisit if: a Meta model follows the policy as well, or Groq withdraws the model.
+
+## 2026-10-27 · one Fly machine; Litestream is the backup and the restore path
+One machine and one volume, never autostopped. Litestream replicates the
+sqlite log to Tigris every 30 s, and a boot with no database restores from
+it, so recovery and normal boot share one path.
+Why: `Store` holds the snapshot in memory and sqlite has one writer, so a
+second machine would diverge.
+Revisit if: deploy downtime matters (then LiteFS) or the game needs more
+than one server.
