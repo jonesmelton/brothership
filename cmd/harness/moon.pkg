@@ -1,0 +1,13 @@
+import {
+  "local/brothership/core",
+  "local/brothership/sim",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+  "moonbit-community/rabbita/svg",
+  "moonbitlang/core/string",
+  "moonbitlang/core/math" @fmath,
+}
+
+supported_targets = "js"
+
+pkgtype(kind: "executable")

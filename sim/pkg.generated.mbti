@@ -1,0 +1,127 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "local/brothership/sim"
+
+import {
+  "local/brothership/core",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub const DEAD_LEVERAGE : Int64 = 300
+
+pub fn gamma(Int64) -> Double
+
+pub fn histogram(Array[Int64], lo~ : Int64, hi~ : Int64, bins~ : Int32) -> Array[Int32]
+
+pub fn percentile(Array[Int64], Int32) -> Int64
+
+pub let policies : Array[Policy]
+
+pub let posts : Array[@core.Post]
+
+pub fn scenarios() -> Array[Scenario]
+
+// Errors
+
+// Types and methods
+pub(all) struct Actor {
+  name : String
+  policy : Policy
+  cadence : Cadence
+  joins_at : Int64
+} derive(Eq, @debug.Debug)
+pub fn Actor::is_player(Self) -> Bool
+
+pub(all) enum Cadence {
+  Reactive
+  Every(every~ : Int64, jitter~ : Int64)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Decision {
+  t : Int64
+  actor : Int32
+  from : @core.Post?
+  to : @core.Post
+  before : Int64
+  after : Int64
+  leverage : Int64
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Outcome {
+  seed : Int64
+  arrived_at : Int64
+  min_hull : Int64
+  end_hull : Int64
+  drive_ticks : Int64
+  hull_ticks : Int64
+  craft_ticks : Int64
+  checkins : Int32
+  dead_checkins : Int32
+  longest_dead : Int64
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Policy {
+  Selfish
+  Driver
+  Mender
+  Cooperative
+  Careful
+  Random
+  Hastener
+  Saboteur
+} derive(Compare, Eq, Hash, ToJson, @debug.Debug, @json.FromJson)
+pub fn Policy::name(Self) -> String
+
+pub(all) struct Route {
+  distance_ly : Double
+  accel_g : Double
+  gamma_cap : Double
+  drive_needed : Int64
+  wear : Int64
+  repair : Int64
+} derive(Eq, @debug.Debug)
+pub fn Route::default() -> Self
+pub fn Route::plan(Self) -> @core.Plan
+
+pub(all) struct Run {
+  seed : Int64
+  plan : @core.Plan
+  samples : Array[Sample]
+  decisions : Array[Decision]
+  arrived_at : Int64
+  min_hull : Int64
+  end_hull : Int64
+  drive_ticks : Int64
+  hull_ticks : Int64
+  craft_ticks : Int64
+  checkins : Int32
+  dead_checkins : Int32
+  longest_dead : Int64
+} derive(Eq, @debug.Debug)
+pub fn Run::outcome(Self) -> Outcome
+
+pub(all) struct Sample {
+  t : Int64
+  phase : @core.Phase
+  eta : Int64
+  hull : Int64
+  setting : Int64
+  drive : Int64
+  mending : Int64
+  crafting : Int64
+  forecast : Int64
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Scenario {
+  name : String
+  route : Route
+  hull : Int64
+  actors : Array[Actor]
+} derive(Eq, @debug.Debug)
+pub fn Scenario::batch(Self, first_seed? : Int64, runs~ : Int32) -> Array[Outcome]
+pub fn Scenario::run(Self, Int64) -> Run
+
+// Type aliases
+
+// Traits

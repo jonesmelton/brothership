@@ -9,3 +9,72 @@ body {
   font-family: system-ui, sans-serif;
   line-height: 1.5;
 }
+
+/* Crossing simulator. Scoped so the game client is unaffected. */
+.sim {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+.sim .controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+  margin: 1rem 0;
+}
+.sim .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.sim .field span {
+  font-size: 0.875rem;
+}
+.sim input,
+.sim select,
+.sim button {
+  font: inherit;
+  padding: 0.35rem 0.5rem;
+}
+.sim button {
+  justify-self: start;
+}
+.sim figure {
+  margin: 1rem 0;
+}
+.sim figcaption {
+  font-size: 0.875rem;
+  max-width: 40rem;
+}
+.sim .table-scroll {
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+.sim table {
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.sim caption {
+  text-align: start;
+  font-weight: 600;
+  padding-block-end: 0.25rem;
+}
+.sim th,
+.sim td {
+  padding: 0.25em 0.75em;
+  border: 0;
+  vertical-align: baseline;
+  text-align: start;
+}
+.sim thead th {
+  border-block-end: 1px solid currentColor;
+}
+.sim .num {
+  text-align: end;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.sim details summary {
+  font-size: 0.875rem;
+  cursor: pointer;
+}
