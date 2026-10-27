@@ -7,15 +7,47 @@ import {
 }
 
 // Values
+pub const HULL_FULL : Int64 = 1_000_000_000
+
 pub fn replay(Iter[Event]) -> State raise Rejected
 
 // Errors
+pub(all) suberror CrossingRejected {
+  BadTicks(ticks~ : Int64)
+  NotAboard(crew~ : Int32)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) suberror Rejected {
   NonPositiveTicks(ticks~ : Int64)
   ClockOverflow(clock~ : Int64, ticks~ : Int64)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Types and methods
+pub(all) struct Crossing {
+  plan : Plan
+  t : Int64
+  phase : Phase
+  left : Int64
+  hull : Int64
+  posts : Map[Int32, Post]
+  arrived_at : Int64?
+} derive(Eq, @debug.Debug)
+pub fn Crossing::apply(Self, CrossingEvent) -> Self raise CrossingRejected
+pub fn Crossing::band(Self) -> Int64
+pub fn Crossing::cap(Self) -> Int64
+pub fn Crossing::count(Self, Post) -> Int64
+pub fn Crossing::eta(Self) -> Int64
+pub fn Crossing::forecast(Self) -> Int64?
+pub fn Crossing::new(Plan, hull~ : Int64) -> Self
+pub fn Crossing::next_boundary(Self) -> Int64
+pub fn Crossing::setting(Self) -> Int64
+
+pub(all) enum CrossingEvent {
+  Elapsed(ticks~ : Int64)
+  Posted(crew~ : Int32, post~ : Post)
+  Left(crew~ : Int32)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) enum Event {
   Elapsed(ticks~ : Int64)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
@@ -32,6 +64,31 @@ pub fn Optimistic::predicted(Self) -> State
 pub fn Optimistic::propose(Self, Event) -> (Self, Proposal) raise Rejected
 pub fn Optimistic::resync(Self, Snapshot) -> Self
 pub fn Optimistic::settle(Self, Receipt) -> Self
+
+pub(all) enum Phase {
+  Burn
+  Coast
+  Approach
+  Arrived
+} derive(Compare, Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Plan {
+  burn : Int64
+  coast : Int64
+  eta_rate : Int64
+  coast_rate : Int64
+  drive_needed : Int64
+  wear : Int64
+  repair : Int64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Plan::fastest(Self) -> Int64
+pub fn Plan::slowest(Self) -> Int64
+
+pub(all) enum Post {
+  Drive
+  Hull
+  Craft
+} derive(Compare, Eq, Hash, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Proposal {
   id : Int64

@@ -71,7 +71,9 @@ test "wire format round trips" {
 ///|
 test "replay" {
   debug_inspect(
-    @core.replay([@core.Elapsed(ticks=1), @core.Elapsed(ticks=2)].iter()),
+    @core.replay(
+      [@core.Event::Elapsed(ticks=1), @core.Event::Elapsed(ticks=2)].iter(),
+    ),
     content="{ clock: 3 }",
   )
 }
