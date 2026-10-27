@@ -6,21 +6,21 @@
 //   moon run cmd/cast -- status [pennant...]
 //
 // Replies are cached in .cache/llm, so rerunning only calls the model for
-// prompts that changed. The hyper key is read from HYPER_API_KEY, or else
-// ~/.config/brothership/hyper.key.
+// prompts that changed. The Meta Model API key is read from MODEL_API_KEY,
+// or else ~/.config/brothership/model-api.key. Get one at dev.meta.ai.
 
 ///|
 let root = "content/cast"
 
 ///|
-async fn hyper_key() -> String {
-  if @env.get_env_var("HYPER_API_KEY") is Some(key) {
+async fn meta_key() -> String {
+  if @env.get_env_var("MODEL_API_KEY") is Some(key) {
     return key
   }
   let home = @env.get_env_var("HOME").unwrap_or("")
-  let path = "\{home}/.config/brothership/hyper.key"
+  let path = "\{home}/.config/brothership/model-api.key"
   guard @fs.exists(path) else {
-    fail("set HYPER_API_KEY or write the key to \{path}")
+    fail("set MODEL_API_KEY or write the key to \{path}")
   }
   @fs.read_file(path).text().trim().to_owned()
 }
@@ -28,9 +28,9 @@ async fn hyper_key() -> String {
 ///|
 async fn backend(mode : @cache.Mode) -> @llm.Backend {
   let providers = {
-    "hyper": @llm.Backend::openai_compatible(
-      base_url="https://hyper.charm.land/v1",
-      api_key=if mode is Live { hyper_key() } else { "" },
+    "meta": @llm.Backend::openai_compatible(
+      base_url="https://api.meta.ai/v1",
+      api_key=if mode is Live { meta_key() } else { "" },
     ),
   }
   // Cache outside the limit, so cache hits don't wait for a slot; retry

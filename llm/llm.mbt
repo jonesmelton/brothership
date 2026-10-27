@@ -2,7 +2,7 @@
 /// One model call, fully specified. Everything that can change the output is
 /// a field here, so `key` can address a cached reply.
 pub(all) struct Call {
-  /// `provider:model`, e.g. `hyper:deepseek-v4.1-flash-1017`. `route` strips
+  /// `provider:model`, e.g. `meta:muse-wonder-1.0`. `route` strips
   /// the provider before the call reaches it.
   model : String
   /// System prompt blocks, in order. Kept separate so a provider with prompt
@@ -177,7 +177,7 @@ fn transient(e : Error) -> Bool {
 }
 
 ///|
-/// An OpenAI-compatible chat completions endpoint, e.g. hyper.
+/// An OpenAI-compatible chat completions endpoint, e.g. Meta Model API.
 /// System blocks are joined into one system message.
 pub fn Backend::openai_compatible(
   base_url~ : String,
@@ -212,7 +212,7 @@ pub fn Backend::openai_compatible(
       text: res.text,
       reasoning: reasoning_of(res.raw),
       finish: finish_of(res.raw),
-      usage: usage_of(res.raw),
+      usage: usage_of(res.model, res.raw),
       raw: res.raw,
     }
   })
@@ -227,7 +227,7 @@ fn finish_of(raw : Json) -> String? {
 }
 
 ///|
-/// `reasoning_content` is a DeepSeek extension the typed response drops.
+/// `reasoning_content` is a provider extension the typed response drops.
 fn reasoning_of(raw : Json) -> String? {
   match raw {
     {
@@ -239,20 +239,38 @@ fn reasoning_of(raw : Json) -> String? {
 }
 
 ///|
-/// Usage including hyper's `cost.usd` extension.
-fn usage_of(raw : Json) -> Usage {
+/// Meta Model API reports usage but no price, so `cost_usd` is computed
+/// from the model's list rate. Rates are dollars per million tokens;
+/// reasoning tokens are billed as output and are included in
+/// `completion_tokens`.
+fn rate_of(model : String) -> (Double, Double)? {
+  match model {
+    "muse-wonder-1.0" => Some((4.0, 20.0))
+    "muse-spark-1.3" | "muse-spark-1.2" | "muse-spark-1.1" => Some((1.25, 4.25))
+    "muse-spark-1.3-contributor" | "muse-spark-1.2-contributor" =>
+      Some((0.10, 0.20))
+    _ => None
+  }
+}
+
+///|
+fn usage_of(model : String, raw : Json) -> Usage {
   guard raw is { "usage": Object(u), .. } else { return Usage::zero() }
   let int = (j : Json?) => if j is Some(Number(n, ..)) { n.to_int() } else { 0 }
+  let input = int(u.get("prompt_tokens"))
+  let output = int(u.get("completion_tokens"))
   {
-    input: int(u.get("prompt_tokens")),
-    output: int(u.get("completion_tokens")),
+    input,
+    output,
     reasoning: match u.get("completion_tokens_details") {
       Some({ "reasoning_tokens": Number(n, ..), .. }) => n.to_int()
       _ => 0
     },
-    cost_usd: match u.get("cost") {
-      Some({ "usd": Number(n, ..), .. }) => n
-      _ => 0
+    cost_usd: match rate_of(model) {
+      Some((input_rate, output_rate)) =>
+        input.to_double() * input_rate / 1_000_000.0 +
+        output.to_double() * output_rate / 1_000_000.0
+      None => 0.0
     },
   }
 }

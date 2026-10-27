@@ -1,5 +1,5 @@
 {
-  "model": "hyper:deepseek-v4.1-flash-1017",
+  "model": "meta:muse-wonder-1.0",
   "samples": 2,
   "portrait": { "name": "portrait", "max_tokens": 16000 },
   "faces": [

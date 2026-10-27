@@ -4,8 +4,9 @@ Each ship in `ships/<pennant>/` starts as `entry.md`. The pipeline drafts a
 private portrait from it, and once you approve one, drafts the ship's faces
 (`captain`, `voice`, `voyage`) from that. Background: [docs/cast.md](../../docs/cast.md).
 
-Run from the repository root. The hyper key comes from `HYPER_API_KEY`, or
-`~/.config/brothership/hyper.key`.
+Run from the repository root. The Meta Model API key comes from
+`MODEL_API_KEY`, or `~/.config/brothership/model-api.key`. Get one at
+dev.meta.ai.
 
 ```sh
 # 1. optional: steer the portrait before it's drafted

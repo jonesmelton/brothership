@@ -99,6 +99,10 @@ of earlier files.
 
 ## model
 
-`hyper:deepseek-v4.1-flash-1017` for every stage, configurable per stage. The
-first run of two ships, 2 portrait drafts and 2 drafts of each face, cost
-$0.068: about $0.034 per ship, or $3.70 for all 108.
+`meta:muse-wonder-1.0` for every stage, configurable per stage. The earlier
+two-ship run (2 portrait drafts and 2 drafts of each face per ship) used
+49,256 input tokens and 44,832 output tokens, reasoning included. At Muse
+Wonder list rates ($4 input, $20 output per million tokens) that is $1.09
+for two ships, about $0.55 per ship, or $59 for all 108. Drafts made before
+the switch were deleted; regenerate them with `moon run cmd/cast -- run`
+once a `MODEL_API_KEY` is set.
