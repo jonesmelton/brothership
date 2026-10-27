@@ -225,7 +225,6 @@ fn policies(runs : Int32) -> Unit {
       actors[0] = { ..actors[0], policy, craft, }
       let s = { ..base, actors, }
       let m = summarize(s, runs)
-      // The player's own share, not the crew's.
       let mut own = 0L
       for i in 0..<runs {
         own += s.run(i.to_int64() + 1L).last.tallies.get(0).unwrap().work

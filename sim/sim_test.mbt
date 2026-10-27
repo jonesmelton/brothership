@@ -128,7 +128,6 @@ test "a voyage carries refits, recruits, records and hull from leg to leg" {
           let now = next.records.get(crew).unwrap()
           assert_true(now.works >= was.works && now.regard >= was.regard)
         }
-        // Recruits work ship posts only, so they make no works.
         for crew, t in r.last.tallies {
           if crew >= 1000 {
             assert_eq(t.craft, 0L)
@@ -173,7 +172,6 @@ test "ships differ, and so do players" {
   })
   let fastest = by_ship.fold(init=@math.MAX_TICKS, (m, x) => m.min(x))
   let slowest = by_ship.fold(init=0L, (m, x) => m.max(x))
-  // The same crew arrives at least a tenth sooner on the quickest ship.
   assert_true(slowest * 10L >= fastest * 11L)
   let with_policy = (policy : @sim.Policy) => {
     let actors = base.actors.copy()
@@ -183,7 +181,6 @@ test "ships differ, and so do players" {
   let own = (s : @sim.Scenario) => {
     s.batch(runs=5).fold(init=0L, (n, o) => n + o.work)
   }
-  // Craft or drive is a real trade: one is sooner, the other makes more.
   assert_true(median(with_policy(Driver)) < median(with_policy(Selfish)))
   assert_true(own(with_policy(Selfish)) > own(with_policy(Driver)))
 }

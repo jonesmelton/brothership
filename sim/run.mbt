@@ -260,7 +260,6 @@ pub fn Scenario::fly(self : Scenario, ship : @core.Ship, seed : Int64) -> Run {
       let options = posts.map(p => {
         prospect(try_option(c, crew, p, watch, order=handover(c)), crew)
       })
-      // The other craft is a choice too: the ship's refit or one's own work.
       let other : @core.Craft = if actor.craft == Artist {
         Engineer
       } else {

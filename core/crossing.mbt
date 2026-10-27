@@ -509,7 +509,6 @@ fn Crossing::settle(self : Crossing) -> Crossing {
   if c.left == 0L && c.phase != Arrived {
     c = c.next_phase()
     let phase = c.phase
-    // Orders for this phase fire; orders for a phase the plan skipped lapse.
     if c.hands.values().any(h => h.order is Some(o) && o.phase <= phase) {
       let hands = c.hands.copy()
       for crew, h in c.hands {
@@ -529,7 +528,6 @@ fn Crossing::settle(self : Crossing) -> Crossing {
   if c.demands.iter().any(opens) {
     let demands = c.demands.map(d => {
       guard opens(d) else { d }
-      // A demand whose phase went by unopened lapses without effect.
       { ..d, status: if d.phase == c.phase { Open } else { Missed }, }
     })
     c = { ..c, demands, }
