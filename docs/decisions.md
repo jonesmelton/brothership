@@ -58,3 +58,11 @@ Why: the epithet already identifies the source figure uniquely to a Chinese
 reader, so hiding behind it bought no secrecy, only a second convention to learn.
 Revisit if: the Chinese conventional names begin leaking source plot into
 generated text or player expectations in a way the epithet alone did not.
+
+## 2026-10-27 · the content gate is gpt-oss-safeguard-20b on Groq
+Model text shown to players passes `llm/gate` against `content/gate/policy.md`
+before it's shown. The classifier is OpenAI's open-weight safeguard model
+served by Groq, not a Meta model.
+Why: it follows a written policy and returns a verdict with evidence, it's
+cheap, and Groq runs it in about a second.
+Revisit if: a Meta model follows the policy as well, or Groq withdraws the model.
