@@ -1,0 +1,41 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "local/llmspike/pipeline"
+
+import {
+  "local/llmspike/llm",
+  "local/llmspike/prompt",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn check(String, String) -> Array[String]
+
+pub fn clean(String, String) -> String
+
+pub let sheets : Array[String]
+
+// Errors
+
+// Types and methods
+pub(all) struct File {
+  name : String
+  text : String
+  problems : Array[String]
+  usage : @llm.Usage
+} derive(Eq, ToJson, @debug.Debug)
+
+pub struct Pipeline {
+  // private fields
+}
+pub fn Pipeline::new(@llm.Backend, @prompt.Prompts, model~ : String, max_tokens? : Int32) -> Self
+pub async fn Pipeline::ship(Self, Ship) -> Array[File]
+
+pub(all) struct Ship {
+  pennant : String
+  entry : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits

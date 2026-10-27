@@ -1,0 +1,7 @@
+import {
+  "bobzhang/minijinja",
+}
+
+supported_targets = "js + native"
+
+warnings = "-79"

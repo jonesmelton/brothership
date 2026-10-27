@@ -1,0 +1,9 @@
+import {
+  "marianoguerra/llm",
+  "marianoguerra/llm/anthropic",
+  "marianoguerra/llm/catalog",
+}
+
+options(
+  "is-main": true,
+)

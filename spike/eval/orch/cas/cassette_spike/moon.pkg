@@ -1,0 +1,6 @@
+import {
+  "weopqrst/mooncassette",
+  "weopqrst/mooncassette/core",
+  "weopqrst/mooncassette/recorder",
+  "moonbitlang/async",
+}

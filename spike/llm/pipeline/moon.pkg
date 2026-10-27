@@ -1,0 +1,13 @@
+import {
+  "local/llmspike/llm",
+  "local/llmspike/prompt",
+  "moonbitlang/async",
+}
+
+import {
+  "moonbitlang/core/cmp",
+} for "test"
+
+supported_targets = "js + native"
+
+warnings = "-79"

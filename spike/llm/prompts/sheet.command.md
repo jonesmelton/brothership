@@ -1,0 +1,1 @@
+Write `command.md`: how you hold command, in the first person, at most 400 words. How you carry responsibility for crew and cargo, how you use and withhold power, how you ask, judge, reward and correct, how you decide under pressure, and what you are like on a crossing and in port.

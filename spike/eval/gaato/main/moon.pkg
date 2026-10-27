@@ -1,0 +1,14 @@
+import {
+  "gaato/anthropic",
+  "gaato/anthropic/gen",
+  "gaato/openai",
+  "gaato/http-async" @http_async,
+  "gaato/sdk-runtime" @runtime,
+  "moonbitlang/async",
+  "moonbitlang/core/env",
+}
+
+options(
+  "is-main": true,
+)
+supported_targets = "js + native"

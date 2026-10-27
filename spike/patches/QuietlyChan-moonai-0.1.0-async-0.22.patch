@@ -1,0 +1,89 @@
+diff -ru -x _ src_ro/QuietlyChan_moonai_0.1.0/src/provider_utils/http_transport.mbt .mooncakes/QuietlyChan/moonai/src/provider_utils/http_transport.mbt
+--- src_ro/QuietlyChan_moonai_0.1.0/src/provider_utils/http_transport.mbt	1980-01-01 00:00:00
++++ .mooncakes/QuietlyChan/moonai/src/provider_utils/http_transport.mbt	2026-10-26 20:43:17
+@@ -146,7 +146,7 @@
+   String,
+   String,
+ ] {
+-  copy_headers(self.response.headers)
++  plain_headers(self.response.headers)
+ }
+ 
+ ///|
+@@ -180,14 +180,14 @@
+ ///|
+ impl HttpTransport for NativeHttpTransport with fn fetch(_self, request) {
+   let (response, body) = match request.meth {
+-    HttpGet => @http.get(request.url, headers=request.headers)
+-    HttpPost => @http.post(request.url, request.body, headers=request.headers)
++    HttpGet => @http.get(request.url, headers=ci_headers(request.headers))
++    HttpPost => @http.post(request.url, request.body, headers=ci_headers(request.headers))
+     HttpDelete => native_delete(request.url, request.headers)
+   }
+   HttpResponse::new(
+     status_code=response.code,
+     reason=response.reason,
+-    headers=response.headers,
++    headers=plain_headers(response.headers),
+     body=body.binary(),
+   )
+ }
+@@ -218,7 +218,7 @@
+   }
+   let client = @http.Client(origin)
+   defer client.close()
+-  client.request(@http.Delete, target, extra_headers=headers)
++  client.request(@http.Delete, target, extra_headers=ci_headers(headers))
+   let response = client.end_request()
+   let body = client.read_all()
+   (response, body)
+@@ -229,7 +229,7 @@
+   guard request.meth == HttpPost else {
+     fail("native streaming transport currently supports POST requests only")
+   }
+-  let client = @http.post_stream(request.url, headers=request.headers)
++  let client = @http.post_stream(request.url, headers=ci_headers(request.headers))
+   try {
+     client.write(request.body)
+     let response = client.end_request()
+@@ -246,4 +246,28 @@
+ /// Return the default native transport as an injectable trait object.
+ pub fn native_http_transport() -> &HttpTransport {
+   NativeHttpTransport::new()
++}
++
++///|
++/// PATCH(async 0.22): @http keys headers case-insensitively.
++fn ci_headers(
++  headers : Map[String, String],
++) -> Map[@http.CaseInsensitiveString, String] {
++  let out : Map[@http.CaseInsensitiveString, String] = Map([])
++  for name, value in headers {
++    out[@http.CaseInsensitiveString(name)] = value
++  }
++  out
++}
++
++///|
++/// PATCH(async 0.22): back to plain string keys.
++fn plain_headers(
++  headers : Map[@http.CaseInsensitiveString, String],
++) -> Map[String, String] {
++  let out : Map[String, String] = Map([])
++  for name, value in headers {
++    out[name.to_string()] = value
++  }
++  out
+ }
+diff -ru -x _ src_ro/QuietlyChan_moonai_0.1.0/src/provider_utils/websocket.mbt .mooncakes/QuietlyChan/moonai/src/provider_utils/websocket.mbt
+--- src_ro/QuietlyChan_moonai_0.1.0/src/provider_utils/websocket.mbt	1980-01-01 00:00:00
++++ .mooncakes/QuietlyChan/moonai/src/provider_utils/websocket.mbt	2026-10-26 20:43:17
+@@ -151,7 +151,7 @@
+   if protocols.length() > 0 {
+     handshake_headers["Sec-WebSocket-Protocol"] = protocols.join(", ")
+   }
+-  let connection = @websocket.connect(url, headers=handshake_headers)
++  let connection = @websocket.connect(url, headers=ci_headers(handshake_headers))
+   NativeWebSocketConnection::{ connection, } as &WebSocketConnection
+ }
+ 

@@ -1,0 +1,25 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "local/llmspike/prompt"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub(all) suberror PromptError {
+  PromptError(String)
+} derive(@debug.Debug)
+pub impl Show for PromptError
+
+// Types and methods
+pub struct Prompts {
+  // private fields
+}
+pub fn Prompts::new(Map[String, String]) -> Self
+pub fn Prompts::render(Self, String, Json) -> String raise PromptError
+
+// Type aliases
+
+// Traits

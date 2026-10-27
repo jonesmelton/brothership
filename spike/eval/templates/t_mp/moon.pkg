@@ -1,0 +1,3 @@
+import {
+  "uiwcvb/moonprompt/lib" @mp,
+}
