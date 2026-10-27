@@ -1,0 +1,15 @@
+import {
+  "local/brothership/core/math",
+  "moonbitlang/core/json",
+}
+
+import {
+  "moonbitlang/quickcheck" @qc,
+} for "test"
+
+supported_targets = "js+native"
+
+// Warning 79 fires for every `pub` derived trait even when promotion to a
+// method is the intent; per-declaration suppression does not reach it.
+
+warnings = "-79"

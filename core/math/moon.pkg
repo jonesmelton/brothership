@@ -1,0 +1,6 @@
+// Verified with `moon prove`. The prover lowers every file in the package to
+// WhyML, so keep this package to proof-friendly code: no Array, no top-level
+// `let`, no `raise` inside contracted functions.
+proof_enabled = true
+
+supported_targets = "js+native"

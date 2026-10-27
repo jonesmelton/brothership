@@ -1,0 +1,12 @@
+import {
+  "local/brothership/core",
+  "moonbit-community/sqlite3",
+  "moonbitlang/async",
+  "moonbitlang/core/json",
+}
+
+import {
+  "moonbitlang/async/fs",
+} for "test"
+
+supported_targets = "native"

@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "local/brothership/store"
+
+import {
+  "local/brothership/core",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct Store {
+  // private fields
+}
+pub fn Store::close(Self) -> Unit raise
+pub async fn Store::open(String) -> Self
+pub async fn Store::propose(Self, @core.Proposal) -> @core.Receipt
+pub fn Store::snapshot(Self) -> @core.Snapshot
+
+// Type aliases
+
+// Traits

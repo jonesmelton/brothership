@@ -1,0 +1,13 @@
+import {
+  "local/brothership/core",
+  "local/brothership/store",
+  "moonbitlang/core/json",
+  "moonbitlang/moonback",
+}
+
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/http",
+} for "test"
+
+supported_targets = "native"

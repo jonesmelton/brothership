@@ -27,3 +27,19 @@ then stop and ask. Don't argue the entry or cite it to refuse work.
 Don't write entries yourself. At the end of a task, if you made a call that
 meets the bar (hard to reverse, or easy to undo by accident), propose a
 draft entry in your reply. I'll add it or not.
+
+## moonbit
+
+Moonbit's ecosystem is untested, much of it appears to be automated ports. Use it where the foundation is good, vendor and patch without remorse. Fork, vendor, and patch freely and without hesitation. Clean up failed experiments or negative resolutions: keep track of working patches they'll become upstream PRs at the end.
+
+## working
+
+`make` is the entrypoint: `dev`, `build`, `test`, `check`. Run `make check`
+before handing off. Don't add make targets unless asked.
+
+Read @docs/architecture.md before changing package boundaries, the sync
+protocol, the store schema, or anything under `core`.
+
+Use `git` freely when assigned work within this project, commiting at reasonable task boundaries.
+
+When beginning a task that will put the repo in an unbuildable or unservable state for more than a handful of minutes, consider using a worktree to isolate it.

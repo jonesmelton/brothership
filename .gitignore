@@ -1,1 +1,10 @@
 .honkmoon/
+_build/
+.mooncakes/
+dist/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+.repos/
+research/*
+!research/water-margin/

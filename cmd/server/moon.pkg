@@ -1,0 +1,15 @@
+import {
+  "local/brothership/api",
+  "local/brothership/store",
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/moonback",
+  "moonbitlang/moonback/middlewares/unstable_static" @static,
+  "moonbitlang/x/path",
+}
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")

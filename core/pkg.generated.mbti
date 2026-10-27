@@ -1,0 +1,62 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "local/brothership/core"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn replay(Iter[Event]) -> State raise Rejected
+
+// Errors
+pub(all) suberror Rejected {
+  NonPositiveTicks(ticks~ : Int64)
+  ClockOverflow(clock~ : Int64, ticks~ : Int64)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Types and methods
+pub(all) enum Event {
+  Elapsed(ticks~ : Int64)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct Optimistic {
+  confirmed : Snapshot
+  pending : Array[Proposal]
+  next_id : Int64
+} derive(Eq, @debug.Debug)
+pub fn Optimistic::confirmed(Self) -> Snapshot
+pub fn Optimistic::in_flight(Self) -> Proposal?
+pub fn Optimistic::new(Snapshot) -> Self
+pub fn Optimistic::predicted(Self) -> State
+pub fn Optimistic::propose(Self, Event) -> (Self, Proposal) raise Rejected
+pub fn Optimistic::resync(Self, Snapshot) -> Self
+pub fn Optimistic::settle(Self, Receipt) -> Self
+
+pub(all) struct Proposal {
+  id : Int64
+  event : Event
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum Receipt {
+  Accepted(id~ : Int64, snapshot~ : Snapshot)
+  Refused(id~ : Int64, reason~ : Rejected, snapshot~ : Snapshot)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Receipt::id(Self) -> Int64
+pub fn Receipt::snapshot(Self) -> Snapshot
+
+pub(all) struct Snapshot {
+  seq : Int64
+  state : State
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Snapshot::initial() -> Self
+
+pub(all) struct State {
+  clock : Int64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn State::apply(Self, Event) -> Self raise Rejected
+pub fn State::initial() -> Self
+
+// Type aliases
+
+// Traits

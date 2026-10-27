@@ -1,0 +1,22 @@
+///|
+predicate clock_ok(clock : Int64) {
+  clock >= 0
+}
+
+///|
+predicate advance_pre(clock : Int64, ticks : Int64) {
+  clock_ok(clock) && ticks > 0 && clock <= 9223372036854775807L - ticks
+}
+
+///|
+predicate advance_post(clock : Int64, ticks : Int64, result : Int64) {
+  clock_ok(result) && result == clock + ticks && result > clock
+}
+
+///|
+predicate try_advance_post(clock : Int64, ticks : Int64, result : Option[Int64]) {
+  match result {
+    Some(next) => advance_pre(clock, ticks) && advance_post(clock, ticks, next)
+    None => !advance_pre(clock, ticks)
+  }
+}

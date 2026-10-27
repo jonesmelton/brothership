@@ -1,0 +1,25 @@
+// Full verification gate: type check every target, run tests on both targets
+// the shared core ships to, and discharge proofs.
+//
+//   moon run scripts/check.mbtx
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/shell",
+}
+
+async fn main {
+  let steps : Array[Array[String]] = [
+    ["fmt", "--check"],
+    ["check", "--target", "all", "--deny-warn"],
+    ["test", "--target", "js"],
+    ["test", "--target", "native"],
+    ["prove"],
+  ]
+  for args in steps {
+    println("==> moon \{args.join(" ")}")
+    let code = @shell.Cmd("moon", args).status()
+    if code != 0 {
+      fail("moon \{args.join(" ")} exited with \{code}")
+    }
+  }
+}
