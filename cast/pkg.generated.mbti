@@ -47,6 +47,7 @@ pub(all) struct Draft {
   model : String
   max_tokens : Int32
   temperature : Double?
+  reasoning_effort : String?
   inputs : Map[String, String]
   text_sha : String
   problems : Array[String]
@@ -66,6 +67,7 @@ pub(all) struct Stage {
   max_tokens : Int32
   model : String?
   temperature : Double?
+  reasoning_effort : String?
   max_words : Int32?
   max_lines : Int32?
   headings : Int32?

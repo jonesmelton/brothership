@@ -11,6 +11,8 @@ pub(all) struct Stage {
   /// `provider:model`; the config's `model` when absent.
   model : String?
   temperature : Double?
+  /// Wire value passed to the provider (`low`, `high`, `xhigh`, ...).
+  reasoning_effort : String?
   max_words : Int32?
   max_lines : Int32?
   /// Exact number of level-two headings.
@@ -39,6 +41,7 @@ pub(all) struct Draft {
   model : String
   max_tokens : Int32
   temperature : Double?
+  reasoning_effort : String?
   /// sha256 of each input file the draft was made from.
   inputs : Map[String, String]
   text_sha : String
@@ -202,6 +205,7 @@ async fn Cast::draft(
       user=self.prompts.render("\{kind}.user.md", Json::object(ctx)),
       max_tokens=stage.max_tokens,
       temperature?=stage.temperature,
+      reasoning_effort?=stage.reasoning_effort,
       sample~,
     )
     let reply = self.backend.call(call)
@@ -213,6 +217,7 @@ async fn Cast::draft(
       model: call.model,
       max_tokens: call.max_tokens,
       temperature: call.temperature,
+      reasoning_effort: call.reasoning_effort,
       inputs: inputs.map((_, text) => @llm.sha256_hex(text)),
       text_sha: @llm.sha256_hex(text),
       problems: check(stage, self.config.banned, text),

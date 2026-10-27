@@ -92,6 +92,20 @@ test "stages parse with optional fields absent" {
   assert_eq(c.faces[0].max_words, Some(500))
   assert_eq(c.faces[1].max_words, None)
   assert_eq(c.faces[1].model, Some("fake:other"))
+  assert_eq(c.portrait.reasoning_effort, None)
+  assert_eq(c.faces[0].reasoning_effort, None)
+}
+
+///|
+test "a stage's reasoning_effort reaches the call and the draft record" {
+  let config_json =
+    #|{"model":"fake:m","samples":1,"portrait":{"name":"portrait","max_tokens":100,"reasoning_effort":"xhigh"},"faces":[],"banned":[]}
+  let c : @cast.Config = @json.from_json(@json.parse(config_json))
+  assert_eq(c.portrait.reasoning_effort, Some("xhigh"))
+  let draft_json =
+    #|{"stage":"portrait","sample":1,"key":"k","model":"fake:m","max_tokens":100,"reasoning_effort":"xhigh","inputs":{},"text_sha":"s","problems":[],"usage":{"input":0,"output":0,"reasoning":0,"cost_usd":0.0},"finish":"stop","raw":null}
+  let draft : @cast.Draft = @json.from_json(@json.parse(draft_json))
+  assert_eq(draft.reasoning_effort, Some("xhigh"))
 }
 
 ///|
@@ -252,6 +266,7 @@ test "checks come from the stage" {
     max_tokens: 1,
     model: None,
     temperature: None,
+    reasoning_effort: None,
     max_words: Some(3),
     max_lines: Some(1),
     headings: Some(11),

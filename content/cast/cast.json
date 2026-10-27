@@ -1,7 +1,7 @@
 {
   "model": "meta:muse-wonder-1.0",
   "samples": 2,
-  "portrait": { "name": "portrait", "max_tokens": 16000 },
+  "portrait": { "name": "portrait", "max_tokens": 16000, "reasoning_effort": "xhigh" },
   "faces": [
     { "name": "captain", "max_tokens": 12000, "max_words": 450 },
     { "name": "voice", "max_tokens": 12000, "headings": 11 },
