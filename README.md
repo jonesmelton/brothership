@@ -24,10 +24,8 @@ to change the address.
 ## Crossing simulator
 
 ```sh
-ulimit -n 4096
-warren dev --direct --browser-entry cmd/harness --port 4311  # http://127.0.0.1:4311
+make sim    # http://127.0.0.1:4311, live reload
 ```
 
 Runs one crossing many times under scripted crews and shows the results
-against the design's targets. See [docs/sim.md](docs/sim.md). Without the
-`ulimit`, warren's file watcher fails with `Too many open files`.
+against the design's targets. See [docs/sim.md](docs/sim.md).
