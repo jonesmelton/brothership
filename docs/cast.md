@@ -73,8 +73,9 @@ In order of leverage. Nothing a player writes reaches these models (see
    approved, `status` marks the file `stale` and names the input that changed.
    Delete the canon file to have `run` draft it again.
 
-Not built yet: a judge stage to rank drafts and screen against
-[content.md](content.md) (the cheap checks only catch fixed phrases), promoting
+Not built yet: a judge stage to rank drafts, screening drafts against
+[content.md](content.md) with `llm/gate` (the cheap checks only catch fixed
+phrases), promoting
 interview answers into the portrait, a dry run that counts cache misses
 before spending, and world events answered by every ship's faces at runtime.
 

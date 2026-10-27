@@ -20,7 +20,11 @@ by `MODEL_API_KEY`. Runtime decisions and live ship dialogue are not built
 yet; when they land they will use a Muse Spark model on the same API, or
 Meta open weights (Muse Spark Open, Llama) served through an
 OpenAI-compatible endpoint. Non-Meta models are for tests and spikes only
-(the survey below is one), not for anything that ships.
+(the survey below is one), not for anything that ships, with one exception:
+the content gate (`llm/gate`) runs OpenAI's open-weight
+`gpt-oss-safeguard-20b` on Groq (`https://api.groq.com/openai/v1`), keyed by
+`GROQ_API_KEY` or `~/.config/brothership/groq.key`. See
+[decisions.md](decisions.md) and [content/gate](../content/gate/README.md).
 
 We wrote the rest: `llm` (calls, backends, routing, limits, retries), `llm/cache`
 (content-addressed replies), `llm/prompt` (minijinja set up for markdown) and

@@ -19,6 +19,9 @@
   its generation record. Regenerated freely.
 - **canon**: the approved file for a stage, beside the cast entry. Written by
   approving a draft, or by hand; never overwritten by a run.
+- **gate**: the check that model text passes before a player sees it. A
+  classifier model reads the text against `content/gate/policy.md` and
+  returns a verdict, clean or violation, with the quote that decided it.
 - **post**: a crew member's current assignment: ship work (drive, hull) or
   their craft. Held while away. See [gameplay](gameplay.md).
 - **craft**: what a crew member's own hours make: works, ship upgrades or
