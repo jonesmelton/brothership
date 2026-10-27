@@ -6,9 +6,6 @@ fn plan20() -> @core.Plan {
     coast: 18_838_000_000,
     eta_rate: 1_308_460,
     coast_rate: 760_500,
-    drive_needed: 4,
-    wear: 30_000,
-    repair: 28_000,
   }
 }
 
@@ -19,8 +16,23 @@ fn plan_short() -> @core.Plan {
 }
 
 ///|
+let values : @core.Values = { drive: 2, hull: 2, craft: 1, }
+
+///|
+fn ship(hull~ : Int64 = @core.HULL_FULL, seed~ : Int64 = 1L) -> @core.Ship {
+  {
+    ..@core.Ship::new(
+      values,
+      @core.Fit::new(needed=4, wear=30_000, repair=28_000),
+      seed~,
+    ),
+    hull,
+  }
+}
+
+///|
 fn crew(posts : Array[@core.Post]) -> @core.Crossing {
-  let mut c = @core.Crossing::new(plan20(), hull=@core.HULL_FULL)
+  let mut c = @core.Crossing::new(plan20(), ship())
   for i, post in posts {
     c = c.apply(Posted(crew=i, post~)) catch { _ => panic() }
   }
@@ -34,30 +46,53 @@ fn fold64(x : Int64, m : Int64) -> Int64 {
 }
 
 ///|
+fn fold(x : Int32, m : Int32) -> Int32 {
+  (x % m + m) % m
+}
+
+///|
 fn post_of(n : Int32) -> @core.Post {
-  match (n % 3 + 3) % 3 {
-    0 => Drive
-    1 => Hull
-    _ => Craft
+  let posts : Array[@core.Post] = [Drive, Hull, Craft]
+  posts[fold(n, 3)]
+}
+
+///|
+/// Any event but `Elapsed`, chosen by `kind`, for crew slot `slot`.
+fn event_of(kind : Int32, slot : Int32, arg : Int64) -> @core.CrossingEvent {
+  let crew = fold(slot, 12)
+  match fold(kind, 10) {
+    0 | 1 | 2 | 3 => Posted(crew~, post=post_of(arg.to_int()))
+    4 => Left(crew~)
+    5 => Crafted(crew~, craft=if arg % 2L == 0L { Engineer } else { Artist })
+    6 | 7 => Watched(crew~, ticks=fold64(arg, 12L) * @core.HOUR + @core.HOUR)
+    8 =>
+      Refitting(
+        refit=match fold64(arg, 4L) {
+          0L => None
+          i => Some(@core.refits[i.to_int() - 1])
+        },
+      )
+    _ =>
+      Asked(
+        post=if arg % 4L == 0L { None } else { Some(post_of(arg.to_int())) },
+      )
   }
 }
 
 ///|
-/// A crossing driven by an arbitrary schedule of post changes. Each step is
-/// (crew slot, post choice, ticks to wait first).
+/// A crossing driven by an arbitrary schedule. Each step is (kind, crew
+/// slot, argument): wait a little, then apply the event if it applies.
 fn drive_schedule(
   plan : @core.Plan,
-  hull : Int64,
+  ship : @core.Ship,
   steps : Array[(Int32, Int32, Int64)],
 ) -> @core.Crossing {
-  let mut c = @core.Crossing::new(plan, hull~)
+  let mut c = @core.Crossing::new(plan, ship)
   for step in steps {
-    let (slot, choice, wait) = step
-    let wait = fold64(wait, 7200L) + 1L
+    let (kind, slot, arg) = step
+    let wait = fold64(arg, 5400L) + 1L
     c = c.apply(Elapsed(ticks=wait)) catch { _ => c }
-    c = c.apply(Posted(crew=(slot % 12 + 12) % 12, post=post_of(choice))) catch {
-      _ => c
-    }
+    c = c.apply(event_of(kind, slot, arg)) catch { _ => c }
   }
   c
 }
@@ -68,8 +103,13 @@ fn arrival(c : @core.Crossing) -> Int64 {
 }
 
 ///|
+fn hull_of(h : Int32) -> Int64 {
+  fold64(h.to_int64() * 1000L, @core.HULL_FULL + 1L)
+}
+
+///|
 test "nobody aboard the drive still arrives, at the slowest forecast" {
-  let c = @core.Crossing::new(plan20(), hull=@core.HULL_FULL)
+  let c = @core.Crossing::new(plan20(), ship())
   inspect(arrival(c) == plan20().slowest(), content="true")
   let all_drive = crew([Drive, Drive, Drive, Drive])
   inspect(arrival(all_drive) >= plan20().fastest(), content="true")
@@ -101,14 +141,16 @@ test "phases run burn, coast, approach, arrived" {
 
 ///|
 test "no coast goes straight from burn to approach" {
-  let mut c = @core.Crossing::new(plan_short(), hull=@core.HULL_FULL)
-  c = c.apply(Elapsed(ticks=c.next_boundary())) catch { _ => panic() }
+  let mut c = @core.Crossing::new(plan_short(), ship())
+  while c.phase == Burn {
+    c = c.apply(Elapsed(ticks=c.next_boundary())) catch { _ => panic() }
+  }
   debug_inspect(c.phase, content="Approach")
 }
 
 ///|
 test "rejections" {
-  let c = @core.Crossing::new(plan20(), hull=@core.HULL_FULL)
+  let c = crew([Drive])
   let reject = (event : @core.CrossingEvent) => {
     try c.apply(event) catch {
       err => err
@@ -122,6 +164,118 @@ test "rejections" {
     content="BadTicks(ticks=1000000001)",
   )
   debug_inspect(reject(Left(crew=3)), content="NotAboard(crew=3)")
+  debug_inspect(
+    reject(Watched(crew=0, ticks=3L * @core.HOUR)),
+    content="BadWatch(ticks=10800, longest=7200)",
+  )
+  let watching = c.apply(Watched(crew=0, ticks=@core.HOUR)) catch {
+    _ => panic()
+  }
+  debug_inspect(
+    try watching.apply(Watched(crew=0, ticks=@core.HOUR)) catch {
+      err => err
+    } noraise {
+      _ => fail("expected a rejection")
+    },
+    content="OnWatch(crew=0)",
+  )
+  let maxed = { ..c, fit: { ..c.fit, needed: 2, injectors: 2, }, }
+  debug_inspect(
+    try maxed.apply(Refitting(refit=Some(Injectors))) catch {
+      err => err
+    } noraise {
+      _ => fail("expected a rejection")
+    },
+    content="Unbuildable(refit=Injectors)",
+  )
+}
+
+///|
+test "demands are fixed by seed and crossing, whatever the crew do" {
+  let a = @core.demands_for(plan20(), 7, 0)
+  let b = @core.demands_for(plan20(), 7, 0)
+  assert_eq(a, b)
+  let mut kinds = 0
+  for seed in 0L..<64L {
+    let ds = @core.demands_for(plan20(), seed, 3)
+    assert_true(ds.length() >= 1 && ds.length() <= 2)
+    for d in ds {
+      assert_true(d.need > 0L && d.opens_at > 0L)
+      if d.hazard == Salvage {
+        assert_true(d.phase == Coast)
+        kinds = kinds | 1
+      } else {
+        assert_true(d.phase is (Burn | Approach))
+        kinds = kinds | 2
+      }
+    }
+    for d in @core.demands_for(plan_short(), seed, 3) {
+      assert_true(d.hazard != Salvage)
+    }
+  }
+  inspect(kinds, content="3")
+}
+
+///|
+test "a watch stood to its end pays; one broken costs" {
+  let c = crew([Hull]).apply(Watched(crew=0, ticks=@core.HOUR)) catch {
+    _ => panic()
+  }
+  let stood = c.apply(Elapsed(ticks=@core.HOUR)) catch { _ => panic() }
+  let t = stood.tallies.get(0).unwrap()
+  debug_inspect(
+    (t.watches_stood, stood.hands.get(0).unwrap().watch),
+    content="(1, None)",
+  )
+  let broken = (c.apply(Elapsed(ticks=@core.HOUR / 2L)) catch { _ => panic() }).apply(
+    Posted(crew=0, post=Drive),
+  ) catch {
+    _ => panic()
+  }
+  inspect(broken.tallies.get(0).unwrap().watches_broken, content="1")
+}
+
+///|
+test "a refit lands mid-crossing and stays for the next" {
+  let mut c = crew([Craft, Craft, Craft])
+  for i in 0..<3 {
+    c = c.apply(Crafted(crew=i, craft=Engineer)) catch { _ => panic() }
+  }
+  c = c.apply(Refitting(refit=Some(Injectors))) catch { _ => panic() }
+  let landed = c.project().unwrap()
+  inspect(landed.fit.injectors >= 1L, content="true")
+  inspect(landed.fit.needed < c.fit.needed, content="true")
+  let next = landed.dock().unwrap()
+  inspect(next.fit == landed.fit, content="true")
+}
+
+///|
+test "works delivered at port bring recruits" {
+  let c = crew([Craft, Craft, Craft, Craft])
+  let landed = c.project().unwrap()
+  let ship = landed.dock().unwrap()
+  let works = ship.records.values().fold(init=0L, (n, r) => n + r.works)
+  inspect(works > 0L, content="true")
+  inspect(
+    ship.recruits == (works / @core.WORKS_PER_RECRUIT).min(@core.MAX_RECRUITS),
+    content="true",
+  )
+  inspect(ship.crossings, content="1")
+  inspect(c.dock() is None, content="true")
+}
+
+///|
+test "ranks and watch lengths" {
+  debug_inspect(
+    [0L, 5L, 6L, 19L, 20L, 48L, 1000L].map(h => {
+      @core.rank_of(h * @core.REGARD_HOUR)
+    }),
+    content="[0, 0, 1, 1, 2, 3, 3]",
+  )
+  debug_inspect(
+    [0L, 1L, 2L, 3L].map(r => @core.max_watch(r) / @core.HOUR),
+    content="[2, 4, 8, 12]",
+  )
 }
 
 ///|
@@ -130,7 +284,7 @@ test "law: one long gap equals two short ones" {
     let (steps, a, b) = input
     let a = fold64(a, 100_000L) + 1L
     let b = fold64(b, 100_000L) + 1L
-    let c = drive_schedule(plan20(), @core.HULL_FULL / 3, steps)
+    let c = drive_schedule(plan20(), ship(hull=@core.HULL_FULL / 3L), steps)
     let whole = c.apply(Elapsed(ticks=a + b)) catch { _ => panic() }
     let split = (c.apply(Elapsed(ticks=a)) catch { _ => panic() }).apply(
       Elapsed(ticks=b),
@@ -142,13 +296,12 @@ test "law: one long gap equals two short ones" {
 }
 
 ///|
-test "law: no schedule of posts leaves the envelope" {
+test "law: no schedule of any events leaves the envelope" {
   let mut checked = 0
   @qc.quick_check_fn((input : (Array[(Int32, Int32, Int64)], Bool, Int32)) => {
     let (steps, short, hull) = input
     let plan = if short { plan_short() } else { plan20() }
-    let hull = fold64(hull.to_int64() * 1000L, @core.HULL_FULL + 1L)
-    let c = drive_schedule(plan, hull, steps)
+    let c = drive_schedule(plan, ship(hull=hull_of(hull)), steps)
     let at = match c.arrived_at {
       Some(at) => at
       None => arrival(c)
@@ -160,13 +313,101 @@ test "law: no schedule of posts leaves the envelope" {
 }
 
 ///|
-test "law: hull stays within bounds" {
+test "law: the forecast is exact" {
+  let mut checked = 0
   @qc.quick_check_fn((input : (Array[(Int32, Int32, Int64)], Int32)) => {
     let (steps, hull) = input
-    let hull = fold64(hull.to_int64() * 1000L, @core.HULL_FULL + 1L)
-    let c = drive_schedule(plan20(), hull, steps)
-    0L <= c.hull && c.hull <= @core.HULL_FULL
+    let c = drive_schedule(plan20(), ship(hull=hull_of(hull)), steps)
+    guard c.arrived_at is None else { true }
+    let at = arrival(c)
+    let early = c.apply(Elapsed(ticks=at - c.t - 1L)) catch { _ => c }
+    let on_time = c.apply(Elapsed(ticks=at - c.t)) catch { _ => panic() }
+    checked += 1
+    (at - c.t == 1L || early.arrived_at is None) &&
+    on_time.arrived_at == Some(at) &&
+    c.project() is Some(p) &&
+    p == on_time
   })
+  assert_true(checked > 0)
+}
+
+///|
+test "law: stocks stay in bounds and tallies never shrink" {
+  @qc.quick_check_fn((input : (Array[(Int32, Int32, Int64)], Int32)) => {
+    let (steps, hull) = input
+    let mut c = @core.Crossing::new(plan20(), ship(hull=hull_of(hull)))
+    let mut ok = true
+    for step in steps {
+      let (kind, slot, arg) = step
+      let before = c
+      c = c.apply(Elapsed(ticks=fold64(arg, 5400L) + 1L)) catch { _ => c }
+      // Only breaking a watch takes regard away, and only from that hand.
+      for crew, t in before.tallies {
+        let n = c.tallies.get(crew).unwrap()
+        ok = ok &&
+          n.drive >= t.drive &&
+          n.hull >= t.hull &&
+          n.craft >= t.craft &&
+          n.work >= t.work &&
+          n.regard >= t.regard
+      }
+      c = c.apply(event_of(kind, slot, arg)) catch { _ => c }
+      ok = ok &&
+        0L <= c.hull &&
+        c.hull <= @core.HULL_FULL &&
+        c.fit.progress >= 0L &&
+        c.tallies.values().all(t => t.regard >= 0L) &&
+        (match c.fit.refit {
+          Some(r) => c.fit.progress < c.fit.cost(r)
+          None => true
+        }) &&
+        c.demands
+        .iter()
+        .zip(before.demands.iter())
+        .all(p => p.0.status >= p.1.status)
+    }
+    ok
+  })
+}
+
+///|
+test "law: refits only ever help" {
+  @qc.quick_check_fn((input : (Array[(Int32, Int32, Int64)], Int32)) => {
+    let (steps, hull) = input
+    let c = drive_schedule(plan20(), ship(hull=hull_of(hull)), steps)
+    let s = ship()
+    c.fit.needed <= s.fit.needed &&
+    c.fit.needed >= 2L &&
+    c.fit.wear <= s.fit.wear &&
+    c.fit.repair >= s.fit.repair &&
+    c.fit.baffles <= @core.MAX_LEVEL &&
+    c.fit.plating <= @core.MAX_LEVEL &&
+    c.fit.injectors <= @core.MAX_LEVEL
+  })
+}
+
+///|
+test "law: docking delivers every work unit exactly once" {
+  let mut checked = 0
+  @qc.quick_check_fn((input : (Array[(Int32, Int32, Int64)], Int64)) => {
+    let (steps, seed) = input
+    let c = drive_schedule(plan20(), ship(seed~), steps)
+    guard c.project() is Some(landed) else { false }
+    guard landed.dock() is Some(next) else { false }
+    checked += 1
+    landed.tallies
+    .iter()
+    .all(p => {
+      let (crew, t) = p
+      let r = next.records.get(crew).unwrap()
+      r.works * @core.WORK_SIZE + r.carry == t.work &&
+      r.regard == t.regard &&
+      r.carry < @core.WORK_SIZE
+    }) &&
+    next.hull >= landed.hull &&
+    next.recruits <= @core.MAX_RECRUITS
+  })
+  assert_true(checked > 0)
 }
 
 ///|
@@ -174,9 +415,9 @@ test "law: another hand on the drive never delays arrival" {
   let mut checked = 0
   @qc.quick_check_fn((input : (Array[(Int32, Int32, Int64)], Int32)) => {
     let (steps, slot) = input
-    let c = drive_schedule(plan20(), @core.HULL_FULL, steps)
+    let c = drive_schedule(plan20(), ship(), steps)
     guard c.phase != Arrived else { true }
-    let slot = 100 + (slot % 8 + 8) % 8
+    let slot = 100 + fold(slot, 8)
     let more = c.apply(Posted(crew=slot, post=Drive)) catch { _ => panic() }
     // A hand taken from the hull may cost a band later; compare like with
     // like by adding a new hand rather than moving one.
@@ -187,12 +428,12 @@ test "law: another hand on the drive never delays arrival" {
 }
 
 ///|
-test "exhaustive: the setting is monotone in drive crew and within bounds" {
+test "exhaustive: the setting is monotone in drive quarters and within bounds" {
   let mut checked = 0
   for needed in 1L..<=64L {
     for cap in [350L, 512L, 675L, 837L, 1000L] {
       let mut last = @math.SETTING_FLOOR
-      for drive in 0L..<=64L {
+      for drive in 0L..<=80L {
         let s = @math.setting(drive, needed, cap)
         assert_true(s >= last && s >= @math.SETTING_FLOOR && s <= cap)
         last = s
@@ -200,5 +441,31 @@ test "exhaustive: the setting is monotone in drive crew and within bounds" {
       }
     }
   }
-  inspect(checked, content="20800")
+  inspect(checked, content="25920")
+}
+
+///|
+test "the schedules the laws use reach every mechanic" {
+  let seen = Array::make(5, 0)
+  @qc.quick_check_fn(
+    (steps : Array[(Int32, Int32, Int64)]) => {
+      let c = drive_schedule(plan20(), ship(), steps)
+      guard c.project() is Some(p) else { false }
+      let hits = [
+        p.tallies.values().any(t => t.watches_stood > 0L),
+        p.tallies.values().any(t => t.watches_broken > 0L),
+        p.demands.iter().any(d => d.status == Met),
+        p.demands.iter().any(d => d.status == Missed),
+        p.fit.baffles + p.fit.plating + p.fit.injectors > 0L,
+      ]
+      for i, hit in hits {
+        if hit {
+          seen[i] += 1
+        }
+      }
+      true
+    },
+    max_success=500,
+  )
+  assert_true(seen.all(n => n > 0), msg="\{seen}")
 }

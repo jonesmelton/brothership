@@ -66,3 +66,15 @@ served by Groq, not a Meta model.
 Why: it follows a written policy and returns a verdict with evidence, it's
 cheap, and Groq runs it in about a second.
 Revisit if: a Meta model follows the policy as well, or Groq withdraws the model.
+
+## 2026-10-27 · the content gate is Muse Spark 1.3
+Supersedes "the content gate is gpt-oss-safeguard-20b on Groq". `llm/gate`
+calls `meta:muse-spark-1.3` on Meta Model API.
+Why: on the sample set it labelled every message correctly, including all
+four injection attempts, where gpt-oss-safeguard-20b missed a faked end of
+message and cruelty played as a joke. It also keeps every shipping model
+Meta's. It takes about 2 s per check against Groq's 0.7 s, which the game
+can absorb because no model call sits between input and feedback.
+Revisit if: checks need to be fast enough to sit between a player's input
+and its feedback, or a held-out sample set shows it missing what gpt-oss
+catches.

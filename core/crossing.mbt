@@ -4,6 +4,10 @@
 pub const HULL_FULL : Int64 = 1_000_000_000L
 
 ///|
+/// Most rate boundaries one forecast steps through before giving up.
+pub const MAX_BOUNDARIES : Int32 = 4096
+
+///|
 /// What a crew member's hours go to. See `docs/gameplay.md`.
 pub(all) enum Post {
   Drive
@@ -32,12 +36,6 @@ pub(all) struct Plan {
   eta_rate : Int64
   /// Distance per tick at the cap.
   coast_rate : Int64
-  /// Drive hands for full burn.
-  drive_needed : Int64
-  /// Hull lost per tick at full burn. Scales with the setting squared.
-  wear : Int64
-  /// Hull restored per tick by each hand on the hull.
-  repair : Int64
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
@@ -60,8 +58,59 @@ pub fn Plan::slowest(self : Plan) -> Int64 {
 }
 
 ///|
+pub(all) struct Watch {
+  from : Int64
+  until : Int64
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// One crew member aboard.
+pub(all) struct Hand {
+  post : Post
+  craft : Craft
+  /// Rank at joining, from the ship's records. Sets the longest watch.
+  rank : Int64
+  watch : Watch?
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub fn Hand::quarters(self : Hand) -> Int64 {
+  if self.watch is Some(_) {
+    WATCH_HAND
+  } else {
+    HAND
+  }
+}
+
+///|
+/// What one crew member did this crossing. Kept after they leave.
+pub(all) struct Tally {
+  /// Quarter-hand-ticks on each post.
+  drive : Int64
+  hull : Int64
+  craft : Int64
+  regard : Int64
+  /// Work units toward works, for artists.
+  work : Int64
+  watches_stood : Int64
+  watches_broken : Int64
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+let no_tally : Tally = {
+  drive: 0,
+  hull: 0,
+  craft: 0,
+  regard: 0,
+  work: 0,
+  watches_stood: 0,
+  watches_broken: 0,
+}
+
+///|
 pub(all) struct Crossing {
   plan : Plan
+  ship : Ship
   /// Ticks since departure.
   t : Int64
   phase : Phase
@@ -69,40 +118,91 @@ pub(all) struct Crossing {
   /// distance in the coast, rapidity to shed in the approach.
   left : Int64
   hull : Int64
-  posts : Map[Int32, Post]
+  /// The ship's fit as of now; refits land here as they finish.
+  fit : Fit
+  hands : Map[Int32, Hand]
+  tallies : Map[Int32, Tally]
+  demands : Array[Demand]
+  /// The post the ship is asking for, if any.
+  ask : Post?
   arrived_at : Int64?
 } derive(Debug, Eq)
 
 ///|
 pub(all) enum CrossingEvent {
   Elapsed(ticks~ : Int64)
-  /// Takes a post, joining the crew if not aboard.
+  /// Takes a post, joining the crew if not aboard. Breaks a watch on another
+  /// post.
   Posted(crew~ : Int32, post~ : Post)
   Left(crew~ : Int32)
+  Crafted(crew~ : Int32, craft~ : Craft)
+  /// Stands a watch on the current post for `ticks`.
+  Watched(crew~ : Int32, ticks~ : Int64)
+  /// What the engineers build next.
+  Refitting(refit~ : Refit?)
+  /// The ship asks for hands on a post, or stops asking.
+  Asked(post~ : Post?)
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
 pub(all) suberror CrossingRejected {
   BadTicks(ticks~ : Int64)
   NotAboard(crew~ : Int32)
+  BadWatch(ticks~ : Int64, longest~ : Int64)
+  OnWatch(crew~ : Int32)
+  Unbuildable(refit~ : Refit)
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
-pub fn Crossing::new(plan : Plan, hull~ : Int64) -> Crossing {
+/// Depart with `ship`'s hull and fit. The crossing's demands are fixed here.
+pub fn Crossing::new(plan : Plan, ship : Ship) -> Crossing {
   {
     plan,
+    ship,
     t: 0,
     phase: Burn,
     left: plan.burn,
-    hull,
-    posts: {},
+    hull: ship.hull,
+    fit: ship.fit,
+    hands: {},
+    tallies: {},
+    demands: demands_for(plan, ship.seed, ship.crossings),
+    ask: None,
     arrived_at: None,
-  }
+  }.settle()
 }
 
 ///|
+/// Crew members on `post`.
 pub fn Crossing::count(self : Crossing, post : Post) -> Int64 {
-  self.posts.values().filter(p => p == post).count().to_int64()
+  self.hands.values().filter(h => h.post == post).count().to_int64()
+}
+
+///|
+/// Quarter-hands on `post`, counting a quarter more for each on watch.
+pub fn Crossing::quarters(self : Crossing, post : Post) -> Int64 {
+  self.hands
+  .values()
+  .fold(init=0L, (n, h) => if h.post == post { n + h.quarters() } else { n })
+}
+
+///|
+/// Crafters of `craft` working together now.
+fn Crossing::crafting(self : Crossing, craft : Craft) -> Int64 {
+  self.hands
+  .values()
+  .filter(h => h.post == Craft && h.craft == craft)
+  .count()
+  .to_int64()
+}
+
+///|
+/// Work units per tick for one crafter: a quarter more for each other
+/// crafter of the same craft at work, up to four.
+fn Crossing::craft_rate(self : Crossing, hand : Hand) -> Int64 {
+  guard hand.post == Craft else { 0L }
+  let together = (self.crafting(hand.craft) - 1L).min(HAND)
+  hand.quarters() * (HAND + together)
 }
 
 ///|
@@ -120,8 +220,13 @@ pub fn Crossing::cap(self : Crossing) -> Int64 {
 
 ///|
 pub fn Crossing::setting(self : Crossing) -> Int64 {
-  let drive = self.count(Drive).min(64L)
-  @math.setting(drive, self.plan.drive_needed, self.cap())
+  let drive = self.quarters(Drive).min(4096L)
+  @math.setting(drive, self.fit.needed * HAND, self.cap())
+}
+
+///|
+pub fn Crossing::firing(self : Crossing) -> Bool {
+  self.phase is (Burn | Approach)
 }
 
 ///|
@@ -138,11 +243,11 @@ pub fn Crossing::eta(self : Crossing) -> Int64 {
 ///|
 /// Per-tick rates now: the phase stock's, and the hull's (signed).
 fn Crossing::rates(self : Crossing) -> (Int64, Int64) {
-  let repair = self.plan.repair * self.count(Hull)
+  let repair = self.fit.repair * self.quarters(Hull) / HAND
   match self.phase {
     Burn | Approach => {
       let s = self.setting()
-      let wear = @math.rate(@math.rate(self.plan.wear, s), s)
+      let wear = @math.rate(@math.rate(self.fit.wear, s), s)
       (@math.rate(self.plan.eta_rate, s), repair - wear)
     }
     Coast => (self.plan.coast_rate, repair)
@@ -151,22 +256,126 @@ fn Crossing::rates(self : Crossing) -> (Int64, Int64) {
 }
 
 ///|
-/// Ticks until a rate next changes on its own: the phase ends or the hull
-/// crosses into another band. Rates are constant until then, so the state
-/// between boundaries is linear.
-pub fn Crossing::next_boundary(self : Crossing) -> Int64 {
-  let (rate, net) = self.rates()
-  guard self.phase != Arrived else { @math.MAX_TICKS }
-  let phase_end = @math.ticks_to_empty(self.left, rate)
-  let band = self.band()
-  let band_edge = if net < 0L && band > 0L && self.hull > 0L {
-    @math.ticks_to_empty(self.hull - band * HULL_FULL / 4L + 1L, -net)
-  } else if net > 0L && band < 3L {
-    @math.ticks_to_empty((band + 1L) * HULL_FULL / 4L - self.hull, net)
-  } else {
-    @math.MAX_TICKS
+/// Refit progress per tick from the engineers at work.
+fn Crossing::refit_rate(self : Crossing) -> Int64 {
+  self.hands
+  .values()
+  .fold(init=0L, (n, h) => {
+    if h.craft == Engineer {
+      n + self.craft_rate(h)
+    } else {
+      n
+    }
+  })
+}
+
+///|
+/// Whether a post's hours do anything now. Regard counts only these: the
+/// drive while it fires, the hull while it is short of full or a breach is
+/// open, and any craft.
+fn Crossing::useful(self : Crossing, post : Post) -> Bool {
+  match post {
+    Drive => self.firing()
+    Hull => self.hull < HULL_FULL || self.open_on(Hull)
+    Craft => true
   }
-  phase_end.min(band_edge)
+}
+
+///|
+fn Crossing::open_on(self : Crossing, post : Post) -> Bool {
+  self.demands.iter().any(d => d.status == Open && d.hazard.post() == post)
+}
+
+///|
+/// Regard per tick for one hand. Doubled for the post the ship asks for,
+/// and again for the post an open demand needs.
+fn Crossing::regard_rate(self : Crossing, hand : Hand) -> Int64 {
+  guard self.useful(hand.post) && self.phase != Arrived else { 0L }
+  let asked = if self.ask == Some(hand.post) { 2L } else { 1L }
+  let needed = if self.open_on(hand.post) { 2L } else { 1L }
+  self.ship.values.weight(hand.post) * hand.quarters() * asked * needed
+}
+
+///|
+/// Ticks until a rate next changes on its own: the phase ends, the hull
+/// crosses into another band or fills, a demand opens or is met, a watch
+/// ends, or a refit is finished. Rates are constant until then, so the
+/// state between boundaries is linear.
+pub fn Crossing::next_boundary(self : Crossing) -> Int64 {
+  guard self.phase != Arrived else { @math.MAX_TICKS }
+  let (rate, net) = self.rates()
+  let mut next = @math.ticks_to_empty(self.left, rate)
+  let band = self.band()
+  if net < 0L && self.hull == HULL_FULL {
+    // The hull post becomes useful, and earns regard, a tick from now.
+    next = 1L
+  } else if net < 0L && band > 0L && self.hull > 0L {
+    next = next.min(
+      @math.ticks_to_empty(self.hull - band * HULL_FULL / 4L + 1L, -net),
+    )
+  } else if net > 0L && self.hull < HULL_FULL {
+    let edge = if band < 3L { (band + 1L) * HULL_FULL / 4L } else { HULL_FULL }
+    next = next.min(@math.ticks_to_empty(edge - self.hull, net))
+  }
+  for d in self.demands {
+    if d.status == Waiting && d.phase == self.phase && self.left > d.opens_at {
+      next = next.min(@math.ticks_to_empty(self.left - d.opens_at, rate))
+    } else if d.status == Open {
+      let q = self.quarters(d.hazard.post())
+      if q > 0L {
+        next = next.min(@math.ticks_to_empty(d.need - d.done, q))
+      }
+    }
+  }
+  for h in self.hands.values() {
+    if h.watch is Some(w) {
+      next = next.min(w.until - self.t)
+    }
+  }
+  if self.fit.refit is Some(r) {
+    let rate = self.refit_rate()
+    if rate > 0L {
+      next = next.min(
+        @math.ticks_to_empty(self.fit.cost(r) - self.fit.progress, rate),
+      )
+    }
+  }
+  next.min(@math.MAX_TICKS)
+}
+
+///|
+/// Linear progress over `step` ticks, which must not pass a boundary.
+fn Crossing::flow(self : Crossing, step : Int64) -> Crossing {
+  let (rate, net) = self.rates()
+  let tallies = self.tallies.copy()
+  for crew, h in self.hands {
+    let q = h.quarters() * step
+    let t = tallies.get(crew).unwrap_or(no_tally)
+    let t = match h.post {
+      Drive => { ..t, drive: t.drive + q, }
+      Hull => { ..t, hull: t.hull + q, }
+      Craft => { ..t, craft: t.craft + q, }
+    }
+    let work = if h.craft == Artist { self.craft_rate(h) * step } else { 0L }
+    tallies[crew] = {
+      ..t,
+      regard: t.regard + self.regard_rate(h) * step,
+      work: t.work + work,
+    }
+  }
+  let demands = self.demands.map(d => {
+    guard d.status == Open else { d }
+    { ..d, done: d.done + self.quarters(d.hazard.post()) * step, }
+  })
+  {
+    ..self,
+    t: self.t + step,
+    left: @math.deplete(self.left, rate, step),
+    hull: @math.settle(self.hull, net, step, HULL_FULL),
+    fit: { ..self.fit, progress: self.fit.progress + self.refit_rate() * step, },
+    tallies,
+    demands,
+  }
 }
 
 ///|
@@ -186,8 +395,93 @@ fn Crossing::next_phase(self : Crossing) -> Crossing {
 }
 
 ///|
-/// Advance by `ticks`, stepping from boundary to boundary. Each phase can
-/// cross each hull band at most once, so the loop is short.
+fn Crossing::lose_hull(self : Crossing, amount : Int64) -> Crossing {
+  { ..self, hull: (self.hull - amount).max(0L), }
+}
+
+///|
+/// Apply whatever is due at this instant: finished watches and refits, met
+/// and missed demands, the phase change, and demands that open. Each pass
+/// either changes something or stops, and each thing can happen only a
+/// bounded number of times, so this ends.
+fn Crossing::settle(self : Crossing) -> Crossing {
+  let mut c = self
+  let hands = c.hands.copy()
+  let tallies = c.tallies.copy()
+  let mut changed = false
+  for crew, h in c.hands {
+    if h.watch is Some(w) && w.until <= c.t {
+      let t = tallies.get(crew).unwrap_or(no_tally)
+      tallies[crew] = {
+        ..t,
+        regard: t.regard + (w.until - w.from) * WATCH_BONUS,
+        watches_stood: t.watches_stood + 1L,
+      }
+      hands[crew] = { ..h, watch: None, }
+      changed = true
+    }
+  }
+  if changed {
+    c = { ..c, hands, tallies, }
+  }
+  while c.fit.refit is Some(r) && c.fit.progress >= c.fit.cost(r) {
+    c = { ..c, fit: c.fit.build(r), }
+  }
+  let demands = c.demands.copy()
+  let mut loss = 0L
+  let mut salvage = 0L
+  for i, d in demands {
+    if d.status == Open && d.done >= d.need {
+      demands[i] = { ..d, status: Met, }
+      if d.hazard == Salvage {
+        salvage += SALVAGE_YIELD
+      }
+    } else if d.status == Open && c.left == 0L && d.phase == c.phase {
+      demands[i] = { ..d, status: Missed, }
+      loss += match d.hazard {
+        Breach => BREACH_LOSS
+        Flare => FLARE_LOSS
+        Salvage => 0L
+      }
+    }
+  }
+  c = { ..c, demands, fit: { ..c.fit, progress: c.fit.progress + salvage, }, }.lose_hull(
+    loss,
+  )
+  if c.left == 0L && c.phase != Arrived {
+    c = c.next_phase()
+  }
+  let demands = c.demands.copy()
+  let mut opened = false
+  for i, d in demands {
+    if d.status == Waiting && d.phase == c.phase && c.left <= d.opens_at {
+      demands[i] = { ..d, status: Open, }
+      opened = true
+    } else if d.status == Waiting && d.phase < c.phase {
+      demands[i] = { ..d, status: Missed, }
+      opened = true
+    }
+  }
+  if opened {
+    c = { ..c, demands, }
+  }
+  if c == self {
+    c
+  } else {
+    c.settle()
+  }
+}
+
+///|
+/// Regard per tick of a watch, paid when it is stood to its end.
+pub const WATCH_BONUS : Int64 = 4L
+
+///|
+/// Regard per tick of a watch already stood, lost by breaking it.
+pub const WATCH_PENALTY : Int64 = 8L
+
+///|
+/// Advance by `ticks`, stepping from boundary to boundary.
 fn Crossing::advance(self : Crossing, ticks : Int64) -> Crossing {
   for c = self, remaining = ticks {
     if remaining == 0L {
@@ -196,17 +490,44 @@ fn Crossing::advance(self : Crossing, ticks : Int64) -> Crossing {
     if c.phase == Arrived {
       break { ..c, t: c.t + remaining, }
     }
-    let (rate, net) = c.rates()
     let step = remaining.min(c.next_boundary())
-    let c = {
-      ..c,
-      t: c.t + step,
-      left: @math.deplete(c.left, rate, step),
-      hull: @math.settle(c.hull, net, step, HULL_FULL),
-    }
-    let c = if c.left == 0L { c.next_phase() } else { c }
-    continue c, remaining - step
+    continue c.flow(step).settle(), remaining - step
   }
+}
+
+///|
+fn Crossing::hand(self : Crossing, crew : Int32) -> Hand raise CrossingRejected {
+  guard self.hands.get(crew) is Some(h) else { raise NotAboard(crew~) }
+  h
+}
+
+///|
+/// Ends `crew`'s watch early: the ship remembers.
+fn Crossing::break_watch(self : Crossing, crew : Int32, h : Hand) -> Crossing {
+  guard h.watch is Some(w) else { self }
+  let tallies = self.tallies.copy()
+  let t = tallies.get(crew).unwrap_or(no_tally)
+  let lost = ((self.t - w.from) * WATCH_PENALTY).min(t.regard)
+  tallies[crew] = {
+    ..t,
+    regard: t.regard - lost,
+    watches_broken: t.watches_broken + 1L,
+  }
+  { ..self, tallies, }
+}
+
+///|
+fn Crossing::with_hand(self : Crossing, crew : Int32, h : Hand) -> Crossing {
+  let hands = self.hands.copy()
+  hands[crew] = h
+  let tallies = if self.tallies.contains(crew) {
+    self.tallies
+  } else {
+    let tallies = self.tallies.copy()
+    tallies[crew] = no_tally
+    tallies
+  }
+  { ..self, hands, tallies, }
 }
 
 ///|
@@ -214,40 +535,111 @@ pub fn Crossing::apply(
   self : Crossing,
   event : CrossingEvent,
 ) -> Crossing raise CrossingRejected {
-  match event {
+  let c = match event {
     Elapsed(ticks~) => {
       guard ticks > 0L && ticks <= @math.MAX_TICKS else {
         raise BadTicks(ticks~)
       }
       self.advance(ticks)
     }
-    Posted(crew~, post~) => {
-      let posts = self.posts.copy()
-      posts[crew] = post
-      { ..self, posts, }
-    }
+    Posted(crew~, post~) =>
+      match self.hands.get(crew) {
+        Some(h) if h.post == post => self
+        Some(h) =>
+          self.break_watch(crew, h).with_hand(crew, { ..h, post, watch: None, })
+        None =>
+          self.with_hand(crew, {
+            post,
+            craft: Artist,
+            rank: self.ship.rank(crew),
+            watch: None,
+          })
+      }
     Left(crew~) => {
-      guard self.posts.contains(crew) else { raise NotAboard(crew~) }
-      let posts = self.posts.copy()
-      posts.remove(crew)
-      { ..self, posts, }
+      let h = self.hand(crew)
+      let c = self.break_watch(crew, h)
+      let hands = c.hands.copy()
+      hands.remove(crew)
+      { ..c, hands, }
     }
+    Crafted(crew~, craft~) => {
+      let h = self.hand(crew)
+      self.with_hand(crew, { ..h, craft, })
+    }
+    Watched(crew~, ticks~) => {
+      let h = self.hand(crew)
+      guard h.watch is None else { raise OnWatch(crew~) }
+      let longest = max_watch(h.rank)
+      guard ticks >= HOUR && ticks <= longest else {
+        raise BadWatch(ticks~, longest~)
+      }
+      self.with_hand(crew, {
+        ..h,
+        watch: Some({ from: self.t, until: self.t + ticks, }),
+      })
+    }
+    Refitting(refit~) => {
+      if refit is Some(r) && !self.fit.can_refit(r) {
+        raise Unbuildable(refit=r)
+      }
+      { ..self, fit: { ..self.fit, refit, }, }
+    }
+    Asked(post~) => { ..self, ask: post, }
   }
+  c.settle()
+}
+
+///|
+/// Where the crossing ends if no one does anything more: the arrived
+/// crossing, or `None` if it would take more than `MAX_BOUNDARIES` steps.
+pub fn Crossing::project(self : Crossing) -> Crossing? {
+  let mut c = self
+  for _ in 0..<MAX_BOUNDARIES {
+    if c.arrived_at is Some(_) {
+      return Some(c)
+    }
+    c = c.advance(c.next_boundary())
+  }
+  None
 }
 
 ///|
 /// When the ship arrives if no one changes post, in ticks since departure.
-/// `None` only if the plan cannot be flown, which `Plan` validation rules out.
 pub fn Crossing::forecast(self : Crossing) -> Int64? {
   if self.arrived_at is Some(at) {
     return Some(at)
   }
-  let mut c = self
-  for _ in 0..<64 {
-    c = c.advance(c.next_boundary())
-    if c.arrived_at is Some(at) {
-      return Some(at)
+  self.project().map(c => c.arrived_at.unwrap())
+}
+
+///|
+/// Settle an arrived crossing into the ship that leaves port: regard and
+/// works go to each crew member's record, works bring recruits, the yard
+/// repairs the hull, and refits stay fitted.
+pub fn Crossing::dock(self : Crossing) -> Ship? {
+  guard self.phase == Arrived else { None }
+  let ship = self.ship
+  let records = ship.records.copy()
+  let mut delivered = 0L
+  for crew, t in self.tallies {
+    let r = records.get(crew).unwrap_or({ regard: 0, works: 0, carry: 0, })
+    let units = r.carry + t.work
+    delivered += units / WORK_SIZE
+    records[crew] = {
+      regard: r.regard + t.regard,
+      works: r.works + units / WORK_SIZE,
+      carry: units % WORK_SIZE,
     }
   }
-  None
+  let toward = ship.toward_recruit + delivered
+  let recruits = (ship.recruits + toward / WORKS_PER_RECRUIT).min(MAX_RECRUITS)
+  Some({
+    ..ship,
+    fit: self.fit,
+    hull: (self.hull + PORT_REPAIR).min(HULL_FULL),
+    records,
+    recruits,
+    toward_recruit: toward % WORKS_PER_RECRUIT,
+    crossings: ship.crossings + 1L,
+  })
 }

@@ -7,7 +7,49 @@ import {
 }
 
 // Values
+pub const BREACH_LOSS : Int64 = 250_000_000
+
+pub const CRAFT_UNIT : Int64 = 16
+
+pub const FLARE_LOSS : Int64 = 166_666_666
+
+pub const HAND : Int64 = 4
+
+pub const HOUR : Int64 = 3600
+
 pub const HULL_FULL : Int64 = 1_000_000_000
+
+pub const MAX_BOUNDARIES : Int32 = 4096
+
+pub const MAX_LEVEL : Int64 = 3
+
+pub const MAX_RECRUITS : Int64 = 8
+
+pub const PORT_REPAIR : Int64 = 250_000_000
+
+pub const REGARD_HOUR : Int64 = 14_400
+
+pub const SALVAGE_YIELD : Int64 = 172_800
+
+pub const WATCH_BONUS : Int64 = 4
+
+pub const WATCH_HAND : Int64 = 5
+
+pub const WATCH_PENALTY : Int64 = 8
+
+pub const WORKS_PER_RECRUIT : Int64 = 2
+
+pub const WORK_SIZE : Int64 = 345_600
+
+pub fn demands_for(Plan, Int64, Int64) -> Array[Demand]
+
+pub fn max_watch(Int64) -> Int64
+
+pub fn rank_of(Int64) -> Int64
+
+pub let rank_thresholds : Array[Int64]
+
+pub let refits : Array[Refit]
 
 pub fn replay(Iter[Event]) -> State raise Rejected
 
@@ -15,6 +57,9 @@ pub fn replay(Iter[Event]) -> State raise Rejected
 pub(all) suberror CrossingRejected {
   BadTicks(ticks~ : Int64)
   NotAboard(crew~ : Int32)
+  BadWatch(ticks~ : Int64, longest~ : Int64)
+  OnWatch(crew~ : Int32)
+  Unbuildable(refit~ : Refit)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) suberror Rejected {
@@ -23,34 +68,91 @@ pub(all) suberror Rejected {
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Types and methods
+pub(all) enum Craft {
+  Engineer
+  Artist
+} derive(Compare, Eq, Hash, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct Crossing {
   plan : Plan
+  ship : Ship
   t : Int64
   phase : Phase
   left : Int64
   hull : Int64
-  posts : Map[Int32, Post]
+  fit : Fit
+  hands : Map[Int32, Hand]
+  tallies : Map[Int32, Tally]
+  demands : Array[Demand]
+  ask : Post?
   arrived_at : Int64?
 } derive(Eq, @debug.Debug)
 pub fn Crossing::apply(Self, CrossingEvent) -> Self raise CrossingRejected
 pub fn Crossing::band(Self) -> Int64
 pub fn Crossing::cap(Self) -> Int64
 pub fn Crossing::count(Self, Post) -> Int64
+pub fn Crossing::dock(Self) -> Ship?
 pub fn Crossing::eta(Self) -> Int64
+pub fn Crossing::firing(Self) -> Bool
 pub fn Crossing::forecast(Self) -> Int64?
-pub fn Crossing::new(Plan, hull~ : Int64) -> Self
+pub fn Crossing::new(Plan, Ship) -> Self
 pub fn Crossing::next_boundary(Self) -> Int64
+pub fn Crossing::project(Self) -> Self?
+pub fn Crossing::quarters(Self, Post) -> Int64
 pub fn Crossing::setting(Self) -> Int64
 
 pub(all) enum CrossingEvent {
   Elapsed(ticks~ : Int64)
   Posted(crew~ : Int32, post~ : Post)
   Left(crew~ : Int32)
+  Crafted(crew~ : Int32, craft~ : Craft)
+  Watched(crew~ : Int32, ticks~ : Int64)
+  Refitting(refit~ : Refit?)
+  Asked(post~ : Post?)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Demand {
+  hazard : Hazard
+  phase : Phase
+  opens_at : Int64
+  need : Int64
+  done : Int64
+  status : Status
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum Event {
   Elapsed(ticks~ : Int64)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Fit {
+  needed : Int64
+  wear : Int64
+  repair : Int64
+  baffles : Int64
+  plating : Int64
+  injectors : Int64
+  refit : Refit?
+  progress : Int64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Fit::can_refit(Self, Refit) -> Bool
+pub fn Fit::cost(Self, Refit) -> Int64
+pub fn Fit::level(Self, Refit) -> Int64
+pub fn Fit::new(needed~ : Int64, wear~ : Int64, repair~ : Int64) -> Self
+
+pub(all) struct Hand {
+  post : Post
+  craft : Craft
+  rank : Int64
+  watch : Watch?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Hand::quarters(Self) -> Int64
+
+pub(all) enum Hazard {
+  Breach
+  Flare
+  Salvage
+} derive(Compare, Eq, Hash, ToJson, @debug.Debug, @json.FromJson)
+pub fn Hazard::post(Self) -> Post
 
 pub struct Optimistic {
   confirmed : Snapshot
@@ -77,9 +179,6 @@ pub(all) struct Plan {
   coast : Int64
   eta_rate : Int64
   coast_rate : Int64
-  drive_needed : Int64
-  wear : Int64
-  repair : Int64
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn Plan::fastest(Self) -> Int64
 pub fn Plan::slowest(Self) -> Int64
@@ -102,6 +201,31 @@ pub(all) enum Receipt {
 pub fn Receipt::id(Self) -> Int64
 pub fn Receipt::snapshot(Self) -> Snapshot
 
+pub(all) struct Record {
+  regard : Int64
+  works : Int64
+  carry : Int64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum Refit {
+  Baffles
+  Plating
+  Injectors
+} derive(Compare, Eq, Hash, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Ship {
+  values : Values
+  fit : Fit
+  hull : Int64
+  records : Map[Int32, Record]
+  recruits : Int64
+  toward_recruit : Int64
+  crossings : Int64
+  seed : Int64
+} derive(Eq, @debug.Debug)
+pub fn Ship::new(Values, Fit, seed~ : Int64) -> Self
+pub fn Ship::rank(Self, Int32) -> Int64
+
 pub(all) struct Snapshot {
   seq : Int64
   state : State
@@ -113,6 +237,35 @@ pub(all) struct State {
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn State::apply(Self, Event) -> Self raise Rejected
 pub fn State::initial() -> Self
+
+pub(all) enum Status {
+  Waiting
+  Open
+  Met
+  Missed
+} derive(Compare, Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Tally {
+  drive : Int64
+  hull : Int64
+  craft : Int64
+  regard : Int64
+  work : Int64
+  watches_stood : Int64
+  watches_broken : Int64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Values {
+  drive : Int64
+  hull : Int64
+  craft : Int64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Values::weight(Self, Post) -> Int64
+
+pub(all) struct Watch {
+  from : Int64
+  until : Int64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases
 

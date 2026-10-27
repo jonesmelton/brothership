@@ -33,6 +33,12 @@ pub fn Route::default() -> Route {
 }
 
 ///|
+/// The ship's fittings at departure, before any refit.
+pub fn Route::fit(self : Route) -> @core.Fit {
+  @core.Fit::new(needed=self.drive_needed, wear=self.wear, repair=self.repair)
+}
+
+///|
 /// The closed-form kinematics of `docs/gameplay.md`, at full burn, rounded
 /// once into billionths. The only floating-point step between a route and
 /// the game.
@@ -50,9 +56,6 @@ pub fn Route::plan(self : Route) -> @core.Plan {
     coast: nano(coast_d),
     eta_rate: nano(a / YEAR),
     coast_rate: nano(@fmath.sinh(eta) / YEAR),
-    drive_needed: self.drive_needed,
-    wear: self.wear,
-    repair: self.repair,
   }
 }
 
