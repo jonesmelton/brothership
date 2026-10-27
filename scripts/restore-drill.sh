@@ -13,6 +13,7 @@ set -eu
 APP=${APP:-brothership}
 BUCKET=${BUCKET:-brothership-data}
 ENDPOINT=${ENDPOINT:-fly.storage.tigris.dev}
+LITESTREAM=${LITESTREAM:-litestream}
 DB=/data/brothership.sqlite
 REPLICA="s3://${BUCKET}/brothership.sqlite?endpoint=${ENDPOINT}&region=auto"
 SNAPSHOT="https://${APP}.fly.dev/api/snapshot"
@@ -33,12 +34,28 @@ paste() {
 }
 
 local_drill() {
+  # There is no Homebrew formula; the release tarball is the install path.
+  if ! command -v "$LITESTREAM" > /dev/null 2>&1; then
+    echo "restore-drill: $LITESTREAM is not on PATH. Download the 0.5 release" >&2
+    echo "binary for this OS from https://github.com/benbjohnson/litestream/releases" >&2
+    echo "and put it on PATH, or set LITESTREAM to its path." >&2
+    exit 1
+  fi
+  version=$("$LITESTREAM" version)
+  case "$version" in
+    0.5.*) ;;
+    *)
+      echo "restore-drill: litestream 0.5 is required, found $version" >&2
+      exit 1
+      ;;
+  esac
+
   # litestream 0.5 replaced `snapshots` with `ltx`; the listing is also the
   # proof that something has replicated at all.
   echo "== replica files =="
   listing=$(fly ssh console -a "$APP" -C "litestream ltx -config /etc/litestream.yml $DB")
   echo "$listing"
-  if ! printf '%s\n' "$listing" | grep -q 'ltx'; then
+  if ! printf '%s\n' "$listing" | grep -qE '^[0-9]+[[:space:]]+[0-9a-f]{16}'; then
     echo "restore-drill: no LTX files in the replica; not trusting it. Check" >&2
     echo "LITESTREAM_REPLICA_URL and the AWS_* secrets before rerunning." >&2
     exit 1
@@ -59,7 +76,7 @@ local_drill() {
   trap 'rm -rf "$dir"' EXIT
 
   echo "== restore =="
-  litestream restore -o "$dir/restored.sqlite" "$REPLICA"
+  "$LITESTREAM" restore -o "$dir/restored.sqlite" "$REPLICA"
 
   echo "== integrity =="
   sqlite3 -init /dev/null "$dir/restored.sqlite" "pragma integrity_check" | sed 's/^/  /'
