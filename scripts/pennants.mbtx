@@ -1,0 +1,253 @@
+///|
+// Assigns each of the 108 heroes a pennant and writes the mapping: pennant,
+// conventional_name (Traditional Chinese), epithet (English, from Shapiro).
+// Every ship is identified by its epithet in English and its conventional
+// name in Chinese. Pennants are HS- for the 36 Heavenly Spirits (天罡) and
+// EF- for the 72 Earthly Fiends (地煞), then a number from 079 to 398 that
+// is unique across both orders and means nothing.
+//
+//   moon run scripts/pennants.mbtx
+//   moon run scripts/pennants.mbtx <heroes.tsv> <pennants.tsv> <ships dir>
+//
+// A hero already in the output keeps its pennant. A new one gets a hash of
+// its conventional name, moved to the next free number on a collision, in
+// rank order, so rerunning changes nothing. Fails if the result breaks a
+// rule, and warns about ship directories that are not in the mapping.
+import {
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/x/fs",
+  "moonbitlang/x/sys",
+}
+
+///|
+const LOW : Int32 = 79
+
+///|
+const HIGH : Int32 = 398
+
+///|
+struct Hero {
+  tier : String
+  /// Traditional form only (`name_hant` in heroes.tsv); never `name_zh`,
+  /// which mixes Simplified and Traditional.
+  conventional_name : String
+  epithet : String
+}
+
+///|
+/// The Simplified forms formerly written from `name_zh`, mapped to the
+/// Traditional conventional name. Lets `read_existing` find pennants that
+/// were assigned under the old mixed-script file. One entry per hero whose
+/// two forms differ; keep sorted by the Simplified form.
+let renamed : Array[(String, String)] = [
+  ("张清", "張清"), // Zhang Qing
+  ("李衮", "李袞"), // Li Gun
+  ("乐和", "樂和"), // Yue He
+  ("宋万", "宋萬"), // Song Wan
+  ("杜迁", "杜遷"), // Du Qian
+  ("汤隆", "湯隆"), // Tang Long
+  ("杜兴", "杜興"), // Du Xing
+  ("朱贵", "朱貴"), // Zhu Gui
+  ("孙新", "孫新"), // Sun Xin
+  ("张青", "張青"), // Zhang Qing
+  ("孙二娘", "孫二娘"), // Sun Erniang
+  ("白胜", "白勝"), // Bai Sheng
+  ("时迁", "時遷"), // Shi Qian
+]
+
+///|
+fn fnv1a(text : String) -> UInt32 {
+  let mut h : UInt32 = 2166136261
+  for b in @utf8.encode(text) {
+    h = (h ^ b.to_uint()) * 16777619
+  }
+  h
+}
+
+///|
+fn prefix(tier : String) -> String raise {
+  match tier {
+    "天罡" => "HS"
+    "地煞" => "EF"
+    _ => fail("unknown tier \{tier}")
+  }
+}
+
+///|
+fn pennant(prefix : String, n : Int32) -> String {
+  let digits = n.to_string()
+  "\{prefix}-\{"0".repeat(3 - digits.length())}\{digits}"
+}
+
+///|
+/// The number in `HS-079`.
+fn number(pennant : String) -> Int32 raise {
+  @string.parse_int(pennant[3:])
+}
+
+///|
+fn read_heroes(path : String) -> Array[Hero] raise {
+  let lines = @fs.read_file_to_string(path).trim_end().split("\n").to_array()
+  let header = lines[0].split("\t").map(c => c.to_owned()).to_array()
+  let col = (name : String) => {
+    match header.search(name) {
+      Some(i) => i
+      None => fail("\{path} has no column \{name}")
+    }
+  }
+  let (tier, conventional_name, epithet) = (
+    col("tier"),
+    col("name_hant"),
+    col("nick_en_shapiro"),
+  )
+  lines[1:]
+  .iter()
+  .map(line => {
+    let cells = line.split("\t").map(c => c.to_owned()).to_array()
+    // Shapiro's list is a forum transcription; research/water-margin/README.md
+    // records these typos.
+    let epithet = match cells[epithet] {
+      "The Tigres" => "The Tigress"
+      "The Black-Eyed tiger" => "The Black-Eyed Tiger"
+      s => s
+    }
+    {
+      tier: cells[tier],
+      conventional_name: cells[conventional_name],
+      epithet,
+    }
+  })
+  .to_array()
+}
+
+///|
+/// Conventional name to pennant, from an earlier run's output. Names written
+/// under the old mixed-script file are translated through `renamed` first.
+fn read_existing(path : String) -> Map[String, String] raise {
+  let existing = Map([])
+  if !@fs.path_exists(path) {
+    return existing
+  }
+  let aliases : Map[String, String] = Map([])
+  for kv in renamed {
+    aliases[kv.0] = kv.1
+  }
+  for line in @fs.read_file_to_string(path).trim_end().split("\n").drop(1) {
+    let cells = line.split("\t").to_array()
+    let name = match aliases.get(cells[1].to_owned()) {
+      Some(traditional) => traditional
+      None => cells[1].to_owned()
+    }
+    existing[name] = cells[0].to_owned()
+  }
+  existing
+}
+
+///|
+fn assign(
+  heroes : Array[Hero],
+  existing : Map[String, String],
+) -> Array[String] raise {
+  let span = HIGH - LOW + 1
+  let used : Map[Int32, String] = Map([])
+  for hero in heroes {
+    if existing.get(hero.conventional_name) is Some(p) {
+      used[number(p)] = hero.conventional_name
+    }
+  }
+  heroes.map(hero => {
+    if existing.get(hero.conventional_name) is Some(p) {
+      return p
+    }
+    let mut n = LOW +
+      (fnv1a(hero.conventional_name) % span.reinterpret_as_uint())
+        .reinterpret_as_int()
+    while used.contains(n) {
+      n = if n == HIGH { LOW } else { n + 1 }
+    }
+    used[n] = hero.conventional_name
+    pennant(prefix(hero.tier), n)
+  })
+}
+
+///|
+fn validate(heroes : Array[Hero], pennants : Array[String]) -> Unit raise {
+  guard heroes.length() == 108 else {
+    fail("expected 108 heroes, got \{heroes.length()}")
+  }
+  let numbers = Map([])
+  let epithets = Map([])
+  let conventional_names = Map([])
+  let mut spirits = 0
+  for i, hero in heroes {
+    let p = pennants[i]
+    guard p.has_prefix("\{prefix(hero.tier)}-") && p.length() == 6 else {
+      fail("\{hero.conventional_name} has pennant \{p} for tier \{hero.tier}")
+    }
+    let n = number(p)
+    guard n >= LOW && n <= HIGH else {
+      fail("\{p} is outside \{LOW}–\{HIGH}")
+    }
+    guard numbers.get(n) is None else {
+      fail("\{p} reuses \{n}, already taken by \{numbers[n]}")
+    }
+    numbers[n] = hero.conventional_name
+    guard epithets.get(hero.epithet) is None && hero.epithet != "" else {
+      fail("epithet \"\{hero.epithet}\" is empty or not unique")
+    }
+    epithets[hero.epithet] = true
+    guard conventional_names.get(hero.conventional_name) is None &&
+      hero.conventional_name != "" else {
+      fail(
+        "conventional name \"\{hero.conventional_name}\" is empty or not unique",
+      )
+    }
+    conventional_names[hero.conventional_name] = true
+    if hero.tier == "天罡" {
+      spirits += 1
+    }
+  }
+  guard spirits == 36 else {
+    fail("expected 36 Heavenly Spirits, got \{spirits}")
+  }
+}
+
+///|
+fn run() -> Unit raise {
+  let args = @env.args()
+  let (heroes_path, out_path, ships_dir) = if args.length() == 4 {
+    (args[1], args[2], args[3])
+  } else {
+    (
+      "research/water-margin/heroes.tsv", "content/cast/pennants.tsv", "content/cast/ships",
+    )
+  }
+  let heroes = read_heroes(heroes_path)
+  let pennants = assign(heroes, read_existing(out_path))
+  validate(heroes, pennants)
+  let lines = ["pennant\tconventional_name\tepithet"]
+  for i, hero in heroes {
+    lines.push("\{pennants[i]}\t\{hero.conventional_name}\t\{hero.epithet}")
+  }
+  @fs.write_string_to_file(out_path, lines.join("\n") + "\n")
+  println("wrote \{heroes.length()} pennants to \{out_path}")
+  if @fs.path_exists(ships_dir) {
+    for dir in @fs.read_dir(ships_dir) {
+      if !pennants.contains(dir) {
+        println("warning: \{ships_dir}/\{dir} is not a pennant in the mapping")
+      }
+    }
+  }
+}
+
+///|
+fn main {
+  run() catch {
+    e => {
+      println("error: \{e}")
+      @sys.exit(1)
+    }
+  }
+}

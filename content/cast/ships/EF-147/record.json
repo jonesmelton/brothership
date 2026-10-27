@@ -1,0 +1,24 @@
+{
+  "portrait": {
+    "stage": "portrait",
+    "sample": 1,
+    "key": "97356cd2a124632d0a32c5188a5ad7ded27675fc76b1a3b734d41360fcaa878d",
+    "model": "meta:muse-wonder-1.0",
+    "max_tokens": 16000,
+    "reasoning_effort": "xhigh",
+    "inputs": {
+      "entry": "f9027bf1da72291f39d0f3bcb57c5d3ebf8658b78d716f7e8bca9545ddf61c09",
+      "notes": "7bee8799b710b7f0e89c17d4cd371c53d7350cc723d16964832397b4bb521618"
+    },
+    "text_sha": "c91b09472523be8e298adf1410b65683c24edbc9858a39e9ab785265e97d736a",
+    "problems": [],
+    "usage": {
+      "input": 1917,
+      "output": 5715,
+      "reasoning": 3161,
+      "cost_usd": 0.121968
+    },
+    "finish": "stop",
+    "raw": null
+  }
+}
