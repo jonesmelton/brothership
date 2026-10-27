@@ -21,6 +21,10 @@ The server stores its data in `brothership.sqlite` in the working directory.
 Set `BROTHERSHIP_DB` to use another path, and `WARREN_HOST` / `WARREN_PORT`
 to change the address.
 
+## Docs
+
+[docs/README.md](docs/README.md) indexes the design and implementation notes.
+
 ## Crossing simulator
 
 ```sh
