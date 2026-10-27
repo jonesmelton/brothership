@@ -16,7 +16,7 @@
 
 ## how the source stays out
 
-The ships don't know the novel. Each ship is written from a short sketch of a temperament and its relationships, set in a hard science fiction world with no people or places from the book. Its violence is translated into coercion, debts, rivalry and betrayal of trust. The interface identifies each ship by its epithet in English and its Chinese conventional name from `pennants.tsv`; ships themselves use epithets only and never use a conventional name, in any language.
+The ships don't know the novel. Each ship is written from a short sketch of a temperament and its relationships, set in a hard science fiction world with no people or places from the book. Its violence is translated into coercion, debts, rivalry and betrayal of trust. The interface identifies each ship by its title (pennant, Chinese conventional name, epithet) and by the epithet in English text or the conventional name in Chinese text; ships themselves use epithets only and never use a conventional name, in any language.
 
 The language models that voice the ships have read the novel, though, and some of it can bleed through. So every ship's character material is reviewed against this policy before it ships, and text generated during play is screened against it before it's shown.
 

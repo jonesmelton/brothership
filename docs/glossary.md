@@ -8,6 +8,9 @@
 - **conventional name**: a ship's Chinese name (`顧大嫂`), the source
   figure's conventional name in Chinese. The interface uses it to identify
   the ship; ships never use it.
+- **title**: a ship's full identifier, pennant plus conventional name plus
+  epithet (`EF-147 顧大嫂 The Tigress`). What a ship is formally called;
+  shorter references use the name that matches the language of the text.
 - **portrait**: a ship's private third-person character study, made from its
   cast entry. Every face is made from it.
 - **face**: a first-person file made from the portrait for one reader in the

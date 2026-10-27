@@ -42,8 +42,8 @@ made from them as stale.
 
 A ship's directory is named for its pennant. `pennants.tsv` maps each pennant
 to the ship's Chinese conventional name and its English epithet; look a ship
-up there before creating its directory. The interface identifies a ship by
-its epithet in English and its conventional name in Chinese. Ships
+up there before creating its directory. A ship's title is pennant plus
+conventional name plus epithet (`EF-147 顧大嫂 The Tigress`). Ships
 themselves use epithets only, in any language. `moon run
 scripts/pennants.mbtx` rebuilds the file, keeps every pennant already in it,
 and warns about directories that are not in it.

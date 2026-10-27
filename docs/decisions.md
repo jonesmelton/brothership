@@ -49,3 +49,12 @@ the harness and as the fallback when a call fails.
 Why: replay must be deterministic, and the harness can't afford model calls.
 Revisit if: a feature needs model output recomputed when the game runs
 differently.
+
+## 2026-10-27 · ships are named by epithet in English and conventional name in Chinese
+Every ship has both: `EF-147 The Tigress` in English, 顧大嫂 in Chinese
+(`conventional_name` in `pennants.tsv`, Traditional). The star is metadata.
+Generated ship text uses epithets only, in any language.
+Why: the epithet already identifies the source figure uniquely to a Chinese
+reader, so hiding behind it bought no secrecy, only a second convention to learn.
+Revisit if: the Chinese conventional names begin leaking source plot into
+generated text or player expectations in a way the epithet alone did not.
