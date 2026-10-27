@@ -245,7 +245,7 @@ fn voyages() -> Unit {
   let legs : Array[Double] = [8.0, 20.0, 12.0, 30.0, 20.0, 8.0]
   let crew = @sim.scenarios()[0].actors
   for p in @sim.profiles() {
-    println("== voyage on \{p.name}: solo thoughtful player, four NPCs")
+    println("== voyage on \{p.name}: solo thoughtful player, two NPCs")
     let actors = crew.copy()
     actors[0] = { ..actors[0], policy: Thoughtful, }
     let s : @sim.Scenario = {

@@ -160,6 +160,12 @@ fn batch_view(
   let min_hulls = outcomes.map(o => o.min_hull)
   let checkins = outcomes.fold(init=0, (n, o) => n + o.checkins)
   let dead = outcomes.fold(init=0, (n, o) => n + o.dead_checkins)
+  let live = outcomes.fold(init=0, (n, o) => n + o.live_checkins)
+  let per_run = (pick : (@sim.Outcome) -> Int64) => {
+    let n = outcomes.length().max(1).to_int64()
+    let tenths = outcomes.fold(init=0L, (t, o) => t + pick(o)) * 10L / n
+    "\{tenths / 10L}.\{tenths % 10L}"
+  }
   let longest = outcomes.map(o => o.longest_dead)
   let total = outcomes.fold(init=0L, (n, o) => {
     n + o.drive_ticks + o.hull_ticks + o.craft_ticks
@@ -195,7 +201,9 @@ fn batch_view(
     @html.p(
       "Median arrival \{hours(p50)} h, 80th percentile \{hours(@sim.percentile(arrivals, 80))} h, latest \{hours(@sim.percentile(arrivals, 100))} h, against an envelope of \{hours(lo)}–\{hours(hi)} h. " +
       "\{percent(dead.to_int64(), checkins.to_int64())} of player check-ins could not move arrival by five minutes. " +
-      "Crew time went \{share(o => o.drive_ticks)} to the drive, \{share(o => o.hull_ticks)} to the hull and \{share(o => o.craft_ticks)} to crafts.",
+      "Crew time went \{share(o => o.drive_ticks)} to the drive, \{share(o => o.hull_ticks)} to the hull and \{share(o => o.craft_ticks)} to crafts. " +
+      "\{percent(live.to_int64(), checkins.to_int64())} of player check-ins offered a real trade: two or more choices that no other choice beat on arrival, hull, works, regard and refits together. " +
+      "Per run, crews met \{per_run(o => o.met.to_int64())} demands and missed \{per_run(o => o.missed.to_int64())}, landed \{per_run(o => o.refits)} refit levels and made \{per_run(o => o.work * 10L / @core.WORK_SIZE)} tenths of a work.",
     ),
     figure(
       "Arrival time across the batch, from the fastest to the slowest possible crossing.",
@@ -434,20 +442,33 @@ fn run_view(
   let shown = if changes_only { changes } else { run.decisions }
   let capped = shown.length() > 400
   let rows = (if capped { shown[:400].to_owned() } else { shown }).map(d => {
-    let actor = scenario.actors[d.actor]
+    let (name, policy) = match scenario.actors.get(d.actor) {
+      Some(a) => (a.name, a.policy.name())
+      None => ("recruit \{d.actor - 999}", "steady")
+    }
     [
       clock(d.t),
-      actor.name,
-      actor.policy.name(),
+      name,
+      policy,
       "\{d.from.map(post_name).unwrap_or("joins")} → \{post_name(d.to)}",
+      if d.watch > 0L {
+        hours(d.watch)
+      } else {
+        "none"
+      },
       minutes_delta(d.after - d.before),
       (d.leverage / 60L).to_string(),
+      d.undominated.to_string(),
+      d.news.to_string(),
     ]
   })
   @html.section([
     @html.h2("Run \{run.seed}"),
     @html.p(
-      "Arrived after \{hours(run.arrived_at)} h (envelope \{hours(plan.fastest())}–\{hours(plan.slowest())} h). Hull fell to \{hull_percent(run.min_hull)} and ended at \{hull_percent(run.end_hull)}. \{run.decisions.length()} check-ins, \{changes.length()} of which changed post; \{run.dead_checkins} of \{run.checkins} player check-ins were dead.",
+      "Arrived after \{hours(run.arrived_at)} h (envelope \{hours(plan.fastest())}–\{hours(plan.slowest())} h). Hull fell to \{hull_percent(run.min_hull)} and ended at \{hull_percent(run.end_hull)}. \{run.decisions.length()} check-ins, \{changes.length()} of which changed post; \{run.dead_checkins} of \{run.checkins} player check-ins were dead. " +
+      demands_sentence(run.last) +
+      " " +
+      fit_sentence(run.last),
     ),
     figure(
       "Timeline of run \{run.seed}. Phase, rapidity, drive setting, hull with band edges, crew per post, forecast arrival between the fastest and slowest possible, and check-ins: tall ticks changed post, grey ticks could not move arrival by five minutes.",
@@ -484,8 +505,53 @@ fn run_view(
     data_table(
       "Decisions, run \{run.seed}" +
       (if capped { ", first 400 of \{shown.length()}" } else { "" }),
-      ["Time", "Crew", "Policy", "Post", "Arrival change, min", "Leverage, min"],
+      [
+        "Time", "Crew", "Policy", "Post", "Watch, h", "Arrival change, min", "Leverage, min",
+        "Undominated choices", "News",
+      ],
       rows,
     ),
   ])
+}
+
+///|
+fn hazard_name(h : @core.Hazard) -> String {
+  match h {
+    Breach => "a breach"
+    Flare => "a flare"
+    Salvage => "salvage"
+  }
+}
+
+///|
+/// What became of the crossing's demands, in order.
+fn demands_sentence(c : @core.Crossing) -> String {
+  let parts = c.demands.map(d => {
+    let phase = phase_name(d.phase)
+    let fate = match d.status {
+      Met => "met"
+      Missed => "missed"
+      Open => "still open"
+      Waiting => "never opened"
+    }
+    "\{hazard_name(d.hazard)} in the \{phase}, needing \{hours(d.need / @core.HAND)} crew-hours, \{fate}"
+  })
+  "Demands: " + parts.join("; ") + "."
+}
+
+///|
+fn fit_sentence(c : @core.Crossing) -> String {
+  let f = c.fit
+  let landed = f.baffles +
+    f.plating +
+    f.injectors +
+    f.coils -
+    (
+      c.ship.fit.baffles +
+      c.ship.fit.plating +
+      c.ship.fit.injectors +
+      c.ship.fit.coils
+    )
+  let works = c.tallies.values().fold(init=0L, (n, t) => n + t.work)
+  "Refit levels landed: \{landed}; the drive now needs \{f.needed} hands. Works made: \{works * 10L / @core.WORK_SIZE} tenths."
 }

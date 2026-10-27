@@ -41,6 +41,28 @@ is as frequent as the crossing's phases and the crew's own choices, not as
 frequent as events. Events still happen, but as demands on the same hours
 (see [events](#events)).
 
+## a check-in
+
+A returning player first hears what happened while they were away: phase
+changes, demands opened or closed, refits landed, their own watch stood and
+works finished. Then they have up to five choices, each on its own timescale:
+
+| choice | event | lasts | reaches |
+|---|---|---|---|
+| post | `Posted` | until changed | arrival and hull, for everyone |
+| watch | `Watched` | 1 hour up to the rank's limit | a quarter more from this hand; regard |
+| standing order | `Ordered` | until the next phase begins | the post taken at the phase change |
+| craft | `Crafted` | until changed | the ship's refit, or one's own works |
+| refit, for engineers | `Refitting` | until it lands | the ship, for good |
+
+Demands set deadlines on posts between check-ins, and docking carries each
+crossing into the next.
+
+In the simulator a player checking in every 3 hours, give or take 2, came
+back to something new on about 80% of returns. About 90% of check-ins
+offered two or more choices that no other choice beat on arrival, hull,
+works, regard and refits together (`moon run cmd/survey --target native`).
+
 ## the crossing
 
 Proper time aboard is wall-clock time. A crossing has three phases:
@@ -82,22 +104,77 @@ The hull wears faster the harder the ship drives (about `setting²` per hour)
 and is repaired by hull crew. Damage lowers the highest setting the drive can
 reach, so neglecting the hull makes later burns slower.
 
+Hands are counted in quarters: a crew member is 4 and one standing a watch
+is 5, so `drive_crew` and the hull's repair are sums of quarters.
+
+The hull's band, which sets the cap, falls as soon as the hull drops below
+the band's edge and rises again only 5% above it (`BAND_MARGIN`). Without
+the margin a ship mending at an edge dropped a band, wore less at the lower
+cap, climbed back over the edge, and repeated every tick.
+
+The map's hops run 8 to 30 ly. Below 8 ly, a ship with coils fitted spends
+more of the crossing in the burn, and staffing stretches it past 2.5×.
+
 ## crafts
 
-A player's craft decides what their own hours make. They choose one before
-their first departure and can change it at any time. Smoothly taking in new
-players matters more than guarding against switching craft to optimize.
+A player's craft decides what their hours on the craft post make. They can
+change it at any time. Smoothly taking in new players matters more than
+guarding against switching craft to optimize. Crafters of the same craft at
+work together each make a quarter more for every other one, up to double.
 
-| craft | makes | benefits |
+| craft | makes | benefits | built |
+|---|---|---|---|
+| engineer | refits | the whole ship, for good | yes |
+| artist | works of 6 crew-hours, delivered at port | the maker's record; recruits for the ship | yes |
+| navigator | charts that add reachable destinations | the whole ship's choices | not yet |
+
+Each payoff belongs to a different person, so crew depend on each other.
+Works do not yet take inputs gathered in port: core counts crew-hours. The
+model will write a work's title and description and decides nothing.
+
+Engineers build one refit at a time. The ship proposes which, by
+temperament, and engineers can choose another. Each refit has three levels,
+and each level costs half again as much as the last.
+
+| refit | effect | first level |
 |---|---|---|
-| engineer | ship upgrades: a higher γ cap, less hull wear | the whole ship, for good |
-| navigator | charts that add reachable destinations | the whole ship's choices |
-| artist, scholar | works, delivered at port | the maker's standing; recruits for the ship |
+| `Baffles` | wear ×3/4 | 5 crew-hours |
+| `Plating` | repair per hull hand ×5/4 | 4 crew-hours |
+| `Injectors` | one fewer drive hand for full burn, down to 2 | 6 crew-hours |
+| `Coils` | γ cap up by a fifth of the route's, from the next departure | 10 crew-hours |
 
-Each payoff belongs to a different person, so crew depend on each other. A
-work is made from inputs the crafter has gathered in port. Two players working
-together make more than either alone. Core computes a work's stats from its
-inputs. The model writes its title and description and decides nothing.
+The first three land mid-crossing and change rates at once. Coils change the
+plan, which is fixed when the ship leaves port, so they pay off only on later
+crossings and most on long hauls. On the Flea, which proposes coils first, a
+solo engineer's six-leg voyage took 61 hours against 68 for a solo artist.
+On the plain ship, which proposes baffles and plating, engineers bought hull
+and no time.
+
+## watches
+
+A watch is a promise to hold the current post for a stated time, from 1 hour
+up to the longest the player's rank allows: 2, 4, 8 or 12 hours for ranks 0
+to 3. A hand on watch counts as 5 quarters instead of 4, on any post. A
+watch stood to its end earns an hour of regard for each hour stood. A post
+change before the end breaks it and costs two hours of regard for each hour
+already stood, never taking regard below zero.
+
+What the watch trades away is flexibility. A long watch on the drive that
+runs past turnover keeps a hand on a post the coast does not need, unless a
+standing order moves it.
+
+## standing orders
+
+A standing order names a post to take when a later phase begins: "craft when
+the coast begins", or "drive at turnover". It fires at the phase boundary,
+so a player who leaves during the burn crafts through the coast and is back
+on the drive for the approach without checking in. A watch in progress
+carries over to the new post. An order for a phase the plan skips, such as
+the coast on a hop too short to reach the cap, lapses at turnover.
+
+Before orders, players who crafted through the coast left the approach at
+the drive's floor until they returned, and the coast forecast read about 3
+hours late on a 20 ly crossing. With orders it matches arrival.
 
 ## the ship
 
@@ -112,35 +189,81 @@ The ship is the language model. It:
   faces. Regard sets **rank**, which is public and spoken. For now rank grants
   no authority. Add authority, such as setting the drive within the ship's
   tolerance, when a good candidate turns up.
+  Regard accrues for each quarter-hand-tick on a useful post: the drive
+  while it fires, the hull while it is short of full or a breach is open,
+  and any craft. It is weighted by the ship's values, doubled on the post
+  the ship asks for, and doubled again on a post an open demand needs. Rank
+  begins at 40, 120 and 280 hours of regard, is fixed when a crew member
+  joins a crossing, and sets their longest watch.
 - **speaks**: arrivals, departures, promotions, and notice of who stood a
   watch.
 
-The ship never sets a rate. Its choices are what to ask, what to propose, and
-how it treats crew. The numbers come from posts.
+The ship never sets a rate. Its choices are what to ask, what to propose,
+what to refit, and how it treats crew. The numbers come from posts.
 
-## events
+The ship reconsiders what it asks for only when something has happened: a
+phase change, a demand opening or closing, or the hull changing band. A
+social ship in the simulator that asked for the emptiest post whenever a
+hand moved, crewed by recruits who follow asks, sent itself and them from
+post to post every tick. Asks are also speech, which
+[accessibility](accessibility.md) treats as scarce.
 
-An event is a demand for hours: "a breach needs 6 crew-hours before
-turnover". It matters because the hours come from the drive or from someone's
-craft. A deadline is a time in the crossing, not a window for a reaction. Any
-post change made before the deadline counts, so nothing depends on being
-present at the right moment.
+## demands
 
-Keep events to about one or two per crossing. Interaction doesn't depend on
-them.
+A demand is a call for hours on one post before its phase ends. Each
+crossing has one or two, fixed at departure from the ship's seed and
+crossing count, so nothing a crew does rerolls them. Each opens when its
+phase's stock is between a fifth and two thirds spent, so its window shrinks
+and grows with the drive rather than with the clock.
+
+| demand | post | phase | needs | if missed | if met |
+|---|---|---|---|---|---|
+| `Breach` | hull | burn or approach | 1.5 to 3 crew-hours | hull loses 25% | nothing more |
+| `Flare` | drive | burn or approach | 2 to 4 crew-hours | hull loses 1/6 | nothing more |
+| `Salvage` | craft | coast | 4 to 8 crew-hours | nothing | 3 crew-hours of refit progress |
+
+A demand in a firing phase ends with the phase, so driving harder leaves less
+time to meet it. Posts held while away count, so nothing depends on being
+present at the right moment. In the simulator, crews missed 30 to 55% of
+demands, most on the Scorpion and fewest on the Tigress.
 
 ## port
 
-Arrival settles the crossing:
+Arrival docks the crossing into the ship that leaves (`Crossing::dock`):
 
-- delivered works raise their makers' standing at that world, and bring NPC
-  recruits to the ship;
-- regard turns into rank, and the ship marks promotions;
-- crew gather inputs for their next works, and may change craft;
+- each crew member's regard and finished works go to their record, and
+  part-finished work carries over;
+- every 3 works delivered across the crew bring a recruit, up to 6.
+  Recruits work ship posts only and make no works, so recruits do not breed
+  recruits;
+- the yard restores a quarter of the hull;
+- refits stay fitted, and coils change the next crossing's plan;
 - the ship proposes destinations and the crew choose. How several players
-  choose is still open.
+  choose is still open, and none of it is built.
+
+Not built yet: works raising their makers' standing at a world, gathering
+inputs for the next works, and promotions spoken by the ship.
 
 Then the ship departs, and the new world gives everything a new meaning.
+
+## ships
+
+Which ship a player crews changes the crossing. A ship's kinematics and
+fittings come from its character, and its values decide which work it
+notices. Starting profiles for the playtest cast, from `sim/ships.mbt`:
+
+| ship | accel, g | γ cap | drive hands | wear | repair | values: drive, hull, craft | temperament |
+|---|---|---|---|---|---|---|---|
+| a plain ship | 40,000 | 24,000 | 4 | 30,000 | 28,000 | 2, 2, 1 | careful |
+| EF-147 The Tigress | 38,000 | 24,000 | 5 | 24,000 | 32,000 | 1, 3, 2 | social |
+| HS-212 The Twin-Tailed Scorpion | 46,000 | 26,000 | 3 | 42,000 | 24,000 | 3, 1, 1 | bold |
+| EF-287 The Flea on the Drum | 42,000 | 20,000 | 3 | 34,000 | 20,000 | 1, 1, 3 | sly |
+
+The same solo crew on a 20 ly crossing arrived in 10.5 hours on the
+Scorpion with the hull down to 59%, and in 13.0 hours on the Tigress with
+the hull at 88% and the fewest demands missed. The Flea made the most works
+and twice the regard for crafters: its crafters reached rank 3 within six
+crossings while its drivers stayed at rank 1.
 
 ## idle grammar
 
@@ -169,7 +292,10 @@ Each phase is a stock that changes linearly, so the crossing fits the
 - **approach**: η falls to zero.
 
 Rates change only at events in the log, such as a post change, so the state
-between events is linear and splittable. Phase changes are the next event. The
+between events is linear and splittable. Phase changes are the next event. A rate also changes at a boundary: a phase ends, the hull
+changes band or fills, a demand opens or is met, a watch ends, a refit lands,
+or a standing order fires. An idle crossing steps through a few dozen
+boundaries, and a law in `core/crossing_test.mbt` holds it under 256. The
 plan for each route fixes the burn's target η and the coast distance offline
 in floats, and stores them as integers. The distance covered while burning
 then does not depend on the setting. That approximation is acceptable for
