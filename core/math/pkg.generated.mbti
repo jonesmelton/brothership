@@ -4,7 +4,27 @@ package "local/brothership/core/math"
 // Values
 pub const MAX_CLOCK : Int64 = 9223372036854775807
 
+pub const MAX_RATE : Int64 = 1000000000
+
+pub const MAX_STOCK : Int64 = 1000000000000000
+
+pub const MAX_TICKS : Int64 = 1000000000
+
+pub const SETTING_FLOOR : Int64 = 350
+
+pub const SETTING_FULL : Int64 = 1000
+
 pub fn advance(Int64, Int64) -> Int64
+
+pub fn deplete(Int64, Int64, Int64) -> Int64
+
+pub fn rate(Int64, Int64) -> Int64
+
+pub fn setting(Int64, Int64, Int64) -> Int64
+
+pub fn settle(Int64, Int64, Int64, Int64) -> Int64
+
+pub fn ticks_to_empty(Int64, Int64) -> Int64
 
 pub fn try_advance(Int64, Int64) -> Int64?
 

@@ -1,0 +1,142 @@
+///|
+predicate setting_pre(drive : Int64, needed : Int64, cap : Int64) {
+  0L <= drive &&
+  1L <= needed &&
+  needed <= 64L &&
+  350L <= cap &&
+  cap <= 1000L
+}
+
+///|
+/// Diminishing returns on drive crew: `c(2n - c) / n²` rises to 1 at `c = n`
+/// and each extra hand adds less than the one before.
+fn setting_raw(drive : Int64, needed : Int64) -> Int64 {
+  if drive < needed {
+    350L + 650L * (drive * (2L * needed - drive)) / (needed * needed)
+  } else {
+    1000L
+  }
+}
+
+///|
+fn setting_model(drive : Int64, needed : Int64, cap : Int64) -> Int64 {
+  if setting_raw(drive, needed) < cap {
+    setting_raw(drive, needed)
+  } else {
+    cap
+  }
+}
+
+///|
+predicate setting_post(
+  drive : Int64,
+  needed : Int64,
+  cap : Int64,
+  result : Int64,
+) {
+  result == setting_model(drive, needed, cap) &&
+  350L <= result &&
+  result <= cap
+}
+
+///|
+predicate rate_pre(base : Int64, setting : Int64) {
+  0L <= base && base <= 1000000000L && 0L <= setting && setting <= 1000L
+}
+
+///|
+fn rate_model(base : Int64, setting : Int64) -> Int64 {
+  base * setting / 1000L
+}
+
+///|
+/// Bounds that keep `rate * ticks` and every stock inside `Int64`.
+predicate deplete_pre(left : Int64, rate : Int64, ticks : Int64) {
+  0L <= left &&
+  left <= 1000000000000000L &&
+  0L <= rate &&
+  rate <= 1000000000L &&
+  0L <= ticks &&
+  ticks <= 1000000000L
+}
+
+///|
+fn deplete_model(left : Int64, rate : Int64, ticks : Int64) -> Int64 {
+  if rate * ticks < left {
+    left - rate * ticks
+  } else {
+    0L
+  }
+}
+
+///|
+/// One long gap equals two short ones: offline progress does not depend on
+/// how often anyone looked.
+lemma deplete_split(left : Int64, rate : Int64, a : Int64, b : Int64) where {
+  proof_require: deplete_pre(left, rate, a),
+  proof_require: deplete_pre(left, rate, b),
+  proof_require: a + b <= 1000000000L,
+  proof_ensure: deplete_model(deplete_model(left, rate, a), rate, b) ==
+    deplete_model(left, rate, a + b),
+} {
+  proof_assert rate * (a + b) == rate * a + rate * b
+}
+
+///|
+predicate empty_post(left : Int64, rate : Int64, result : Int64) {
+  0L <= result &&
+  result * rate >= left &&
+  (result == 0L || (result - 1L) * rate < left)
+}
+
+///|
+predicate settle_pre(
+  level : Int64,
+  net : Int64,
+  ticks : Int64,
+  ceiling : Int64,
+) {
+  0L <= ceiling &&
+  ceiling <= 1000000000000000L &&
+  0L <= level &&
+  level <= ceiling &&
+  -1000000000L <= net &&
+  net <= 1000000000L &&
+  0L <= ticks &&
+  ticks <= 1000000000L
+}
+
+///|
+fn settle_model(
+  level : Int64,
+  net : Int64,
+  ticks : Int64,
+  ceiling : Int64,
+) -> Int64 {
+  if level + net * ticks < 0L {
+    0L
+  } else {
+    if level + net * ticks > ceiling {
+      ceiling
+    } else {
+      level + net * ticks
+    }
+  }
+}
+
+///|
+lemma settle_split(
+  level : Int64,
+  net : Int64,
+  a : Int64,
+  b : Int64,
+  ceiling : Int64,
+) where {
+  proof_require: settle_pre(level, net, a, ceiling),
+  proof_require: settle_pre(level, net, b, ceiling),
+  proof_require: a + b <= 1000000000L,
+  proof_ensure: settle_model(settle_model(level, net, a, ceiling), net, b, ceiling) ==
+    settle_model(level, net, a + b, ceiling),
+} {
+  proof_assert net * (a + b) == net * a + net * b
+}
