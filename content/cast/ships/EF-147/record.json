@@ -20,5 +20,70 @@
     },
     "finish": "stop",
     "raw": null
+  },
+  "captain": {
+    "stage": "captain",
+    "sample": 1,
+    "key": "00f84feae358660cc71c63b9940151c6919bf5207ee589458094d7ef20b28e8c",
+    "model": "meta:muse-wonder-1.0",
+    "max_tokens": 12000,
+    "inputs": {
+      "entry": "4092f0f714e7781a7596be90ce05466960964f6a1f12a59342c5f38224ec0b57",
+      "portrait": "c91b09472523be8e298adf1410b65683c24edbc9858a39e9ab785265e97d736a"
+    },
+    "text_sha": "f151091ad41580e42216b642ec0e9745bcdba801571d0b9446df0fabad5ea2bb",
+    "problems": [
+      "has 818 words, wants at most 450"
+    ],
+    "usage": {
+      "input": 4263,
+      "output": 3626,
+      "reasoning": 2600,
+      "cost_usd": 0.089572
+    },
+    "finish": "stop",
+    "raw": null
+  },
+  "voyage": {
+    "stage": "voyage",
+    "sample": 1,
+    "key": "96cad64b110c9a806da24142777766abf7bd46ad4cfeea10089202a14fe8b079",
+    "model": "meta:muse-wonder-1.0",
+    "max_tokens": 12000,
+    "inputs": {
+      "entry": "4092f0f714e7781a7596be90ce05466960964f6a1f12a59342c5f38224ec0b57",
+      "portrait": "c91b09472523be8e298adf1410b65683c24edbc9858a39e9ab785265e97d736a"
+    },
+    "text_sha": "705d553ed5104aedc17439e6e0e4439ca498d474f56aee644f1dc5f20ce586a5",
+    "problems": [],
+    "usage": {
+      "input": 4554,
+      "output": 1823,
+      "reasoning": 1609,
+      "cost_usd": 0.054676
+    },
+    "finish": "stop",
+    "raw": null
+  },
+  "voice": {
+    "stage": "voice",
+    "sample": 1,
+    "key": "8c102355939539ce075a269e22903cc8bf7442639a2265ab7ea614c9ee40d1c1",
+    "model": "meta:muse-wonder-1.0",
+    "max_tokens": 12000,
+    "inputs": {
+      "entry": "4092f0f714e7781a7596be90ce05466960964f6a1f12a59342c5f38224ec0b57",
+      "portrait": "c91b09472523be8e298adf1410b65683c24edbc9858a39e9ab785265e97d736a"
+    },
+    "text_sha": "c6205eff37c801d6dbc829782bb8af71a32f00c53645cb6338de83bff193c735",
+    "problems": [],
+    "usage": {
+      "input": 4290,
+      "output": 9889,
+      "reasoning": 9055,
+      "cost_usd": 0.1989344
+    },
+    "finish": "stop",
+    "raw": null
   }
 }
