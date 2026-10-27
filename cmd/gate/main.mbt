@@ -1,45 +1,62 @@
 // Checks messages against the content gate's policy. Run from the repository
 // root.
 //
-//   moon run cmd/gate -- [--replay] [file...]
+//   moon run cmd/gate -- [--replay] [--model provider:model] [file...]
 //
 // With no files it checks every sample in content/gate/samples and fails if
 // a verdict disagrees with the sample's directory, clean or violation.
-// Replies are cached in .cache/llm. The Groq key is read from GROQ_API_KEY,
-// or else ~/.config/brothership/groq.key.
+// Replies are cached in .cache/llm. Keys are read from GROQ_API_KEY or
+// ~/.config/brothership/groq.key, and MODEL_API_KEY or
+// ~/.config/brothership/meta-api.key.
 
 ///|
 let root = "content/gate"
 
 ///|
-let model = "groq:openai/gpt-oss-safeguard-20b"
+let default_model = "groq:openai/gpt-oss-safeguard-20b"
 
 ///|
-async fn groq_key() -> String {
-  if @env.get_env_var("GROQ_API_KEY") is Some(key) {
+async fn key(env_var : String, file : String) -> String {
+  if @env.get_env_var(env_var) is Some(key) {
     return key
   }
   let home = @env.get_env_var("HOME").unwrap_or("")
-  let path = "\{home}/.config/brothership/groq.key"
+  let path = "\{home}/.config/brothership/\{file}"
   guard @fs.exists(path) else {
-    fail("set GROQ_API_KEY or write the key to \{path}")
+    fail("set \{env_var} or write the key to \{path}")
   }
   @fs.read_file(path).text().trim().to_owned()
 }
 
 ///|
-async fn backend(mode : @cache.Mode) -> @llm.Backend {
-  let providers = {
-    "groq": @llm.Backend::openai_compatible(
-      base_url="https://api.groq.com/openai/v1",
-      api_key=if mode is Live { groq_key() } else { "" },
-    ),
+async fn provider(name : String, mode : @cache.Mode) -> @llm.Backend {
+  let (base_url, env_var, file) = match name {
+    "groq" => ("https://api.groq.com/openai/v1", "GROQ_API_KEY", "groq.key")
+    "meta" => ("https://api.meta.ai/v1", "MODEL_API_KEY", "meta-api.key")
+    _ => fail("unknown provider \{name}, use groq or meta")
   }
-  @cache.cached(
-    @llm.Backend::route(providers).limited(8).retrying(),
-    dir=".cache/llm",
-    mode~,
+  @llm.Backend::openai_compatible(
+    base_url~,
+    api_key=if mode is Live { key(env_var, file) } else { "" },
   )
+}
+
+///|
+/// Milliseconds each uncached call took, by the call's user message.
+async fn backend(
+  model : String,
+  mode : @cache.Mode,
+  timings : Map[String, Int64],
+) -> @llm.Backend {
+  let name = model.split(":").next().unwrap().to_owned()
+  let routed = @llm.Backend::route(Map([(name, provider(name, mode))]))
+  let timed = @llm.Backend::new(routed.name, async fn(c) {
+    let start = @async.now()
+    let r = routed.call(c)
+    timings[c.user] = @async.now() - start
+    r
+  })
+  @cache.cached(timed.limited(8).retrying(), dir=".cache/llm", mode~)
 }
 
 ///|
@@ -69,13 +86,18 @@ fn expected(path : String) -> @llm_gate.Verdict? {
 async fn main {
   let args = @env.args()[1:].to_owned()
   let mode : @cache.Mode = if args.contains("--replay") { Replay } else { Live }
-  let given = args.filter(a => !a.has_prefix("--"))
+  let model = match args.search("--model") {
+    Some(i) if i + 1 < args.length() => args[i + 1]
+    _ => default_model
+  }
+  let given = args.filter(a => !a.has_prefix("--") && a != model)
   let files = if given.length() > 0 { given } else { samples() }
   let gate = @llm_gate.Gate::new(
     model~,
     policy=@fs.read_file("\{root}/policy.md").text(),
   )
-  let b = backend(mode)
+  let timings = Map([])
+  let b = backend(model, mode, timings)
   let lines : Array[String] = Array::make(files.length(), "")
   let wrong = Ref(0)
   @async.with_task_group(g => {
@@ -100,7 +122,11 @@ async fn main {
           }
           _ => ""
         }
-        lines[i] = "\{mark}\{file}\t\{shown}"
+        let took = match timings.get(@llm_gate.wrap(text)) {
+          Some(ms) => "\{ms}ms"
+          None => "cached"
+        }
+        lines[i] = "\{mark}\{file}\t\{took}\t\{shown}"
       })
     }
   })
