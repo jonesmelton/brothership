@@ -1,0 +1,35 @@
+# One machine, one volume: sqlite has one writer and the server keeps its
+# snapshot in memory, so a second machine would diverge. Autostop is off so the
+# demo never meets a cold boot and its Litestream restore.
+app = "brothership"
+primary_region = "ord"
+
+[build]
+
+[env]
+  WARREN_HOST = "0.0.0.0"
+  WARREN_PORT = "8080"
+  BROTHERSHIP_DB = "/data/brothership.sqlite"
+
+[[mounts]]
+  source = "brothership_data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = false
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "2s"
+    # Boot includes the Litestream restore from Tigris.
+    grace_period = "60s"
+    method = "GET"
+    path = "/api/snapshot"
