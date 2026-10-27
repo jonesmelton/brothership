@@ -33,13 +33,27 @@ pub fn Route::default() -> Route {
 }
 
 ///|
+/// The ship's fittings at departure, before any refit.
+pub fn Route::fit(self : Route) -> @core.Fit {
+  @core.Fit::new(needed=self.drive_needed, wear=self.wear, repair=self.repair)
+}
+
+///|
 /// The closed-form kinematics of `docs/gameplay.md`, at full burn, rounded
 /// once into billionths. The only floating-point step between a route and
 /// the game.
 pub fn Route::plan(self : Route) -> @core.Plan {
+  self.plan_with(coils=0)
+}
+
+///|
+/// The plan for a ship with `coils` levels of coils: each raises the γ cap
+/// by a fifth of the route's.
+pub fn Route::plan_with(self : Route, coils~ : Int64) -> @core.Plan {
   let a = self.accel_g * G
+  let cap = self.gamma_cap * (1.0 + coils.to_double() / 5.0)
   let eta = @fmath.acosh(1.0 + a * self.distance_ly / 2.0).min(
-    @fmath.acosh(self.gamma_cap),
+    @fmath.acosh(cap),
   )
   let gamma = @fmath.cosh(eta)
   let burn_d = (gamma - 1.0) / a
@@ -50,9 +64,6 @@ pub fn Route::plan(self : Route) -> @core.Plan {
     coast: nano(coast_d),
     eta_rate: nano(a / YEAR),
     coast_rate: nano(@fmath.sinh(eta) / YEAR),
-    drive_needed: self.drive_needed,
-    wear: self.wear,
-    repair: self.repair,
   }
 }
 

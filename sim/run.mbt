@@ -1,6 +1,6 @@
 ///|
 /// A check-in that cannot move arrival by at least this much, by any choice
-/// of post, offers no decision worth the name.
+/// of post, offers no decision about arrival.
 pub const DEAD_LEVERAGE : Int64 = 300L
 
 ///|
@@ -15,6 +15,7 @@ pub(all) enum Cadence {
 pub(all) struct Actor {
   name : String
   policy : Policy
+  craft : @core.Craft
   cadence : Cadence
   joins_at : Int64
 } derive(Debug, Eq)
@@ -25,8 +26,23 @@ pub fn Actor::is_player(self : Actor) -> Bool {
 }
 
 ///|
+/// The watch a player stands at each check-in: as long as the shortest
+/// absence they expect, in whole hours, within what their rank allows.
+/// NPCs stand none, since they change post at every boundary.
+fn Actor::watch(self : Actor, rank : Int64) -> Int64 {
+  match self.cadence {
+    Reactive => 0L
+    Every(every~, jitter~) => {
+      let hours = ((every - jitter) / @core.HOUR).max(1L)
+      (hours * @core.HOUR).min(@core.max_watch(rank))
+    }
+  }
+}
+
+///|
 pub(all) struct Scenario {
   name : String
+  ship : Profile
   route : Route
   /// Hull at departure, in `@core.HULL_FULL` units.
   hull : Int64
@@ -54,11 +70,17 @@ pub(all) struct Decision {
   actor : Int32
   from : @core.Post?
   to : @core.Post
+  watch : Int64
   /// Forecast arrival before and after.
   before : Int64
   after : Int64
   /// How far the best and worst choice of post would move arrival apart.
   leverage : Int64
+  /// Choices of post, or of the other craft, that no other choice beats on
+  /// arrival, hull, works, regard and refits together.
+  undominated : Int32
+  /// Things that happened since this crew member last checked in.
+  news : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -77,8 +99,14 @@ pub(all) struct Run {
   /// Player check-ins, and those with less than `DEAD_LEVERAGE`.
   checkins : Int32
   dead_checkins : Int32
+  /// Player check-ins with at least two undominated choices.
+  live_checkins : Int32
+  /// Player check-ins that came back to something new.
+  newsy_checkins : Int32
   /// The longest a player went between check-ins that offered a decision.
   longest_dead : Int64
+  /// The arrived crossing, ready to dock.
+  last : @core.Crossing
 } derive(Debug, Eq)
 
 ///|
@@ -97,27 +125,87 @@ fn sample(c : @core.Crossing) -> Sample {
 }
 
 ///|
-fn leverage(c : @core.Crossing, crew : Int32) -> Int64 {
-  let ats = posts.map(post => forecast_with(c, crew, post))
-  let mut lo = ats[0]
-  let mut hi = ats[0]
-  for at in ats {
-    lo = lo.min(at)
-    hi = hi.max(at)
+/// What a returning crew member would be told about: phase changes,
+/// demands opening or closing, refits landing, their own watches stood and
+/// works finished.
+fn news(a : @core.Crossing, b : @core.Crossing, crew : Int32) -> Int32 {
+  let mut n = 0
+  if a.phase != b.phase {
+    n += 1
   }
-  hi - lo
+  for i, d in b.demands {
+    if a.demands.get(i).map(x => x.status) != Some(d.status) {
+      n += 1
+    }
+  }
+  if refit_units(b.fit) / (100L * @core.HOUR * @core.CRAFT_UNIT) !=
+    refit_units(a.fit) / (100L * @core.HOUR * @core.CRAFT_UNIT) {
+    n += 1
+  }
+  match (a.tallies.get(crew), b.tallies.get(crew)) {
+    (Some(x), Some(y)) => {
+      if y.watches_stood > x.watches_stood {
+        n += 1
+      }
+      if y.work / @core.WORK_SIZE > x.work / @core.WORK_SIZE {
+        n += 1
+      }
+    }
+    _ => ()
+  }
+  n
 }
 
 ///|
-/// Fly one crossing. Time jumps from one instant of interest to the next: a
-/// check-in, a join, or a boundary where a rate changes on its own.
+/// Crew ids: actors by index, then recruits from 1000.
+const RECRUIT_BASE : Int32 = 1000
+
+///|
+/// The scenario's actors, with the ship's recruits added as steady NPCs.
+pub fn Scenario::crew(self : Scenario, ship : @core.Ship) -> Array[Actor] {
+  self.actors +
+  Array::makei(ship.recruits.to_int(), i => {
+    name: "recruit \{i + 1}",
+    policy: Steady,
+    craft: Artist,
+    cadence: Reactive,
+    joins_at: 0L,
+  })
+}
+
+///|
+fn id_of(i : Int32, actors : Int32) -> Int32 {
+  if i < actors {
+    i
+  } else {
+    RECRUIT_BASE + i - actors
+  }
+}
+
+///|
+/// The ship this scenario departs with.
+pub fn Scenario::departing(self : Scenario, seed : Int64) -> @core.Ship {
+  { ..self.ship.ship(seed~), hull: self.hull, }
+}
+
+///|
 pub fn Scenario::run(self : Scenario, seed : Int64) -> Run {
-  let plan = self.route.plan()
-  let actors = self.actors
-  let mut c = @core.Crossing::new(plan, hull=self.hull)
+  self.fly(self.departing(seed), seed)
+}
+
+///|
+/// Fly one crossing from `ship`. Time jumps from one instant of interest to
+/// the next: a check-in, a join, or a boundary where a rate changes on its
+/// own. The ship acts at every instant.
+pub fn Scenario::fly(self : Scenario, ship : @core.Ship, seed : Int64) -> Run {
+  let plan = self.route.plan_with(coils=ship.fit.coils)
+  let actors = self.crew(ship)
+  let temperament = self.ship.temperament
+  let mut c = @core.Crossing::new(plan, ship)
   let next = actors.map(a => a.joins_at)
   let rounds = Array::make(actors.length(), 0)
   let last_live = actors.map(a => a.joins_at)
+  let seen = actors.map(_ => c)
   let mut longest_dead = 0L
   let samples = [sample(c)]
   let decisions = []
@@ -127,7 +215,15 @@ pub fn Scenario::run(self : Scenario, seed : Int64) -> Run {
   let mut craft_ticks = 0L
   let mut checkins = 0
   let mut dead = 0
+  let mut live = 0
+  let mut newsy = 0
   let mut first = true
+  let mut spoke_at = (@core.Phase::Arrived, [], -1L)
+  let apply = (c : @core.Crossing, e : @core.CrossingEvent) => {
+    c.apply(e) catch {
+      _ => c
+    }
+  }
   for _ in 0..<1_000_000 {
     guard c.arrived_at is None else { break }
     let boundary = c.t + c.next_boundary()
@@ -147,31 +243,78 @@ pub fn Scenario::run(self : Scenario, seed : Int64) -> Run {
     let at_boundary = first || now == boundary
     first = false
     for i, actor in actors {
+      let crew = id_of(i, self.actors.length())
       let joined = c.t >= actor.joins_at
       let due = next[i] == c.t ||
         (actor.cadence is Reactive && joined && at_boundary)
       guard due && joined else { continue }
+      if !c.hands.contains(crew) {
+        c = apply(
+          apply(c, Posted(crew~, post=Craft)),
+          Crafted(crew~, craft=actor.craft),
+        )
+      }
+      let rank = c.hands.get(crew).map(h => h.rank).unwrap_or(0L)
+      let watch = actor.watch(rank)
       let roll = draw(seed, i, rounds[i], 1)
-      let lev = leverage(c, i)
+      let options = posts.map(p => {
+        prospect(try_option(c, crew, p, watch, order=handover(c)), crew)
+      })
+      let other : @core.Craft = if actor.craft == Artist {
+        Engineer
+      } else {
+        Artist
+      }
+      let switched = apply(c, Crafted(crew~, craft=other))
+      options.push(
+        prospect(
+          try_option(switched, crew, Craft, watch, order=handover(c)),
+          crew,
+        ),
+      )
+      let lev = options.fold(init=0L, (m, o) => m.max(o.arrival)) -
+        options.fold(init=@math.MAX_TICKS, (m, o) => m.min(o.arrival))
       let before = c.forecast().unwrap_or(@math.MAX_TICKS)
-      let from = c.posts.get(i)
-      let to = actor.policy.decide(c, i, roll)
-      c = c.apply(Posted(crew=i, post=to)) catch { _ => panic() }
+      let from = c.hands.get(crew).map(h => h.post)
+      let choice = actor.policy.decide(c, crew, watch, roll)
+      let fresh = news(seen[i], c, crew)
+      c = apply(c, Posted(crew~, post=choice.post))
+      let on_watch = c.hands
+        .get(crew)
+        .map(h => h.watch is Some(_))
+        .unwrap_or(false)
+      if choice.watch > 0L && !on_watch {
+        c = apply(c, Watched(crew~, ticks=choice.watch))
+      }
+      if c.hands.get(crew).map(h => h.order) != Some(choice.order) {
+        c = apply(c, Ordered(crew~, order=choice.order))
+      }
+      seen[i] = c
       let after = c.forecast().unwrap_or(@math.MAX_TICKS)
+      let open = undominated(options)
       decisions.push({
         t: c.t,
-        actor: i,
+        actor: crew,
         from,
-        to,
+        to: choice.post,
+        watch: choice.watch,
         before,
         after,
         leverage: lev,
+        undominated: open,
+        news: fresh,
       })
       rounds[i] += 1
       match actor.cadence {
         Reactive => next[i] = @math.MAX_TICKS
         Every(every~, jitter~) => {
           checkins += 1
+          if fresh > 0 {
+            newsy += 1
+          }
+          if open >= 2 {
+            live += 1
+          }
           if lev < DEAD_LEVERAGE {
             dead += 1
           } else {
@@ -182,6 +325,21 @@ pub fn Scenario::run(self : Scenario, seed : Int64) -> Run {
             jitter
           next[i] = c.t + (every + offset).max(1L)
         }
+      }
+    }
+    let refit = temperament.refit(c)
+    if refit != c.fit.refit {
+      c = apply(c, Refitting(refit~))
+    }
+    // The ship speaks when something has happened, not whenever the crew
+    // move: asking on head counts made recruits, who follow asks, and the
+    // ship chase each other from post to post.
+    let moment = (c.phase, c.demands.map(d => d.status), c.band)
+    if moment != spoke_at {
+      spoke_at = moment
+      let ask = temperament.ask(c)
+      if ask != c.ask {
+        c = apply(c, Asked(post=ask))
       }
     }
     samples.push(sample(c))
@@ -206,6 +364,36 @@ pub fn Scenario::run(self : Scenario, seed : Int64) -> Run {
     craft_ticks,
     checkins,
     dead_checkins: dead,
+    live_checkins: live,
+    newsy_checkins: newsy,
     longest_dead,
+    last: c,
   }
+}
+
+///|
+/// One crossing of a voyage, and the ship that left port after it.
+pub(all) struct Leg {
+  distance_ly : Double
+  run : Run
+  docked : @core.Ship
+} derive(Debug, Eq)
+
+///|
+/// Fly `distances` one after another, docking between them, so refits,
+/// recruits, hull and ranks carry from each crossing into the next.
+pub fn Scenario::voyage(
+  self : Scenario,
+  distances : Array[Double],
+  seed : Int64,
+) -> Array[Leg] {
+  let legs = []
+  let mut ship = self.departing(seed)
+  for d in distances {
+    let s = { ..self, route: { ..self.route, distance_ly: d, }, }
+    let run = s.fly(ship, seed + ship.crossings * 7919L)
+    ship = run.last.dock().unwrap()
+    legs.push({ distance_ly: d, run, docked: ship, })
+  }
+  legs
 }

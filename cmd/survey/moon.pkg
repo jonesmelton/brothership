@@ -1,0 +1,10 @@
+import {
+  "local/brothership/core",
+  "local/brothership/sim",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+}
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")

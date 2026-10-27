@@ -1,6 +1,8 @@
 ///|
 struct Model {
   scenario : Int32
+  /// Index into `@sim.profiles()`.
+  ship : Int32
   route : @sim.Route
   hull_pct : Int32
   runs : Int32
@@ -14,6 +16,7 @@ struct Model {
 ///|
 enum Msg {
   Pick(String)
+  Ship(String)
   Distance(String)
   Cap(String)
   Accel(String)
@@ -31,6 +34,7 @@ enum Msg {
 fn Model::scenario(self : Model) -> @sim.Scenario {
   {
     ..@sim.scenarios()[self.scenario],
+    ship: @sim.profiles()[self.ship],
     route: self.route,
     hull: self.hull_pct.to_int64() * @core.HULL_FULL / 100L,
   }
@@ -78,6 +82,13 @@ fn update(model : Model, msg : Msg) -> Model {
   let set = (route : @sim.Route) => { ..model, route, stale: true, }
   match msg {
     Pick(i) => model.pick(whole(i, 0L).to_int())
+    Ship(i) => {
+      let ship = whole(i, 0L)
+        .clamp(min=0L, max=(@sim.profiles().length() - 1).to_int64())
+        .to_int()
+      let route = { ..@sim.profiles()[ship].route, distance_ly: r.distance_ly, }
+      { ..model, ship, route, }.refresh()
+    }
     Distance(v) =>
       set({
         ..r,
@@ -152,6 +163,15 @@ fn controls(model : Model, emit : @rabbita.Emit[Msg]) -> @html.Html {
         }),
       ),
     ]),
+    @html.label(class="field", [
+      @html.span("Ship"),
+      @html.select(
+        on_change=emit.map(v => Ship(v)),
+        @sim.profiles().mapi((i, p) => {
+          @html.option(value=i.to_string(), selected=i == model.ship, p.name)
+        }),
+      ),
+    ]),
     field("Distance, ly", r.distance_ly.to_string(), emit, v => Distance(v)),
     field("γ cap", r.gamma_cap.to_string(), emit, v => Cap(v)),
     field("Acceleration, g", r.accel_g.to_string(), emit, v => Accel(v)),
@@ -208,7 +228,7 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @html.Html {
   @html.main_(class="sim", [
     @html.h1("Crossing simulator"),
     @html.p(
-      "One crossing, drive and hull only. Every run uses the game's own rules from core; seeds replay exactly.",
+      "One crossing: posts, watches, standing orders, demands, refits and works. Every run uses the game's own rules from core; seeds replay exactly.",
     ),
     controls(model, emit),
     crew_view(scenario),
@@ -230,6 +250,7 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @html.Html {
 fn main {
   let init = {
     scenario: 0,
+    ship: 0,
     route: @sim.Route::default(),
     hull_pct: 100,
     runs: 50,

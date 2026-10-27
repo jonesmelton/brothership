@@ -84,9 +84,16 @@ lemma deplete_split(left : Int64, rate : Int64, a : Int64, b : Int64) where {
 
 ///|
 predicate empty_post(left : Int64, rate : Int64, result : Int64) {
-  0L <= result &&
-  result * rate >= left &&
-  (result == 0L || (result - 1L) * rate < left)
+  0L <= result && result * rate >= left && empty_minimal(left, rate, result)
+}
+
+///|
+/// Not one tick sooner. A predicate of its own because `moon prove` drops
+/// the parentheses around a disjunction inside a conjunction: written
+/// inline, `a && (b || c)` was proved as `(a && b) || c`, which does not
+/// promise that the stock is empty at the result.
+predicate empty_minimal(left : Int64, rate : Int64, result : Int64) {
+  result == 0L || (result - 1L) * rate < left
 }
 
 ///|
@@ -139,4 +146,16 @@ lemma settle_split(
     settle_model(level, net, a + b, ceiling),
 } {
   proof_assert net * (a + b) == net * a + net * b
+}
+
+///|
+/// A higher setting never gives a lower rate, so every setting the drive
+/// allows gives a rate between the floor's and full burn's.
+lemma rate_monotone(base : Int64, s1 : Int64, s2 : Int64) where {
+  proof_require: rate_pre(base, s1),
+  proof_require: rate_pre(base, s2),
+  proof_require: s1 <= s2,
+  proof_ensure: rate_model(base, s1) <= rate_model(base, s2),
+} {
+  proof_assert base * s1 <= base * s2
 }
