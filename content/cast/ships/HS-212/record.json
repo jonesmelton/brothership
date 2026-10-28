@@ -1,0 +1,24 @@
+{
+  "entry": {
+    "stage": "entry",
+    "sample": 2,
+    "key": "93f9999ed162030f9c513d99ded7196250831c55cbfb1d5eeeb8fbe49cfc3f6d",
+    "model": "meta:muse-wonder-1.0",
+    "max_tokens": 16000,
+    "reasoning_effort": "xhigh",
+    "inputs": {
+      "seed": "d8c8060aa93a70d06afa9a8886baf7316571526dcd744f8d08837703f6a6497f",
+      "ships": "a910f621b76a5b179f847060b41f521a16579e6e958e37fdb5320bc49ecd94bd"
+    },
+    "text_sha": "e549ff4c4399df7d9c4b0207a6ba4465e4cd03391233ecbbb740308429bb127d",
+    "problems": [],
+    "usage": {
+      "input": 1858,
+      "output": 13364,
+      "reasoning": 12774,
+      "cost_usd": 0.274712
+    },
+    "finish": "stop",
+    "raw": null
+  }
+}
