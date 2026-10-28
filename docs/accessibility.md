@@ -53,7 +53,7 @@ Screen reader users move around a page by headings, landmarks, lists and control
 - Touch targets are large and spaced apart.
 - No information only on hover or long press.
 - Respect reduced motion. Animation is never needed to understand what happened.
-- Nothing fixed to the screen that eats space when zoomed in.
+- Nothing fixed to the screen that eats space when zoomed in. The bar of pages is fixed only on viewports tall enough to spare it, and in the flow otherwise.
 
 ### phones first, desktop too
 
