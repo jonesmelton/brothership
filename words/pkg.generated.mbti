@@ -13,6 +13,8 @@ pub fn ago(Int64) -> String
 
 pub fn ask_sentence(@core.Crossing) -> Array[String]
 
+pub fn craft_label(@core.Craft) -> String
+
 pub fn craft_name(@core.Craft) -> String
 
 pub fn hazard_name(@core.Hazard) -> String
@@ -23,9 +25,13 @@ pub fn phase_name(@core.Phase) -> String
 
 pub fn plural(Int64, String, String) -> String
 
+pub fn post_label(@core.Post) -> String
+
 pub fn post_name(@core.Post) -> String
 
 pub fn priority(@core.Entry, you~ : String, story~ : Array[@core.Entry]) -> Priority
+
+pub fn refit_label(@core.Refit) -> String
 
 pub fn refit_name(@core.Refit) -> String
 

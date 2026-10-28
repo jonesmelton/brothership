@@ -178,3 +178,25 @@ test "how long ago, coarsely" {
     ),
   )
 }
+
+///|
+test "button labels are sentence case and need no article" {
+  debug_inspect(
+    [@core.Drive, @core.Hull, @core.Craft].map(post_label),
+    content=(
+      #|["Drive", "Hull", "Craft"]
+    ),
+  )
+  debug_inspect(
+    [@core.Artist, @core.Engineer].map(craft_label),
+    content=(
+      #|["Art", "Engineering"]
+    ),
+  )
+  debug_inspect(
+    @core.refits.map(refit_label),
+    content=(
+      #|["Baffles", "Plating", "Injectors", "Coils"]
+    ),
+  )
+}

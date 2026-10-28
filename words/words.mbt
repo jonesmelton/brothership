@@ -71,6 +71,37 @@ pub fn refit_name(refit : @core.Refit) -> String {
 }
 
 ///|
+/// A post as a control's label: sentence case, no article. The names above
+/// are for use inside sentences.
+pub fn post_label(post : @core.Post) -> String {
+  match post {
+    Drive => "Drive"
+    Hull => "Hull"
+    Craft => "Craft"
+  }
+}
+
+///|
+/// A craft as a control's label.
+pub fn craft_label(craft : @core.Craft) -> String {
+  match craft {
+    Artist => "Art"
+    Engineer => "Engineering"
+  }
+}
+
+///|
+/// A refit as a control's label.
+pub fn refit_label(refit : @core.Refit) -> String {
+  match refit {
+    Baffles => "Baffles"
+    Plating => "Plating"
+    Injectors => "Injectors"
+    Coils => "Coils"
+  }
+}
+
+///|
 pub fn phase_name(phase : @core.Phase) -> String {
   match phase {
     Burn => "burn"
