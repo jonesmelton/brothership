@@ -199,6 +199,51 @@ fn sentences(lines : Array[String]) -> Array[@rabbita.Html] {
 }
 
 ///|
+/// A ship's title as pennant, conventional name and epithet. The
+/// conventional name is hidden from assistive technology, so the accessible
+/// name is the English title. See docs/translation.md.
+fn title(name : String) -> Array[@rabbita.Html] {
+  match @ships.profile_named(name).bind(p => p.title) {
+    Some(t) =>
+      [
+        @html.span(class="pennant", t.pennant),
+        @html.text(" "),
+        @html.span(
+          class="han",
+          attrs=@html.Attrs::build().lang("zh-Hant").aria_hidden("true"),
+          t.conventional_name,
+        ),
+        @html.text(" "),
+        @html.span(class="epithet", t.epithet),
+      ]
+    None => [@html.span(class="epithet", name)]
+  }
+}
+
+///|
+/// Where the ship is, with the voyage track after the phase sentence and
+/// the ship's ask in its own voice.
+fn where_section(s : @core.State) -> @rabbita.Html {
+  let lines = where_sentences(s)
+  let ask = match s.crossing() {
+    Some(c) => ask_sentence(c)
+    None => []
+  }
+  let body = []
+  for i, line in lines {
+    if ask.contains(line) {
+      body.push(@html.p(class="voice", line))
+    } else {
+      body.push(@html.p(line))
+    }
+    if i == 0 && s.crossing() is Some(c) && c.phase != Arrived {
+      body.push(track(c))
+    }
+  }
+  @html.section([@html.h2("Where the ship is"), ..body])
+}
+
+///|
 /// A choice. `pressed` marks the one in force, as a toggle button.
 fn choice(
   emit : @rabbita.Emit[Msg],
@@ -334,7 +379,7 @@ fn ship_choices(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
         attrs=@html.Attrs::build().aria_pressed(
           (model.ship == Some(l.id)).to_string(),
         ),
-        l.name,
+        title(l.name),
       )
     }),
   )
@@ -348,7 +393,7 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
       _ if model.ships.is_empty() => [@html.p("Reaching the fleet.")]
       _ => [ship_choices(model, emit)]
     }
-    @html.main_(class="checkin", [@html.h1("Choose a ship"), ..body])
+    @html.main_(class="checkin", [masthead("Choose a ship"), ..body])
   }
   let name = model.ships
     .iter()
@@ -370,9 +415,7 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
         away.map(line => @html.li(line))
       }
       [
-        @html.section(
-          [@html.h2("Where the ship is"), ..sentences(where_sentences(s))],
-        ),
+        where_section(s),
         @html.section([@html.h2("While you were away"), @html.ul(away)]),
         @html.section(
           [@html.h2("You"), ..sentences(you_sentences(s, model.crew))],
@@ -390,7 +433,12 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
     }
   }
   let other = @html.section([@html.h2("Other ships"), ship_choices(model, emit)])
-  @html.main_(class="checkin", [@html.h1(name), ..body, other])
+  @html.main_(class="checkin", [masthead(title(name)), ..body, other])
+}
+
+///|
+fn[C : @html.IsChildren] masthead(heading : C) -> @rabbita.Html {
+  @html.header(class="masthead", @html.h1(heading))
 }
 
 ///|

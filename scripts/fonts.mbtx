@@ -1,0 +1,190 @@
+///|
+// Fetches the game's fonts and subsets them into public/fonts as WOFF2.
+// See docs/typography.md for the choices and docs/visual-design.md for use.
+//
+//   moon run scripts/fonts.mbtx
+//
+// Sources are downloaded once into .cache/fonts. Latin faces keep Latin-1,
+// Latin Extended-A, the pinyin tone vowels and general punctuation, with the
+// figure and small-cap features the stylesheet asks for. The hanzi face keeps
+// only the characters of the 108 conventional names and star names in
+// research/water-margin/heroes.tsv, so add a column here if the game shows
+// more hanzi. Needs curl and pyftsubset (fonttools with brotli).
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/shell",
+}
+
+///|
+const CACHE : String = ".cache/fonts"
+
+///|
+const OUT : String = "public/fonts"
+
+///|
+const HEROES : String = "research/water-margin/heroes.tsv"
+
+///|
+const GOOGLE : String = "https://github.com/google/fonts/raw/main/ofl"
+
+///|
+const NOTO : String = "https://github.com/notofonts/noto-cjk/raw/main/Serif"
+
+///|
+/// Basic Latin, Latin-1, Latin Extended-A, the pinyin vowels with caron and
+/// ü, combining tone marks, general punctuation, arrows and the minus sign.
+const LATIN : String = "U+0020-007E,U+00A0-017F,U+01CD-01DC,U+0300-0304,U+2000-206F,U+2190-2193,U+2212"
+
+///|
+const FEATURES : String = "smcp,c2sc,onum,pnum,tnum,lnum,zero,case,frac,numr,dnom,sups"
+
+///|
+/// A file to fetch into the cache: its name there and its URL.
+struct Source {
+  file : String
+  url : String
+}
+
+///|
+/// A subset to write: its source in the cache, its name in `OUT`, and the
+/// characters it keeps, as `--unicodes` or `--text-file`.
+struct Subset {
+  source : String
+  out : String
+  keep : String
+}
+
+///|
+let sources : Array[Source] = [
+  {
+    file: "EBGaramond.ttf",
+    url: "\{GOOGLE}/ebgaramond/EBGaramond%5Bwght%5D.ttf",
+  },
+  {
+    file: "EBGaramond-Italic.ttf",
+    url: "\{GOOGLE}/ebgaramond/EBGaramond-Italic%5Bwght%5D.ttf",
+  },
+  { file: "EBGaramond-OFL.txt", url: "\{GOOGLE}/ebgaramond/OFL.txt", },
+  {
+    file: "FiraSans-Regular.ttf",
+    url: "\{GOOGLE}/firasans/FiraSans-Regular.ttf",
+  },
+  {
+    file: "FiraSans-Italic.ttf",
+    url: "\{GOOGLE}/firasans/FiraSans-Italic.ttf",
+  },
+  {
+    file: "FiraSans-Medium.ttf",
+    url: "\{GOOGLE}/firasans/FiraSans-Medium.ttf",
+  },
+  {
+    file: "FiraSans-SemiBold.ttf",
+    url: "\{GOOGLE}/firasans/FiraSans-SemiBold.ttf",
+  },
+  { file: "FiraSans-OFL.txt", url: "\{GOOGLE}/firasans/OFL.txt", },
+  {
+    file: "NotoSerifTC-Regular.otf",
+    url: "\{NOTO}/SubsetOTF/TC/NotoSerifTC-Regular.otf",
+  },
+  {
+    file: "NotoSerifTC-Medium.otf",
+    url: "\{NOTO}/SubsetOTF/TC/NotoSerifTC-Medium.otf",
+  },
+  { file: "NotoSerifCJK-LICENSE.txt", url: "\{NOTO}/LICENSE", },
+]
+
+///|
+/// The distinct characters of the `name_hant` and `star_zh` columns.
+fn hanzi(tsv : String) -> String raise {
+  let lines = tsv.split("\n").map(l => l.to_owned()).to_array()
+  let header = lines[0].split("\t").map(c => c.to_owned()).to_array()
+  let columns = ["name_hant", "star_zh"].map(name => {
+    match header.search(name) {
+      Some(i) => i
+      None => fail("\{HEROES} has no \{name} column")
+    }
+  })
+  let seen : Map[Char, Unit] = Map([])
+  let buf = StringBuilder()
+  for line in lines[1:] {
+    let cells = line.split("\t").map(c => c.to_owned()).to_array()
+    for i in columns {
+      guard i < cells.length() else { continue }
+      for ch in cells[i] {
+        if !seen.contains(ch) {
+          seen[ch] = ()
+          buf.write_char(ch)
+        }
+      }
+    }
+  }
+  buf.to_string()
+}
+
+///|
+async fn main {
+  @fs.mkdir(CACHE, recursive=true, allow_exist=true)
+  @fs.mkdir(OUT, recursive=true, allow_exist=true)
+  for s in sources {
+    let path = "\{CACHE}/\{s.file}"
+    if @fs.exists(path) {
+      continue
+    }
+    println("==> fetch \{s.file}")
+    @shell.Cmd("curl", ["-fsSL", "-o", path, s.url]).run()
+  }
+  let chars = hanzi(@fs.read_file(HEROES).text())
+  let text = "\{CACHE}/hanzi.txt"
+  @fs.write_file(text, chars, create_mode=CreateOrTruncate)
+  println("==> \{chars.length()} hanzi from \{HEROES}")
+  let latin = "--unicodes=\{LATIN}"
+  let han = "--text-file=\{text}"
+  let subsets : Array[Subset] = [
+    { source: "EBGaramond.ttf", out: "eb-garamond.woff2", keep: latin, },
+    {
+      source: "EBGaramond-Italic.ttf",
+      out: "eb-garamond-italic.woff2",
+      keep: latin,
+    },
+    { source: "FiraSans-Regular.ttf", out: "fira-sans-400.woff2", keep: latin, },
+    {
+      source: "FiraSans-Italic.ttf",
+      out: "fira-sans-400-italic.woff2",
+      keep: latin,
+    },
+    { source: "FiraSans-Medium.ttf", out: "fira-sans-500.woff2", keep: latin, },
+    {
+      source: "FiraSans-SemiBold.ttf",
+      out: "fira-sans-600.woff2",
+      keep: latin,
+    },
+    {
+      source: "NotoSerifTC-Regular.otf",
+      out: "noto-serif-tc-400.woff2",
+      keep: han,
+    },
+    {
+      source: "NotoSerifTC-Medium.otf",
+      out: "noto-serif-tc-500.woff2",
+      keep: han,
+    },
+  ]
+  for s in subsets {
+    println("==> subset \{s.out}")
+    @shell.Cmd("pyftsubset", [
+      "\{CACHE}/\{s.source}",
+      s.keep,
+      "--layout-features+=\{FEATURES}",
+      "--flavor=woff2",
+      "--output-file=\{OUT}/\{s.out}",
+    ]).run()
+  }
+  for
+    license in [
+      "EBGaramond-OFL.txt", "FiraSans-OFL.txt", "NotoSerifCJK-LICENSE.txt",
+    ] {
+    let body = @fs.read_file("\{CACHE}/\{license}").text()
+    @fs.write_file("\{OUT}/\{license}", body, create_mode=CreateOrTruncate)
+  }
+}

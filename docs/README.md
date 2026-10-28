@@ -11,6 +11,7 @@ Design and implementation notes for the game. Read the one that matches the work
 | [content](content.md) | the content policy and model prompts |
 | [translation](translation.md) | ship names and titles in English and Chinese |
 | [typography](typography.md) | fonts, figures, small caps, hanzi setting |
+| [visual design](visual-design.md) | palette, type scale, layout, components |
 | [accessibility](accessibility.md) | screen reader, announcements, contrast |
 | [llm-tooling](llm-tooling.md) | model APIs, prompts, cache, gate |
 | [deploy-plan](deploy-plan.md) | the Fly.io deploy, what shipped, the restore drill |

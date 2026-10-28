@@ -2,7 +2,7 @@
 
 Font choices for the game client: EB Garamond for the book voice, Fira Sans for the interface and data, and Noto Serif CJK TC for the hanzi. Everything recommended here is open-licensed, and the OpenType features were checked in the font files.
 
-`public/styles.css` still uses the system stack. The CSS below is the implementation target, not a description of the current stylesheet.
+`public/styles.css` implements these choices; [visual design](visual-design.md) has the palette, type scale and components built on them. `scripts/fonts.mbtx` fetches the faces and subsets them into `public/fonts`.
 
 ## Latin
 
@@ -128,7 +128,7 @@ For the full title, the accessible name is the title in the language of the surr
 
 ### Loading
 
-Subset the font to the characters you ship. The 108 `name_hant` values and 108 `star_zh` values from [`heroes.tsv`](../research/water-margin/heroes.tsv) use 250 unique characters. A subset of Noto Serif CJK TC Regular to those characters, with layout features retained, is about 143 KB as WOFF2. Two weights are about 286 KB. That is small enough to self-host and preload the weight used above the fold. Do not hotlink Google Fonts: the game should work offline, and the CSS request is a privacy leak.
+Subset the font to the characters you ship. `scripts/fonts.mbtx` does this from the `name_hant` and `star_zh` columns; rerun it if the game shows hanzi from anywhere else. The 108 `name_hant` values and 108 `star_zh` values from [`heroes.tsv`](../research/water-margin/heroes.tsv) use 251 unique characters. A subset of Noto Serif CJK TC Regular to those characters is about 85 KB as WOFF2, and the two weights the game uses about 170 KB. That is small enough to self-host and preload the weight used above the fold. Do not hotlink Google Fonts: the game should work offline, and the CSS request is a privacy leak.
 
 Noto Serif CJK TC has no Reserved Font Name, so a subset can keep the name. Source Han Serif TW and Source Han Sans TC carry the Reserved Font Name 'Source'; rename a subset before redistributing it. Subsetting counts as a modification under the OFL.
 

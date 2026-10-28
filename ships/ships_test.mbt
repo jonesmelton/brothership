@@ -6,6 +6,16 @@ test "every hop of the itinerary is 8 to 30 ly" {
 }
 
 ///|
+test "every ship in the fleet has a title that agrees with its name" {
+  for berth in @ships.fleet() {
+    let p = berth.profile
+    guard p.title is Some(t) else { fail("\{p.name} has no title") }
+    assert_eq("\{t.pennant} \{t.epithet}", p.name)
+    assert_true(t.conventional_name.length() > 0, msg=p.name)
+  }
+}
+
+///|
 test "the ship asks once per moment and refits only on change" {
   let p = @ships.profiles()[1]
   let c = @core.Crossing::new(p.next_plan(legs=0, coils=0), p.ship(seed=1))

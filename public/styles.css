@@ -1,3 +1,83 @@
+/* Fonts, from scripts/fonts.mbtx. Choices in docs/typography.md. */
+@font-face {
+  font-family: "EB Garamond";
+  src: url("./fonts/eb-garamond.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "EB Garamond";
+  src: url("./fonts/eb-garamond-italic.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fira Sans";
+  src: url("./fonts/fira-sans-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fira Sans";
+  src: url("./fonts/fira-sans-400-italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fira Sans";
+  src: url("./fonts/fira-sans-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fira Sans";
+  src: url("./fonts/fira-sans-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Noto Serif CJK TC";
+  src: url("./fonts/noto-serif-tc-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Noto Serif CJK TC";
+  src: url("./fonts/noto-serif-tc-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Palette and faces. Values and contrast in docs/visual-design.md. */
+:root {
+  color-scheme: light dark;
+  --paper: #f0e7d5;
+  --ink: #1b1914;
+  --quiet: #6b6254;
+  --rule: #c9bca4;
+  --accent: #7e2e22;
+  --font-display: "EB Garamond", Georgia, serif;
+  --font-ui: "Fira Sans", system-ui, sans-serif;
+  --font-han: "Noto Serif CJK TC", "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0f1513;
+    --ink: #e9e0cf;
+    --quiet: #8f9b92;
+    --rule: #2b3630;
+    --accent: #c6a15b;
+  }
+}
+
 *,
 *::before,
 *::after {
@@ -6,8 +86,19 @@
 
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-synthesis: none;
   line-height: 1.5;
+}
+
+.han {
+  font-family: var(--font-han);
+  font-style: normal;
+  font-synthesis: none;
+  letter-spacing: 0;
+  white-space: nowrap;
 }
 
 /* Crossing simulator. Scoped so the game client is unaffected. */
@@ -79,35 +170,112 @@ body {
   cursor: pointer;
 }
 
-/* The check-in. One column at any size; type from docs/typography.md. */
-:root {
-  --font-display: "EB Garamond", Georgia, serif;
-  --font-ui: "Fira Sans", system-ui, sans-serif;
-}
+/* The check-in. One column at any size; see docs/visual-design.md. */
 .checkin {
   max-width: 36rem;
   margin: 0 auto;
-  padding: 1rem;
-  font-family: var(--font-ui);
-  font-synthesis: none;
+  padding: 1.5rem 1rem 3rem;
 }
-.checkin h1,
-.checkin h2 {
-  font-family: var(--font-display);
-  font-weight: 500;
-  line-height: 1.2;
-}
-.checkin h1 {
-  font-size: 1.75rem;
-}
-.checkin h2 {
-  font-size: 1.25rem;
-  margin-block: 1.5rem 0.5rem;
+@media (min-width: 40rem) {
+  .checkin {
+    padding-inline: 1.5rem;
+  }
 }
 .checkin p,
 .checkin ul {
   margin-block: 0 0.5rem;
 }
+.checkin ul {
+  padding-inline-start: 1.25rem;
+}
+.checkin li::marker {
+  color: var(--quiet);
+}
+
+.masthead {
+  border-block-start: 3px solid var(--accent);
+  padding-block-start: 1rem;
+}
+.masthead h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 2.25rem;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+@media (min-width: 40rem) {
+  .masthead h1 {
+    font-size: 2.75rem;
+  }
+}
+.masthead .pennant {
+  display: block;
+  margin-block-end: 0.5rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.masthead .han {
+  font-size: 0.8em;
+}
+.pennant {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
+}
+
+.checkin section {
+  margin-block-start: 2rem;
+  padding-block-start: 1rem;
+  border-block-start: 1px solid var(--rule);
+}
+.checkin h2 {
+  margin-block: 0 0.75rem;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.05em;
+}
+
+.voice {
+  margin-block: 0.75rem;
+  padding-inline-start: 0.875rem;
+  border-inline-start: 2px solid var(--accent);
+  font-family: var(--font-display);
+  font-size: 1.1875rem;
+  line-height: 1.4;
+}
+
+.track {
+  display: flex;
+  gap: 0.25rem;
+  margin-block: 0.5rem 1rem;
+}
+.track .bar {
+  height: 0.375rem;
+  background: var(--rule);
+}
+.track .fill {
+  height: 100%;
+  background: var(--accent);
+}
+.track .label {
+  display: block;
+  margin-block-start: 0.25rem;
+  font-size: 0.875rem;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+  color: var(--quiet);
+  white-space: nowrap;
+}
+.track .now .label {
+  color: var(--ink);
+  font-weight: 600;
+}
+
 .checkin fieldset {
   border: 0;
   padding: 0;
@@ -117,26 +285,54 @@ body {
   gap: 0.5rem;
 }
 .checkin legend {
-  font-variant-caps: all-small-caps;
-  letter-spacing: 0.04em;
   padding: 0;
-  margin-block-end: 0.25rem;
+  margin-block-end: 0.375rem;
+  font-weight: 500;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+  color: var(--quiet);
+}
+.checkin fieldset p {
+  margin: 0;
 }
 .checkin button {
   font: inherit;
   min-height: 2.75rem;
   padding: 0.5rem 0.9rem;
-  border: 1px solid currentColor;
-  border-radius: 0.25rem;
-  background: Canvas;
-  color: CanvasText;
+  border: 1px solid var(--quiet);
+  border-radius: 2px;
+  background: var(--paper);
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+}
+.checkin button:hover {
+  border-color: var(--ink);
 }
 .checkin button[aria-pressed="true"] {
-  background: CanvasText;
-  color: Canvas;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
   font-weight: 600;
 }
 .checkin button:focus-visible {
-  outline: 3px solid Highlight;
+  outline: 3px solid var(--accent);
   outline-offset: 2px;
+}
+.checkin button .han {
+  font-size: 0.95em;
+  font-weight: 500;
+}
+
+@media (forced-colors: active) {
+  .checkin button {
+    border-color: ButtonText;
+  }
+  .checkin button[aria-pressed="true"] {
+    background: Highlight;
+    color: HighlightText;
+  }
+  .track .fill {
+    background: CanvasText;
+  }
 }

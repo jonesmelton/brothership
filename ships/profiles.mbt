@@ -23,10 +23,24 @@ pub fn Temperament::name(self : Temperament) -> String {
 }
 
 ///|
+/// How a ship is formally identified: `EF-147 顧大嫂 The Tigress`. See
+/// `docs/translation.md` and `content/cast/pennants.tsv`.
+pub(all) struct Title {
+  pennant : String
+  /// Traditional Chinese; the source figure's name, not a translation.
+  conventional_name : String
+  epithet : String
+} derive(Debug, Eq)
+
+///|
 /// A ship as authored: its kinematics and fittings for a default route,
 /// what it values, and its temperament.
 pub(all) struct Profile {
+  /// The key a ship's log is commissioned under. Never rename a profile
+  /// that has flown: replay looks it up by this name.
   name : String
+  /// None for the plain ship of the scenarios, which is not in the cast.
+  title : Title?
   route : Route
   values : @core.Values
   temperament : Temperament
@@ -36,6 +50,7 @@ pub(all) struct Profile {
 pub fn Profile::default() -> Profile {
   {
     name: "a plain ship",
+    title: None,
     route: Route::default(),
     values: { drive: 2, hull: 2, craft: 1, },
     temperament: Careful,
@@ -51,6 +66,11 @@ pub fn profiles() -> Array[Profile] {
     Profile::default(),
     {
       name: "EF-147 The Tigress",
+      title: Some({
+        pennant: "EF-147",
+        conventional_name: "顧大嫂",
+        epithet: "The Tigress",
+      }),
       route: {
         ..base,
         accel_g: 38000.0,
@@ -63,6 +83,11 @@ pub fn profiles() -> Array[Profile] {
     },
     {
       name: "HS-212 The Twin-Tailed Scorpion",
+      title: Some({
+        pennant: "HS-212",
+        conventional_name: "解寶",
+        epithet: "The Twin-Tailed Scorpion",
+      }),
       route: {
         ..base,
         accel_g: 46000.0,
@@ -76,6 +101,11 @@ pub fn profiles() -> Array[Profile] {
     },
     {
       name: "EF-287 The Flea on the Drum",
+      title: Some({
+        pennant: "EF-287",
+        conventional_name: "時遷",
+        epithet: "The Flea on the Drum",
+      }),
       route: {
         ..base,
         accel_g: 42000.0,

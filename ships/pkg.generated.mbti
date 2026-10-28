@@ -43,6 +43,7 @@ pub fn Berth::next_advance(Self, @core.State, Int64) -> Int64
 
 pub(all) struct Profile {
   name : String
+  title : Title?
   route : Route
   values : @core.Values
   temperament : Temperament
@@ -77,6 +78,12 @@ pub fn Temperament::ask(Self, @core.Crossing) -> @core.Post?
 pub fn Temperament::name(Self) -> String
 pub fn Temperament::refit(Self, @core.Crossing) -> @core.Refit?
 pub fn Temperament::turn(Self, @core.Crossing, @core.Moment?) -> Array[Act]
+
+pub(all) struct Title {
+  pennant : String
+  conventional_name : String
+  epithet : String
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 
