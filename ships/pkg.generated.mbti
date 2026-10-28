@@ -10,7 +10,13 @@ import {
 // Values
 pub const MAX_SLEEP : Int64 = 60
 
+pub const MIND_WAIT : Int64 = 300
+
 pub const PORT_STAY : Int64 = 600
+
+pub fn allowed(@core.Crossing, Array[String], officer~ : (String) -> Bool) -> Array[(String, Int64)]
+
+pub fn arrived_at(@core.State) -> Int64?
 
 pub fn fleet() -> Array[Berth]
 
@@ -35,6 +41,7 @@ pub(all) enum Act {
   Ask(@core.Post?)
   Refit(@core.Refit?)
 } derive(Eq, @debug.Debug)
+pub fn Act::event(Self) -> @core.Event
 
 pub(all) struct Berth {
   id : String
@@ -43,7 +50,7 @@ pub(all) struct Berth {
   lag : Int64
 } derive(Eq, @debug.Debug)
 pub fn Berth::commission(Self) -> @core.Event
-pub fn Berth::next_advance(Self, @core.State, Int64) -> Int64
+pub fn Berth::next_advance(Self, @core.State, Int64, minded? : Bool) -> Int64
 
 pub(all) struct Profile {
   name : String
@@ -53,11 +60,11 @@ pub(all) struct Profile {
   temperament : Temperament
 } derive(Eq, @debug.Debug)
 pub fn Profile::default() -> Self
-pub fn Profile::due(Self, @core.State, Int64, officer~ : (String) -> Bool) -> (Array[@core.Event], @core.State)
+pub fn Profile::due(Self, @core.State, Int64, officer~ : (String) -> Bool, minded? : Bool) -> (Array[@core.Event], @core.State)
 pub fn Profile::next_plan(Self, legs~ : Int64, coils~ : Int64) -> @core.Plan
-pub fn Profile::respond(Self, @core.State) -> (Array[@core.Event], @core.State)
+pub fn Profile::respond(Self, @core.State, minded? : Bool) -> (Array[@core.Event], @core.State)
 pub fn Profile::ship(Self, seed~ : Int64) -> @core.Ship
-pub fn Profile::wake(Self, @core.State) -> Int64
+pub fn Profile::wake(Self, @core.State, minded? : Bool) -> Int64
 
 pub(all) struct Route {
   distance_ly : Double

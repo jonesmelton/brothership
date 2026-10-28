@@ -1,0 +1,48 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "local/brothership/mind"
+
+import {
+  "local/brothership/core",
+  "local/brothership/llm",
+  "local/brothership/ships",
+  "local/brothership/speech",
+  "local/brothership/store",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn decode_muster(String, Map[String, String]) -> (Array[String], String) raise Unreadable
+
+pub fn decode_turn(String, @core.Crossing) -> Choice raise Unreadable
+
+// Errors
+pub(all) suberror Unreadable {
+  Unreadable(String)
+} derive(@debug.Debug)
+pub impl Show for Unreadable
+
+// Types and methods
+pub(all) struct Choice {
+  acts : Array[@ships.Act]
+  thought : String
+} derive(Eq, @debug.Debug)
+
+pub struct Mind {
+  // private fields
+}
+pub fn Mind::new(String, @ships.Profile, @speech.Voice, Prompts, model~ : String, @llm.Backend) -> Self
+pub async fn Mind::step(Self, @store.Store, clock~ : () -> Int64) -> Unit
+pub fn Mind::thinking(Self) -> Bool
+pub fn Mind::thoughts(Self) -> Array[String]
+
+pub struct Prompts {
+  // private fields
+}
+pub async fn Prompts::load(content~ : String) -> Self
+pub fn Prompts::muster(Self, @speech.Voice, model~ : String, @core.State, Array[@core.Entry], thoughts~ : Array[String]) -> @llm.Call raise
+pub fn Prompts::new(system~ : String, turn~ : String, muster~ : String, setting~ : String) -> Self
+pub fn Prompts::turn(Self, @speech.Voice, model~ : String, @core.State, Array[@core.Entry], thoughts~ : Array[String]) -> @llm.Call raise
+
+// Type aliases
+
+// Traits

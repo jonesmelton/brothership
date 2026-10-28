@@ -192,7 +192,12 @@ async test "a ship's line is appended after its tick and joins the story" {
   store.advance("tigress", now=T0)
   store.advance("tigress", now=T0 + 600)
   let about = store.story("tigress", after=0).unwrap()[0].seq
-  store.speak("tigress", line=cleared("Who will sit with me?"), about~, now=T0 + 700)
+  store.speak(
+    "tigress",
+    line=cleared("Who will sit with me?"),
+    about~,
+    now=T0 + 700,
+  )
   let last = store.story("tigress", after=0).unwrap().last().unwrap()
   debug_inspect(
     last.happening,

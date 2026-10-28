@@ -8,7 +8,7 @@ async test "a minded ship takes its turn only from its mind, for the moment it w
   let c = snap(store, "tigress").state.crossing().unwrap()
   debug_inspect((c.ask, c.fit.refit), content="(None, None)")
   let moment = c.moment()
-  let stale = { ..moment, band: moment.band + 1L }
+  let stale = { ..moment, band: moment.band + 1L, }
   let took = store.decide(
     "tigress",
     [Ask(Some(Hull))],
@@ -48,10 +48,7 @@ async test "muster appends the mind's promotions that are allowed, then docks" {
     now += 120L
     store.advance("tigress", now~)
   }
-  inspect(
-    snap(store, "tigress").state.leg is Underway(..),
-    content="true",
-  )
+  inspect(snap(store, "tigress").state.leg is Underway(..), content="true")
   let promoted = store.muster("tigress", ["bo", "ghost"], now=now + 5)
   debug_inspect(promoted, content="[(\"bo\", 1)]")
   let s = snap(store, "tigress").state

@@ -4,7 +4,12 @@
 fn departed(p : @ships.Profile) -> (@core.State, Int64) {
   let ship = p.ship(seed=1)
   let records : Map[String, @core.Record] = {
-    "a": { regard: 200L * @core.REGARD_HOUR, works: 0, carry: 0, rank: Some(0L) },
+    "a": {
+      regard: 200L * @core.REGARD_HOUR,
+      works: 0,
+      carry: 0,
+      rank: Some(0L),
+    },
   }
   let mut s = @core.State::initial({ ..ship, records, }, profile=p.name)
   let mut now = 1_800_000_000L
@@ -20,7 +25,7 @@ fn departed(p : @ships.Profile) -> (@core.State, Int64) {
 test "a minded ship leaves its asks and refits to its mind" {
   let p = @ships.profiles()[1]
   let (s, now) = departed(p)
-  let s = { ..s, leg: Underway(crossing=s.crossing().unwrap(), spoke=None) }
+  let s = { ..s, leg: Underway(crossing=s.crossing().unwrap(), spoke=None), }
   let (events, _) = p.due(s, now + 1L, officer=_ => true, minded=true)
   debug_inspect(events, content="[Tick(at=1800000602)]")
   let (scripted, _) = p.due(s, now + 1L, officer=_ => true)
@@ -64,14 +69,12 @@ test "a minded ship waits for its mind at arrival, then promotes by script" {
 test "a mind's promotions keep to one step, the hands aboard and the caps" {
   let p = @ships.profiles()[1]
   let c = @core.Crossing::new(p.next_plan(legs=0, coils=0), p.ship(seed=1))
-  let hand = (rank : Int64) => {
-    @core.Hand::{
-      post: Drive,
-      craft: Artist,
-      rank,
-      watch: None,
-      order: None,
-    }
+  let hand = (rank : Int64) => @core.Hand::{
+    post: Drive,
+    craft: Artist,
+    rank,
+    watch: None,
+    order: None,
   }
   let c = {
     ..c,
@@ -90,8 +93,5 @@ test "a mind's promotions keep to one step, the hands aboard and the caps" {
       #|[("d", 1), ("a", 4), ("c", 3)]
     ),
   )
-  debug_inspect(
-    @ships.allowed(c, ["e"], officer=id => id != "e"),
-    content="[]",
-  )
+  debug_inspect(@ships.allowed(c, ["e"], officer=id => id != "e"), content="[]")
 }

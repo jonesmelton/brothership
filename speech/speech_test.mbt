@@ -260,7 +260,68 @@ async test "a promotion prompt carries facts about the officer and no id" {
   debug_inspect(
     call.user,
     content=(
-      #|"# what just happened\n\nA hand was promoted to lieutenant.\n\n# the officer promoted\n\n- New rank: lieutenant.\n- Hours on the drive this crossing: 3.\n- Hours on the hull this crossing: 2.\n- Hours at crafts this crossing: 0.\n- Watches stood this crossing: 2.\n- Watches broken this crossing: 1.\n- Works finished in all: 4.\n- Hours of regard on record: 130.\n\nYou have no name or handle for them: speak of them by what they did.\n\n# where you are\n\nBurning toward the next port.\nArriving in about 18 hours, if the drive stays as set.\nHull at 100%.\nDrive at 35% of full burn, with none of the 5 hands it needs.\nNobody is on a post yet.\nThe ship asks for hands on the drive.\n\n# earlier on this crossing\n\n- Nothing yet.\n\n# what you are asking for\n\nHands on the drive.\n"
+      #|"# what just happened\n\nA hand was promoted to lieutenant.\n\n# the officer promoted\n\n- New rank: lieutenant.\n- Hours on the drive this crossing: 3.\n- Hours on the hull this crossing: 2.\n- Hours at crafts this crossing: 0.\n- Watches stood this crossing: 2.\n- Watches broken this crossing: 1.\n- Works finished in all: 4.\n- Hours of regard on record: 130.\n\nYou have no name or handle for them: speak of them by what they did.\n\n# where you are\n\nBurning toward the next port.\nArriving in about 18 hours, if the drive stays as set.\nHull at 100%.\nDrive at 35% of full burn, with none of the 5 hands it needs.\nNobody is on a post yet.\nThe ship asks for hands on the drive.\n\n# your crew this crossing\n\n- Nobody has taken a post yet.\n\n# earlier on this crossing\n\n- Nothing yet.\n\n# what you are asking for\n\nHands on the drive.\n"
     ),
   )
+}
+
+///|
+test "a line that opens like an earlier one, or reuses most of its words, repeats" {
+  let earlier = [
+    "Hands to the hull, loves, the plating is thin.", "Steady burn now; the drive is singing for us all tonight.",
+  ]
+  debug_inspect(
+    [
+      "Hands to the hull, quickly!", "The drive is singing tonight for us all, steady now.",
+      "Who will sit the night watch with me?",
+    ].map(line => @speech.repeats(line, earlier)),
+    content="[true, true, false]",
+  )
+}
+
+///|
+async test "the ship can pass, and says nothing" {
+  let store = departed()
+  defer store.close()
+  let calls = Ref(0)
+  let speaker = @speech.Speaker::new(
+    "tigress",
+    voice(),
+    speech(),
+    fake("PASS", 0, calls),
+    from=0,
+  )
+  speaker.step(store, clock=() => T0 + 620)
+  inspect(calls.val, content="1")
+  inspect(spoken(store).length(), content="0")
+}
+
+///|
+async test "the speaker waits while the mind decides, then hears its thoughts" {
+  let store = departed()
+  defer store.close()
+  let calls = Ref(0)
+  let busy = Ref(true)
+  let seen : Ref[String] = Ref("")
+  let backend = @llm.Backend::new("seen", c => {
+    if c.model != "gate" {
+      seen.val = c.user
+    }
+    fake("Eat first.", 0, calls).call(c)
+  })
+  let speaker = @speech.Speaker::new(
+    "tigress",
+    voice(),
+    speech(),
+    backend,
+    from=0,
+    busy=() => busy.val,
+    thoughts=() => ["You asked for hands on the hull. You thought: mend first."],
+  )
+  speaker.step(store, clock=() => T0 + 620)
+  inspect(calls.val, content="0")
+  busy.val = false
+  speaker.step(store, clock=() => T0 + 625)
+  inspect(calls.val, content="2")
+  assert_true(seen.val.contains("You thought: mend first."))
 }

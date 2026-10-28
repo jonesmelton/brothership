@@ -13,9 +13,21 @@ import {
 // Values
 pub const QUIET : Int64 = 900
 
+pub fn answered(Array[@core.Entry]) -> Map[String, Int64]
+
+pub fn handles(@core.Crossing) -> Map[String, String]
+
 pub fn meta_backend(String, limit? : Int32) -> @llm.Backend
 
 pub async fn meta_key() -> String?
+
+pub fn recount(@core.Happening, Map[String, String], ship~ : String) -> String
+
+pub fn repeats(String, Array[String]) -> Bool
+
+pub fn roster(@core.State, Array[@core.Entry]) -> Array[String]
+
+pub fn this_crossing(Array[@core.Entry]) -> Array[@core.Entry]
 
 pub fn tidy(String) -> String?
 
@@ -27,14 +39,14 @@ pub fn worth(Array[@core.Entry], quiet_until~ : Int64) -> @core.Entry?
 pub struct Speaker {
   // private fields
 }
-pub fn Speaker::new(String, Voice, Speech, @llm.Backend, from~ : Int64) -> Self
+pub fn Speaker::new(String, Voice, Speech, @llm.Backend, from~ : Int64, busy? : () -> Bool, thoughts? : () -> Array[String]) -> Self
 pub fn Speaker::speaking(Self) -> Bool
 pub async fn Speaker::step(Self, @store.Store, clock~ : () -> Int64) -> Unit
 
 pub struct Speech {
   // private fields
 }
-pub fn Speech::call(Self, Voice, @core.State, Array[@core.Entry], @core.Entry) -> @llm.Call raise @prompt.PromptError
+pub fn Speech::call(Self, Voice, @core.State, Array[@core.Entry], @core.Entry, thoughts? : Array[String]) -> @llm.Call raise @prompt.PromptError
 pub async fn Speech::load(content~ : String, model~ : String, gate_model~ : String) -> Self
 pub fn Speech::new(system~ : String, user~ : String, setting~ : String, model~ : String, gate~ : @gate.Gate) -> Self
 

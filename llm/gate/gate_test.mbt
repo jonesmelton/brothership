@@ -71,16 +71,18 @@ async test "check sends the call and decodes the reply" {
 
 ///|
 async test "clear passes clean text and raises on a violation" {
-  let reply = (verdict : String) => @llm.Backend::new("fixed", fn(c) {
-    {
-      model: c.model,
-      text: verdict,
-      reasoning: None,
-      finish: Some("stop"),
-      usage: @llm.Usage::zero(),
-      raw: Json::null(),
-    }
-  })
+  let reply = (verdict : String) => {
+    @llm.Backend::new("fixed", fn(c) {
+      {
+        model: c.model,
+        text: verdict,
+        reasoning: None,
+        finish: Some("stop"),
+        usage: @llm.Usage::zero(),
+        raw: Json::null(),
+      }
+    })
+  }
   let clean = reply("{\"violation\": 0}")
   inspect(gate().clear(clean, "hello").text(), content="hello")
   let blocked = try {

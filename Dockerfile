@@ -41,6 +41,7 @@ COPY llm/prompt/moon.pkg llm/prompt/
 COPY ships/moon.pkg ships/
 COPY sim/moon.pkg sim/
 COPY speech/moon.pkg speech/
+COPY mind/moon.pkg mind/
 COPY store/moon.pkg store/
 COPY words/moon.pkg words/
 RUN moon update \

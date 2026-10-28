@@ -123,8 +123,13 @@ pub fn tidy(reply : String) -> String? {
 }
 
 ///|
-/// How many earlier happenings the prompt recalls.
-const RECALLED : Int32 = 8
+/// How many earlier happenings this crossing the prompt recounts.
+const RECALLED : Int32 = 14
+
+///|
+/// How many of the ship's last lines the prompt shows, and `repeats`
+/// compares against.
+const SAID : Int32 = 5
 
 ///|
 /// Whole hours in `quarters`, quarter-hand-ticks.
@@ -134,7 +139,8 @@ fn crew_hours(quarters : Int64) -> Json {
 
 ///|
 /// What the ship may know of a promoted officer: counts from this
-/// crossing and the record, never an id, a name or anything a player wrote.
+/// crossing and the record, and their handle, never an id, a name or
+/// anything a player wrote.
 fn officer_facts(
   state : @core.State,
   crew : String,
@@ -144,6 +150,10 @@ fn officer_facts(
   let record = state.ship.records.get(crew)
   let works = record.map(r => r.works).unwrap_or(0L)
   let regard = record.map(r => r.regard).unwrap_or(0L)
+  let handle = match state.crossing() {
+    Some(c) => handles(c).get(crew)
+    None => None
+  }
   {
     "rank": Json(@words.rank_name(rank)),
     "drive_hours": crew_hours(tally.drive),
@@ -153,27 +163,48 @@ fn officer_facts(
     "watches_broken": Json::number(tally.watches_broken.to_double()),
     "works": Json::number(works.to_double()),
     "regard_hours": Json::number((regard / @core.REGARD_HOUR).to_double()),
+    "handle": match handle {
+      Some(h) => Json::string(h)
+      None => Json::null()
+    },
   }
 }
 
 ///|
+/// The ship's last lines in `story`, oldest first.
+fn said(story : Array[@core.Entry]) -> Array[String] {
+  let lines = story.filter_map(e => {
+    match e.happening {
+      Spoke(line~, ..) => Some(line)
+      _ => None
+    }
+  })
+  lines[(lines.length() - SAID).max(0):].to_owned()
+}
+
+///|
 /// The call asking the model for `voice`'s line about `about`, in `state`,
-/// recalling what came before it in `story`.
+/// recounting what came before it this crossing in `story`, and the ship's
+/// recent `thoughts` from its mind.
 pub fn Speech::call(
   self : Speech,
   voice : Voice,
   state : @core.State,
   story : Array[@core.Entry],
   about : @core.Entry,
+  thoughts~ : Array[String] = [],
 ) -> @llm.Call raise @prompt.PromptError {
   let ship = voice.epithet
-  let earlier = story.filter(e => {
-    e.seq < about.seq &&
-    (weight(e.happening) is Some(_) || e.happening is Spoke(_))
+  let names = match state.crossing() {
+    Some(c) => handles(c)
+    None => Map([])
+  }
+  let earlier = this_crossing(story).filter(e => {
+    e.seq < about.seq && !(e.happening is Spoke(_))
   })
   let recent = earlier[(earlier.length() - RECALLED).max(0):]
     .iter()
-    .map(e => @words.told(e.happening, you="", ship~))
+    .map(e => recount(e.happening, names, ship~))
     .collect()
   let ask = match state.crossing() {
     Some(c) => c.ask.map(@words.post_name)
@@ -193,7 +224,10 @@ pub fn Speech::call(
     "happening": Json(@words.told(about.happening, you="", ship~)),
     "officer": officer,
     "readout": Json(@words.where_sentences(state)),
+    "roster": Json(roster(state, story)),
     "recent": Json(recent),
+    "thoughts": Json(thoughts),
+    "said": Json(said(story)),
     "ask": match ask {
       Some(post) => Json::string(post)
       None => Json::null()
@@ -209,6 +243,47 @@ pub fn Speech::call(
 }
 
 ///|
+/// Lowercase words of `line`, without punctuation.
+fn words_of(line : String) -> Array[String] {
+  let out = []
+  let word = StringBuilder()
+  let flush = () => {
+    let w = word.to_string()
+    if w != "" {
+      out.push(w)
+    }
+    word.reset()
+  }
+  for ch in line {
+    if ch.is_ascii_alphabetic() || ch == '\'' {
+      word.write_char(ch.to_ascii_lowercase())
+    } else {
+      flush()
+    }
+  }
+  flush()
+  out
+}
+
+///|
+/// `line` opens like one of `earlier` (the same first three words), or
+/// shares most of its longer words with one.
+pub fn repeats(line : String, earlier : Array[String]) -> Bool {
+  let these = words_of(line)
+  let long = these.filter(w => w.length() > 3)
+  earlier
+  .iter()
+  .any(other => {
+    let those = words_of(other)
+    let opens = these.length() >= 3 &&
+      those.length() >= 3 &&
+      these[:3] == those[:3]
+    let shared = long.filter(w => those.contains(w)).length()
+    opens || (long.length() >= 4 && shared * 5 >= long.length() * 3)
+  })
+}
+
+///|
 /// Writes one ship's lines. Holds what it has considered, so each
 /// happening is weighed once, and when it last spoke.
 pub struct Speaker {
@@ -216,6 +291,9 @@ pub struct Speaker {
   priv voice : Voice
   priv speech : Speech
   priv backend : @llm.Backend
+  /// The ship's mind is deciding, so its line waits to hear what it chose.
+  priv busy : () -> Bool
+  priv thoughts : () -> Array[String]
   /// The newest story `seq` weighed.
   priv mut considered : Int64
   priv mut quiet_until : Int64
@@ -224,19 +302,24 @@ pub struct Speaker {
 
 ///|
 /// A speaker for `ship` that weighs only happenings after `from`, so a
-/// restarted server does not answer old news.
+/// restarted server does not answer old news. It holds its line while
+/// `busy`, and tells the model the ship's `thoughts`.
 pub fn Speaker::new(
   ship : String,
   voice : Voice,
   speech : Speech,
   backend : @llm.Backend,
   from~ : Int64,
+  busy~ : () -> Bool = () => false,
+  thoughts~ : () -> Array[String] = () => [],
 ) -> Speaker {
   {
     ship,
     voice,
     speech,
     backend,
+    busy,
+    thoughts,
     considered: from,
     quiet_until: 0,
     speaking: false,
@@ -252,12 +335,14 @@ pub fn Speaker::speaking(self : Speaker) -> Bool {
 ///|
 /// Weigh what happened since the last step and, if something earns a
 /// line, write it, check it with the gate, and append it at `clock()`. A
-/// failed or blocked line is reported on stdout and leaves nothing.
+/// failed, blocked or repeated line, or the model passing, is reported on
+/// stdout and leaves nothing.
 pub async fn Speaker::step(
   self : Speaker,
   store : @store.Store,
   clock~ : () -> Int64,
 ) -> Unit {
+  guard !(self.busy)() else { return }
   guard store.story(self.ship, after=self.considered) is Some(fresh) &&
     fresh.last() is Some(newest) else {
     return
@@ -279,10 +364,24 @@ pub async fn Speaker::step(
   }
   let started = @async.now()
   let line = try {
-    let call = self.speech.call(self.voice, snapshot.state, story, about)
+    let call = self.speech.call(
+      self.voice,
+      snapshot.state,
+      story,
+      about,
+      thoughts=(self.thoughts)(),
+    )
     let reply = self.backend.call(call)
+    if reply.text.trim() == "PASS" {
+      report("kept quiet")
+      return
+    }
     guard tidy(reply.text) is Some(line) else {
       report("unusable reply: \{reply.text}")
+      return
+    }
+    if repeats(line, said(story)) {
+      report("repeats itself: \{line}")
       return
     }
     let written = @async.now()

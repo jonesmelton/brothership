@@ -1,0 +1,25 @@
+import {
+  "local/brothership/core",
+  "local/brothership/llm",
+  "local/brothership/llm/prompt",
+  "local/brothership/ships",
+  "local/brothership/speech",
+  "local/brothership/store",
+  "local/brothership/words",
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/json",
+}
+
+import {
+  "local/brothership/core",
+  "local/brothership/llm",
+  "local/brothership/ships",
+  "local/brothership/speech",
+  "local/brothership/store",
+  "moonbitlang/async",
+} for "test"
+
+supported_targets = "native"
+
+warnings = "-79"

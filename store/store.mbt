@@ -302,9 +302,7 @@ pub async fn Store::decide(
   let mut s = state
   for act in acts {
     let e = act.event()
-    s = s.apply(e) catch {
-      _ => continue
-    }
+    s = s.apply(e) catch { _ => continue }
     events.push(e)
   }
   self.commit(ship, v, events, s)
@@ -341,7 +339,8 @@ pub async fn Store::muster(
   for pair in promoted {
     let e : @core.Event = Promoted(crew=pair.0, rank=pair.1)
     s = s.apply(e) catch {
-      err => abort("store: allowed promotion refused: \{err.to_json().stringify()}")
+      err =>
+        abort("store: allowed promotion refused: \{err.to_json().stringify()}")
     }
     events.push(e)
   }
