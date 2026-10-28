@@ -1,10 +1,14 @@
-.PHONY: dev build test check sim
+.PHONY: dev build deploy test check sim
 
 dev:
 	warren dev --server-target native
 
 build:
 	warren build --server-target native
+
+# Ships HEAD to Fly.io; refuses tracked changes. See scripts/fly-deploy.sh.
+deploy:
+	scripts/fly-deploy.sh
 
 test:
 	moon test --target js
