@@ -119,3 +119,21 @@ Why: a pin that can't be downloaded is not a pin, and a rebuild today needs
 the version the installer serves.
 Revisit if: the installer starts serving dated builds, or a `latest` upgrade
 breaks the image build without a code change.
+
+## 2026-10-27 · time is a server event
+Only the server writes `Tick(at~)`, in Unix seconds. A tick later than
+`State.at` advances the voyage by the difference; an earlier or equal one
+changes nothing. Clients show a local tick and never propose one.
+Why: a client that can propose elapsed time can move game time, and replay
+must never read the clock.
+Revisit if: ticks need to be finer than a second, or tick rows become a
+storage problem.
+
+## 2026-10-27 · clients send intents, the server writes events
+`Proposal` carries a crew id and an `Intent`. `Event` adds `Tick`,
+`Departed`, `Docked`, `Asked` and the ship's `Refitting`, which no
+client-sendable type can express.
+Why: a client can't fake a server event, because its type has no
+constructor for one.
+Revisit if: a player action needs to write something only the server can
+write today.
