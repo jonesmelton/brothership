@@ -1,0 +1,50 @@
+{
+  "stage": "entry",
+  "sample": 2,
+  "key": "8e79938c7ced8d85f9beb8a3b806311023457b03d6edcfddb984852711707295",
+  "model": "meta:muse-wonder-1.0",
+  "max_tokens": 16000,
+  "reasoning_effort": "xhigh",
+  "inputs": {
+    "seed": "e60a168d6ec5284b99edd9ea1d7104f4f4043e1e714f16a185b74b3379b44cdb",
+    "ships": "a910f621b76a5b179f847060b41f521a16579e6e958e37fdb5320bc49ecd94bd"
+  },
+  "text_sha": "a6a1e2aba3201701bc6f379a16c1cbb0cba2b032a9baab9958ad197a25688adf",
+  "problems": [],
+  "usage": {
+    "input": 1805,
+    "output": 14298,
+    "reasoning": 13804,
+    "cost_usd": 0.286416
+  },
+  "finish": "stop",
+  "raw": {
+    "id": "chatcmpl-01a18349-276e-7312-b338-69abe25e682e",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "content": "## The Flea on the Drum\n\nEarthly Fiend 時遷\n\n### personality and characteristics\n\na thief and grave robber from Gaotang who had drifted to Jizhou, slight, nimble and brazen, able to climb walls and roofs and move unseen, he was robbing a grave on Cuiping Mountain when he saw 石秀 and 楊雄 kill 楊雄's wife and her maid, came out of hiding and begged to be taken with them to Liangshan; on the road, at an inn under Zhujiazhuang, he stole and ate a rooster, was seized and made prisoner, so that 宋江's three attacks on the village were needed to free him and he entered the stronghold through the trouble his theft had caused; thereafter he was used wherever stealth mattered, stealing 徐寧's heirloom light gold armour from his house in the capital so that 徐寧 could be lured to Liangshan to teach the counter to the chained cavalry, and on the Lantern Festival at Daming climbing and firing Cuiyun Tower as the signal for the assault that rescued 盧俊義 and 石秀, and in the final ranking he stood 107th, assigned to intelligence work as an infantry officer; after the amnesty he served on the later expeditions, and in the campaign against Fang La, after Hangzhou had been taken, he fell ill and died there.\n\n### relationships\n\n- debt: HS-357 The Pallid (took him in after Cuiping Mountain on the road to Liangshan and sought help for him when he was prisoner at Zhujiazhuang)\n- debt: HS-137 The Rash (took him in after Cuiping Mountain on the road to Liangshan and sought help for him when he was prisoner at Zhujiazhuang)\n- debt: HS-142 The Timely Rain (whose attacks on Zhujiazhuang freed him after the theft of the rooster brought his capture)\n- conflict: HS-294 The Metal Lancer (stole his heirloom light gold armour from his house in the capital to draw him out and up to Liangshan)\n- debt: HS-174 The Jade Unicorn (climbed and burned Cuiyun Tower in Daming as the signal for the attack that rescued him)\n\n### star\n\n地賊星 Dì zéi xīng: Earthly Thief Star",
+          "refusal": null,
+          "role": "assistant"
+        },
+        "logprobs": null
+      }
+    ],
+    "created": 1793203971,
+    "model": "muse-wonder-1.0",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 14298,
+      "prompt_tokens": 1805,
+      "total_tokens": 16103,
+      "completion_tokens_details": {
+        "reasoning_tokens": 13804
+      },
+      "prompt_tokens_details": {
+        "cached_tokens": 1780
+      }
+    }
+  }
+}

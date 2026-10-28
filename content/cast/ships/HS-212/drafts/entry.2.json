@@ -1,0 +1,50 @@
+{
+  "stage": "entry",
+  "sample": 2,
+  "key": "93f9999ed162030f9c513d99ded7196250831c55cbfb1d5eeeb8fbe49cfc3f6d",
+  "model": "meta:muse-wonder-1.0",
+  "max_tokens": 16000,
+  "reasoning_effort": "xhigh",
+  "inputs": {
+    "seed": "d8c8060aa93a70d06afa9a8886baf7316571526dcd744f8d08837703f6a6497f",
+    "ships": "a910f621b76a5b179f847060b41f521a16579e6e958e37fdb5320bc49ecd94bd"
+  },
+  "text_sha": "e549ff4c4399df7d9c4b0207a6ba4465e4cd03391233ecbbb740308429bb127d",
+  "problems": [],
+  "usage": {
+    "input": 1858,
+    "output": 13364,
+    "reasoning": 12774,
+    "cost_usd": 0.274712
+  },
+  "finish": "stop",
+  "raw": {
+    "id": "chatcmpl-01a18348-c4d6-71a3-b95d-5bbc9a23036b",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "content": "## The Twin-Tailed Scorpion\n\nHeavenly Spirit 解寶\n\n### personality and characteristics\n\na hunter of Dengzhou and the younger brother of Xie Zhen, Xie Bao was orphaned young and lived by the hunt beside his brother, the two of them famed locally for their strength, their climbing and their steel forks; hot and quick to flare where Xie Zhen could still hold back, he showed it when a man-eating tiger they had been ordered on pain of punishment to kill in three days, and had wounded with poisoned arrows, fell into Squire Mao's grounds and was claimed there — refused the carcass, Xie Bao raged through the Mao house and smashed its furnishings, giving the family the opening to have the brothers arrested for robbery, beaten in court and left in prison while the Maos bribed the authorities to do away with them, until word carried out by Le He brought Gu Dasao and her fellow rescuers to break the jail, whereupon the brothers took their revenge on the Mao household and fled with the whole Dengzhou company to Liangshan, where Xie Bao was seated thirty-fifth and served as an infantry leader beside his brother; after the amnesty he followed the campaigns to the war against Fang La, and at Black Dragon Ridge he and Xie Zhen, going as hunters again, tried a night climb up the cliff into the enemy position, were discovered, and fell together to their deaths.\n\n### relationships\n\n- kinship: HS-325 The Two-Headed Snake (his elder brother and hunting partner, the steadier head beside his own heat; framed, jailed, freed and finally killed with him on the same night climb)\n- kinship: EF-147 The Tigress (his cousin, who took the alarm out of the prison, forced the rescue into being and broke the jail to get him and his brother out; the debt sits inside the blood)\n- debt: EF-083 The Iron Throat (the jailer who slipped word out that the brothers were to be done to death in prison, and so set their rescue moving)\n- debt: EF-134 The Sickly General (the Dengzhou officer pressed into the plan who helped break the prison open and then fled with the brothers rather than stay behind)\n- debt: EF-259 The Junior General (his cousin's husband, at whose inn the plot gathered and who came himself to the jailbreak and fled with them after)\n- debt: EF-256 The Dragon from the Forest (one of the rescuers who lent his strength to the breaking of the Dengzhou prison that freed him)\n- debt: EF-280 The One-Horned Dragon (the nephew who came with his uncle to the prison break; Xie Bao owes his life in part to both of them)\n\n### star\n\n天哭星 Tiānkūxīng: the Heavenly Weeping Star",
+          "refusal": null,
+          "role": "assistant"
+        },
+        "logprobs": null
+      }
+    ],
+    "created": 1793203946,
+    "model": "muse-wonder-1.0",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 13364,
+      "prompt_tokens": 1858,
+      "total_tokens": 15222,
+      "completion_tokens_details": {
+        "reasoning_tokens": 12774
+      },
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    }
+  }
+}
