@@ -36,7 +36,9 @@ The client and server run the same `core`. `State::apply` is the only
 transition: the server uses it to validate and commit, the client to predict.
 
 The client applies its proposals locally for immediate feedback and sends them
-one at a time. Each receipt, accepted or refused, carries the server's
+one at a time. It learns its officer from `GET /api/session`; a proposal
+carries that crew id, and the server refuses one that names another officer.
+Each receipt, accepted or refused, carries the server's
 snapshot, which the client adopts as confirmed state. Sending one at a time is
 what makes this sound: each receipt's snapshot contains exactly the client's
 earlier proposals. `Optimistic::resync` ignores snapshots while a proposal is
@@ -102,15 +104,22 @@ The server's speakers print each line's times.
 - `GET /healthz` returns `{"ok": true}`. It is the path `fly.toml` checks.
   The listener binds only after the store opens, so a response proves boot got
   that far; keep it independent of the game routes.
+- `GET /api/session` returns `@core.Session`, the officer this client acts
+  as. A first visit mints a token and an officer and sets `session` as an
+  HttpOnly cookie; later visits return the same officer. The cookie is
+  `HttpOnly` and `SameSite=Lax`, and `Secure` unless `routes` is called with
+  `secure=false` for plain-http development. The token never appears in a
+  snapshot or the log, because both publish crew ids.
 - `GET /api/ships` returns `Array[@core.Listing]`, in order of commission.
 - `GET /api/ships/:id/snapshot` returns `@core.Snapshot`.
 - `GET /api/ships/:id/story?after=seq` returns `@core.Story`: the ship's
   happenings after `seq`, and whether it is writing a line.
 - `POST /api/ships/:id/proposals` takes `@core.Proposal` and returns
-  `@core.Receipt`. An unknown ship is a 404.
-  A proposal is a crew id and an `Intent`. Nothing checks the id: until
-  there are accounts, any client can act as any crew member. A body naming
-  a server event fails to decode and gets a 400.
+  `@core.Receipt`. It acts as the session's officer: no session is a 401, and
+  a proposal naming another officer is a 403. An unknown ship is a 404. A
+  body naming a server event fails to decode and gets a 400.
+- A session is not a seat. Nothing limits how many officers join a ship, and
+  `Posted` adds a hand for any new id.
 
 ## store
 
@@ -127,6 +136,9 @@ replayed through `State::apply` and is rebuilt on open. So is its story:
 the happenings `@core.happenings` derives from each row and the states
 either side of it, kept in memory and never written. Logs from before
 commissioning are kept in `event_legacy` and not replayed.
+Sessions live in a `session` table beside the log: a random token and the
+officer it names. They are not events, do not replay, and are restored with
+the database.
 Migrations live in `store/schema.mbt`, are forward-only and are tracked with
 `pragma user_version`; append new ones, never edit a shipped one. Writes are
 serialized by a mutex so validation sees the state the event will follow.

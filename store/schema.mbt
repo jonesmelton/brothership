@@ -20,6 +20,15 @@ let migrations : Array[String] = [
     #|  recorded_at integer not null default (unixepoch())
     #|) strict
   ),
+  // A player's session, outside the event log: the cookie token and the
+  // crew id it acts as. Not replayed and not part of the game state.
+  (
+    #|create table session (
+    #|  token      text primary key,
+    #|  officer    text not null unique,
+    #|  created_at integer not null
+    #|) strict
+  ),
 ]
 
 ///|

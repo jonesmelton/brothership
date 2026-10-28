@@ -289,6 +289,10 @@ pub(all) enum Refit {
   Coils
 } derive(Compare, Eq, Hash, ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct Session {
+  officer : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct Ship {
   values : Values
   fit : Fit

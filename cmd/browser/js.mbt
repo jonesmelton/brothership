@@ -8,19 +8,6 @@ fn unix_now() -> Int64 {
 extern "js" fn date_now_ms() -> Double = "() => Date.now()"
 
 ///|
-/// This browser's crew id, made once and kept in `localStorage`. There are
-/// no accounts yet, so anyone who sends an id acts as that crew member.
-extern "js" fn crew_id() -> String =
-  #|() => {
-  #|  let id = localStorage.getItem("brothership.crew");
-  #|  if (!id) {
-  #|    id = "crew-" + crypto.randomUUID().slice(0, 8);
-  #|    localStorage.setItem("brothership.crew", id);
-  #|  }
-  #|  return id;
-  #|}
-
-///|
 /// The newest story `seq` this browser has shown of `ship`, or "" if none.
 extern "js" fn load_seen(ship : String) -> String =
   #|(ship) => localStorage.getItem("brothership.seen-seq." + ship) ?? ""

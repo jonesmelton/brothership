@@ -2,9 +2,11 @@ import {
   "local/brothership/core",
   "local/brothership/store",
   "moonbitlang/async",
+  "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/string",
   "moonbitlang/moonback",
+  "moonbitlang/x/crypto",
 }
 
 import {

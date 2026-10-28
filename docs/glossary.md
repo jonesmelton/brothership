@@ -22,6 +22,11 @@
 - **gate**: the check that model text passes before a player sees it. A
   classifier model reads the text against `content/gate/policy.md` and
   returns a verdict, clean or violation, with the quote that decided it.
+- **officer**: the crew member a player controls. A session's officer is the
+  crew id that player's proposals act as. Recruits and other NPC crew are
+  crew members but not officers.
+- **session**: a random token in an HttpOnly cookie, mapped to an officer.
+  Not an account: clearing the cookie starts a new officer.
 - **post**: a crew member's current assignment: ship work (drive, hull) or
   their craft. Held while away. See [gameplay](gameplay.md).
 - **craft**: what a crew member's hours on the craft post make: refits for

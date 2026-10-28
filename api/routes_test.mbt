@@ -25,12 +25,36 @@ async fn fleet_store() -> @store.Store {
 }
 
 ///|
+/// The session cookie a browser gets, and the officer it names.
+async fn new_session(base : String) -> (@http.Cookie, @core.Session) {
+  let (response, body) = @http.get("\{base}/api/session")
+  let session : @core.Session = @json.from_json(body.json())
+  (
+    response.cookies
+    .iter()
+    .find_first(cookie => cookie.name == "session")
+    .unwrap(),
+    session,
+  )
+}
+
+///|
+/// The `Cookie` request header for `cookie`.
+fn cookie_header(
+  cookie : @http.Cookie,
+) -> Map[@http.CaseInsensitiveString, String] {
+  { "Cookie": "session=\{cookie.value}" }
+}
+
+///|
 async test "api round trip over http" {
   let store = fleet_store()
   defer store.close()
   store.advance("tigress", now=1_800_000_000)
   store.advance("tigress", now=1_800_000_600)
   with_server(store, 1_800_000_660, base => {
+    let (cookie, session) = new_session(base)
+    let headers = cookie_header(cookie)
     let (_, body) = @http.get("\{base}/api/ships")
     json_inspect(body.json(), content=[
       { "id": "tigress", "name": "EF-147 The Tigress" },
@@ -42,12 +66,13 @@ async test "api round trip over http" {
     inspect(snapshot == store.snapshot("tigress").unwrap(), content="true")
     let proposal : @core.Proposal = {
       id: 1,
-      crew: "ann",
+      crew: session.officer,
       intent: Posted(post=Hull),
     }
     let (_, body) = @http.post(
       "\{base}/api/ships/tigress/proposals",
       proposal.to_json(),
+      headers~,
     )
     let receipt : @core.Receipt = @json.from_json(body.json())
     inspect(receipt is Accepted(id=1, ..), content="true")
@@ -63,8 +88,72 @@ async test "api round trip over http" {
     let (res, _) = @http.post(
       "\{base}/api/ships/nobody/proposals",
       proposal.to_json(),
+      headers~,
     )
     inspect(res.code, content="404")
+  })
+}
+
+///|
+async test "the session cookie names one officer and is HttpOnly" {
+  let store = fleet_store()
+  defer store.close()
+  with_server(store, 1_800_000_000, base => {
+    let (cookie, session) = new_session(base)
+    inspect(cookie.http_only, content="true")
+    inspect(cookie.secure, content="true")
+    inspect(cookie.path.unwrap_or(""), content="/")
+    inspect(cookie.max_age.unwrap_or(0L), content="2592000")
+    inspect(cookie.extensions.contains("SameSite=Lax"), content="true")
+    inspect(session.officer.has_prefix("officer-"), content="true")
+    let (response, body) = @http.get(
+      "\{base}/api/session",
+      headers=cookie_header(cookie),
+    )
+    let again : @core.Session = @json.from_json(body.json())
+    inspect(again == session, content="true")
+    inspect(response.cookies.is_empty(), content="true")
+  })
+}
+
+///|
+async test "a proposal acts only as its session's officer" {
+  let store = fleet_store()
+  defer store.close()
+  store.advance("tigress", now=1_800_000_000)
+  store.advance("tigress", now=1_800_000_600)
+  with_server(store, 1_800_000_660, base => {
+    let (cookie, session) = new_session(base)
+    let headers = cookie_header(cookie)
+    let wrong : @core.Proposal = {
+      id: 1,
+      crew: "officer-other",
+      intent: Posted(post=Drive),
+    }
+    let (res, _) = @http.post(
+      "\{base}/api/ships/tigress/proposals",
+      wrong.to_json(),
+      headers~,
+    )
+    inspect(res.code, content="403")
+    let (res, _) = @http.post(
+      "\{base}/api/ships/tigress/proposals",
+      wrong.to_json(),
+    )
+    inspect(res.code, content="401")
+    let right : @core.Proposal = { ..wrong, crew: session.officer, }
+    let (res, body) = @http.post(
+      "\{base}/api/ships/tigress/proposals",
+      right.to_json(),
+      headers~,
+    )
+    inspect(res.code, content="200")
+    let receipt : @core.Receipt = @json.from_json(body.json())
+    inspect(receipt is Accepted(id=1, ..), content="true")
+    inspect(
+      receipt.snapshot().state.crossing().unwrap().count(Drive),
+      content="1",
+    )
   })
 }
 

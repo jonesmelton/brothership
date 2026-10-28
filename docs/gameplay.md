@@ -5,10 +5,10 @@ points for the harness to tune, not targets; the targets are in each section.
 
 ## the player
 
-A player is one crew member: one soul. A ship carries up to about ten players
-and as many NPC crew as it needs. NPCs keep a ship with one player playable,
-stand in for players in the simulation harness, and are what deliveries
-recruit.
+A player is one crew member, an **officer**: one soul. A ship carries up to
+about ten officers and as many NPC crew as it needs. NPCs keep a ship with one
+officer playable, stand in for officers in the simulation harness, and are
+what deliveries recruit.
 
 ## the core action: posts
 

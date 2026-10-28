@@ -6,7 +6,7 @@ fn listing(id : String, name : String) -> @core.Listing {
 ///|
 fn aboard() -> Model {
   {
-    crew: "ann",
+    officer: "ann",
     now: 0L,
     ships: [listing("tigress", "EF-147 The Tigress")],
     ship: Some("tigress"),

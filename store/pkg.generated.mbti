@@ -18,7 +18,9 @@ pub async fn Store::advance(Self, String, now~ : Int64) -> Unit
 pub fn Store::close(Self) -> Unit raise
 pub async fn Store::commission(Self, @ships.Berth) -> Unit
 pub async fn Store::open(String) -> Self
+pub async fn Store::open_session(Self, String, String, now~ : Int64) -> Unit
 pub async fn Store::propose(Self, String, @core.Proposal, now~ : Int64) -> @core.Receipt?
+pub async fn Store::session(Self, String) -> String?
 pub fn Store::ships(Self) -> Array[String]
 pub fn Store::snapshot(Self, String) -> @core.Snapshot?
 pub async fn Store::speak(Self, String, line~ : String, about~ : Int64, now~ : Int64) -> Unit

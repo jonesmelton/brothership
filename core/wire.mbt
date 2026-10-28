@@ -9,8 +9,7 @@ pub(all) struct Snapshot {
 ///|
 /// A client's request for `crew` to do `intent`. `id` is assigned by the
 /// client and only identifies the proposal within that client's session.
-/// Nothing checks `crew`: until there are accounts, any client can act as
-/// any crew member.
+/// The server refuses a `crew` that is not the officer its session names.
 pub(all) struct Proposal {
   id : Int64
   crew : String
@@ -44,6 +43,13 @@ pub fn Receipt::snapshot(self : Receipt) -> Snapshot {
     Accepted(snapshot~, ..) | Refused(snapshot~, ..) => snapshot
   }
 }
+
+///|
+/// `GET /api/session`: the officer this client acts as. The session token
+/// stays in an HttpOnly cookie; the body carries only the public crew id.
+pub(all) struct Session {
+  officer : String
+} derive(Debug, Eq, ToJson, FromJson)
 
 ///|
 /// One ship in `GET /api/ships`.

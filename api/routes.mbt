@@ -3,6 +3,7 @@
 /// browser decodes exactly what the server encodes.
 ///
 /// - `GET /healthz` -> `{"ok": true}`, the path `fly.toml` checks
+/// - `GET /api/session` -> `@core.Session`, and sets the `session` cookie
 /// - `GET /api/ships` -> `Array[@core.Listing]`, in order of commission
 /// - `GET /api/ships/:id/snapshot` -> `@core.Snapshot`
 /// - `POST /api/ships/:id/proposals` with `@core.Proposal` -> `@core.Receipt`
@@ -10,13 +11,38 @@
 ///
 /// An unknown ship is a 404. `clock` gives the wall clock in Unix seconds;
 /// proposals are applied at it. `speaking` says whether a ship is writing a
-/// line now.
+/// line now. A proposal acts as the officer in its session cookie: no
+/// session is a 401, and a proposal naming another officer is a 403.
+/// `secure` marks the session cookie `Secure`; keep it false only for
+/// plain-http development.
 pub fn routes(
   store : @store.Store,
   clock~ : () -> Int64 = unix_now,
   speaking~ : (String) -> Bool = _ => false,
+  secure~ : Bool = true,
 ) -> @moonback.Module {
   ctx => {
+    ctx.get("/api/session", (req, res) => {
+      let (officer, token) = match officer_of(store, req) {
+        Some(officer) => (officer, None)
+        None => {
+          let token = new_token()
+          let officer = new_officer()
+          store.open_session(token, officer, now=clock())
+          (officer, Some(token))
+        }
+      }
+      let body : @core.Session = { officer, }
+      let headers = match token {
+        None => [("Cache-Control", "no-store")]
+        Some(token) =>
+          [
+            ("Set-Cookie", session_cookie(token, secure~)),
+            ("Cache-Control", "no-store"),
+          ]
+      }
+      res.send_json(body.to_json(), headers~)
+    })
     ctx.get("/api/ships/:id/story", (req, res) => {
       let ship = req.params["id"].to_owned()
       let after = @string.parse_int64(req.query().get("after").unwrap_or("0")) catch {
@@ -54,10 +80,20 @@ pub fn routes(
           return
         }
       }
-      let ship = req.params["id"].to_owned()
-      match store.propose(ship, proposal, now=clock()) {
-        Some(receipt) => res.send_json(receipt.to_json())
-        None => res.send_json({ "error": "no such ship" }, status=404)
+      match officer_of(store, req) {
+        None => res.send_json({ "error": "no session" }, status=401)
+        Some(officer) if proposal.crew != officer =>
+          res.send_json(
+            { "error": "proposal is for another officer" },
+            status=403,
+          )
+        Some(_) => {
+          let ship = req.params["id"].to_owned()
+          match store.propose(ship, proposal, now=clock()) {
+            Some(receipt) => res.send_json(receipt.to_json())
+            None => res.send_json({ "error": "no such ship" }, status=404)
+          }
+        }
       }
     })
   }

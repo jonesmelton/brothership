@@ -137,3 +137,22 @@ Why: a client can't fake a server event, because its type has no
 constructor for one.
 Revisit if: a player action needs to write something only the server can
 write today.
+
+## 2026-10-28 · an officer is a player's crew member
+`officer` names the crew member a player controls. `crew` stays the generic
+core term for anyone who can hold a hand or a record, NPCs included. A
+session's officer is the crew id that player's proposals act as.
+Why: the game needs one word for the player's character in interface text and
+session code, separate from the crew as a whole, and the session needs a name
+for what its token points at.
+Revisit if: NPC crew need the same identity or roster treatment as players.
+
+## 2026-10-28 · a session token is not a crew id
+`GET /api/session` sets a random `session` cookie and the store maps it to an
+officer's crew id in a `session` table. The token never appears in a snapshot
+or the log.
+Why: `Snapshot` and `Crew` events publish every crew id (`hands`, `tallies`,
+`records`), so a cookie carrying the crew id would be forgeable by anyone
+aboard. A table, not a signed cookie, keeps the mapping revocable and leaves a
+place for names and recovery codes.
+Revisit if: crew ids stop being public, or a signed cookie replaces the table.

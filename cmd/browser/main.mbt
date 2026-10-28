@@ -2,8 +2,9 @@
 /// Client state. Rendering reads `predicted()`, which already includes
 /// proposals the server has not answered yet, advanced to the local clock.
 struct Model {
-  /// This browser's crew id. See `crew_id`.
-  crew : String
+  /// The officer this client acts as, from `GET /api/session` and the
+  /// server-issued session cookie. Empty until the session arrives.
+  officer : String
   /// The local wall clock in Unix seconds, as of the last `Tock`.
   now : Int64
   /// The ships in service, once listed.
@@ -30,6 +31,7 @@ enum Sync {
 /// Replies carry the ship they are about, so one that arrives after the
 /// player changed ship is dropped.
 enum Msg {
+  Session(Result[@core.Session, Error])
   Listed(Result[Array[@core.Listing], Error])
   Choose(String)
   Loaded(String, Result[@core.Snapshot, Error])
@@ -48,6 +50,13 @@ const TOCK_MS : Int32 = 5_000
 
 ///|
 const POLL_MS : Int32 = 15_000
+
+///|
+/// The officer this browser acts as. The server sets the session cookie on
+/// the first call.
+fn session(emit : @rabbita.Emit[Msg]) -> @rabbita.Cmd {
+  @http.get("/api/session").expect_json(emit.map(r => Session(r)))
+}
 
 ///|
 fn list(emit : @rabbita.Emit[Msg]) -> @rabbita.Cmd {
@@ -192,6 +201,9 @@ fn update(
   }
   let current = (ship : String) => model.ship == Some(ship)
   match (model.sync, msg) {
+    (_, Session(Ok(s))) => ({ ..model, officer: s.officer, }, list(emit))
+    (_, Session(Err(err))) =>
+      ({ ..model, sync: Offline(reason=err.to_string()), }, @rabbita.none)
     // A line is on its way: look for it sooner than the poll would.
     (_, Tock) =>
       (
@@ -221,7 +233,7 @@ fn update(
     (_, Storied(ship, Ok(story))) => {
       let (told, polite, assertive) = model.told.merge(
         story,
-        you=model.crew,
+        you=model.officer,
         hear=model.hear,
         ship=epithet(model),
       )
@@ -264,6 +276,7 @@ fn update(
     (Ready(_), Loaded(_, Err(_))) => (model, @rabbita.none)
     (_, Loaded(_, Err(err))) =>
       ({ ..model, sync: Offline(reason=err.to_string()), }, @rabbita.none)
+    (Ready(_), Propose(_)) if model.officer == "" => (model, @rabbita.none)
     (Ready(sync), Propose(intent)) =>
       match model.ship {
         None => (model, @rabbita.none)
@@ -271,9 +284,9 @@ fn update(
           let standing = sync
             .predicted()
             .crossing()
-            .bind(c => c.hands.get(model.crew))
+            .bind(c => c.hands.get(model.officer))
             .bind(h => h.order)
-          try sync.propose(model.crew, intent) catch {
+          try sync.propose(model.officer, intent) catch {
             // Refused locally: the server would refuse it too.
             _ => (model, @rabbita.none)
           } noraise {
@@ -409,9 +422,9 @@ fn group(
 fn choices(
   emit : @rabbita.Emit[Msg],
   c : @core.Crossing,
-  crew : String,
+  officer : String,
 ) -> Array[@rabbita.Html] {
-  let hand = c.hands.get(crew)
+  let hand = c.hands.get(officer)
   let at = hand.map(h => h.post)
   let posts : Array[@core.Post] = [Drive, Hull, Craft]
   let post = group(
@@ -548,19 +561,19 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
     Ready(sync) => {
       let s = shown(model, sync)
       let away = model.told
-        .away(model.seen, you=model.crew, ship=epithet(model))
+        .away(model.seen, you=model.officer, ship=epithet(model))
         .map(line => @html.li(line))
       [
         where_section(s),
         @html.section([@html.h2("While you were away"), @html.ul(away)]),
         @html.section(
-          [@html.h2("You"), ..sentences(@words.you_sentences(s, model.crew))],
+          [@html.h2("You"), ..sentences(@words.you_sentences(s, model.officer))],
         ),
         @html.section(
           [
             @html.h2("Choices"),
             ..match s.crossing() {
-              Some(c) => choices(emit, c, model.crew)
+              Some(c) => choices(emit, c, model.officer)
               None => [@html.p("Choices open when the ship departs.")]
             },
           ],
@@ -587,7 +600,7 @@ fn log_section(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
     .to_owned()
     .rev()
     .map(e => {
-      let line = @words.told(e.happening, you=model.crew, ship~)
+      let line = @words.told(e.happening, you=model.officer, ship~)
       let when = @words.ago((model.now - e.at).max(0L))
       @html.li(class=if e.happening is Spoke(_) { "voice" } else { "" }, [
         @html.text(line),
@@ -663,7 +676,7 @@ fn main {
       init=emit => {
         let ship = stored_ship()
         let model = {
-          crew: crew_id(),
+          officer: "",
           now: unix_now(),
           ships: [],
           ship: if ship == "" {
@@ -677,7 +690,7 @@ fn main {
           said: { polite: "", assertive: "", count: 0, },
           sync: Loading,
         }
-        (model, list(emit))
+        (model, session(emit))
       },
       update~,
       subscriptions=(_, emit) => {

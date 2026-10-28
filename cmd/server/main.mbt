@@ -54,9 +54,13 @@ async fn main {
       })
     }
     ctx.use_(
-      @api.routes(store, speaking=ship => {
-        speakers.iter().any(sp => sp.0 == ship && sp.1.speaking())
-      }),
+      @api.routes(
+        store,
+        speaking=ship => {
+          speakers.iter().any(sp => sp.0 == ship && sp.1.speaking())
+        },
+        secure=!dev,
+      ),
     )
   })
   defer app.close()
