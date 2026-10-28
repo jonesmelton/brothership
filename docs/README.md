@@ -13,5 +13,6 @@ Design and implementation notes for the game. Read the one that matches the work
 | [typography](typography.md) | fonts, figures, small caps, hanzi setting |
 | [accessibility](accessibility.md) | screen reader, announcements, contrast |
 | [llm-tooling](llm-tooling.md) | model APIs, prompts, cache, gate |
+| [deploy-plan](deploy-plan.md) | the Fly.io deploy, what shipped, the restore drill |
 | [decisions](decisions.md) | why hard-to-reverse choices were made |
 | [glossary](glossary.md) | terms used in the code and docs |

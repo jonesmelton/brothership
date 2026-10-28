@@ -21,6 +21,18 @@ The server stores its data in `brothership.sqlite` in the working directory.
 Set `BROTHERSHIP_DB` to use another path, and `WARREN_HOST` / `WARREN_PORT`
 to change the address.
 
+## Deploy
+
+The game runs at https://brothership.fly.dev: one machine in `ord`, with its
+sqlite log replicated to Tigris by Litestream every 30 s.
+
+```sh
+make deploy  # ships HEAD; refuses uncommitted tracked changes
+```
+
+Provisioning, secrets and the restore drill are in
+[docs/deploy-plan.md](docs/deploy-plan.md).
+
 ## Docs
 
 [docs/README.md](docs/README.md) indexes the design and implementation notes.

@@ -34,7 +34,7 @@ Moonbit's ecosystem is untested, much of it appears to be automated ports. Use i
 
 ## working
 
-`make` is the entrypoint: `dev`, `build`, `test`, `check`. Run `make check`
+`make` is the entrypoint: `dev`, `build`, `deploy`, `test`, `check`. Run `make check`
 before handing off. Don't add make targets unless asked.
 
 Read @docs/architecture.md before changing package boundaries, the sync

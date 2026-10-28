@@ -110,3 +110,12 @@ never craft, so they make no works.
 Why: recruits who craft deliver works that bring more recruits, and the cap
 was reached by the second port.
 Revisit if: recruiting gains a cost or a limit per port.
+
+## 2026-10-27 · the deployed image tracks `latest` MoonBit, not a pinned toolchain
+The Dockerfile installs MoonBit from the unversioned installer. The
+installer's linux-x86_64 URL returns 403 for the local toolchain version
+(`0.1.20261020`) and 200 only for `latest`.
+Why: a pin that can't be downloaded is not a pin, and a rebuild today needs
+the version the installer serves.
+Revisit if: the installer starts serving dated builds, or a `latest` upgrade
+breaks the image build without a code change.
