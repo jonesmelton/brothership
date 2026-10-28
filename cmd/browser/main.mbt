@@ -52,6 +52,8 @@ enum Msg {
   Hear(Hear)
   /// The address now names this page.
   Went(@words.Page)
+  /// A link was followed. Rabbita stops the browser following it.
+  Requested(@url.UrlRequest)
   /// The local clock moved.
   Tock
   Poll
@@ -250,20 +252,16 @@ fn update(
     // A line is on its way: look for it sooner than the poll would.
     (_, Tock) => {
       let ticked = { ..model, now: unix_now(), }
-      // A link followed without the browser telling us still changes page.
-      let page = page_from_hash(current_hash())
-      let moved = ticked.goto(page)
-      let focus = if moved.page != model.page {
-        focus_cmd("page")
-      } else {
-        @rabbita.none
-      }
       let ask = match model.ship {
         Some(ship) if model.told.speaking => tell(emit, ship, model.told.last())
         _ => @rabbita.none
       }
-      (moved, @rabbita.batch([ask, focus, keep_ledger(ticked)]))
+      (ticked, @rabbita.batch([ask, keep_ledger(ticked)]))
     }
+    // Pushing the address brings the page back as `Went`.
+    (_, Requested(Internal(url))) =>
+      (model, @nav.push_url("#" + url.fragment.unwrap_or("")))
+    (_, Requested(External(href))) => (model, @nav.load(href))
     (_, Went(page)) => {
       let moved = model.goto(page)
       let cmds = if moved.page != model.page {
@@ -1001,6 +999,7 @@ fn main {
         @sub.batch([
           @sub.every(TOCK_MS, emit(Tock)),
           @sub.every(POLL_MS, emit(Poll)),
+          @sub.on_url_request(emit.map(r => Requested(r))),
           @sub.on_url_changed(
             emit.map(u => Went(page_from_hash(u.fragment.unwrap_or("")))),
           ),

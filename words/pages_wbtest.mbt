@@ -121,15 +121,27 @@ test "effect of nothing" {
 }
 
 ///|
+/// `s` with `crew` proposing `intent`, at the same instant.
+fn propose(
+  s : @core.State,
+  crew : String,
+  intent : @core.Intent,
+) -> @core.State {
+  s.apply(@core.Crew(crew~, intent~)) catch {
+    _ => panic()
+  }
+}
+
+///|
 test "effect: a hand on the drive" {
   let before = sea()
-  let after = sea(posts=[Drive])
+  let after = propose(before, "0", Posted(post=Drive))
   debug_inspect(
     effect(before, after, you="0"),
     content=(
       #|[
       #|  "Arrival about 6 hours sooner.",
-      #|  "Your regard now grows about 2 hours an hour.",
+      #|  "You now earn 2 hours of regard an hour.",
       #|]
     ),
   )
@@ -137,40 +149,26 @@ test "effect: a hand on the drive" {
 
 ///|
 test "effect: a hand on the hull while it wears" {
-  let before = sea(posts=[Drive], ticks=3600L)
-  let after = sea(posts=[Drive, Hull], ticks=3600L)
+  let before = sea(posts=[Drive, Drive, Drive], ticks=3600L)
   guard before.crossing() is Some(c) else { panic() }
+  inspect(c.trend("").hull < 0L, content="true")
+  let after = propose(before, "3", Posted(post=Hull))
   debug_inspect(
-    (c.hull, c.trend("").hull),
+    effect(before, after, you="3"),
     content=(
-      #|(970534000, -29466000)
-    ),
-  )
-  debug_inspect(
-    effect(before, after, you="0"),
-    content=(
-      #|["The hull holds steady."]
+      #|["Arrival about 40 minutes sooner.", "The hull now mends."]
     ),
   )
 }
 
 ///|
-test "effect: the coast does not need the drive" {
+test "effect: a drive hand in the coast still shortens the approach" {
   let before = until_phase(sea(posts=[Hull, Craft]), Coast)
-  let after = before.apply(
-    @core.Crew(crew="2", intent=@core.Posted(post=Drive)),
-  ) catch {
-    _ => before
-  }
   guard before.crossing() is Some(c) else { panic() }
+  inspect(c.phase is Coast, content="true")
+  let after = propose(before, "2", Posted(post=Drive))
   debug_inspect(
-    c.phase,
-    content=(
-      #|Coast
-    ),
-  )
-  debug_inspect(
-    effect(before, after, you="0"),
+    effect(before, after, you="2"),
     content=(
       #|["Arrival about 3 hours sooner."]
     ),
@@ -178,17 +176,38 @@ test "effect: the coast does not need the drive" {
 }
 
 ///|
-test "effect: a demand that closes" {
-  let before = sea(posts=[Drive, Hull, Hull])
-  guard before.crossing() is Some(c) else { panic() }
-  guard c.outcomes() is Some(out) else { panic() }
-  let after = before.apply(@core.Tick(at=before.at + out[0].at)) catch {
-    _ => before
+test "effect: a hand that saves a demand" {
+  // The first crew and seed where one more hand on a demand's post turns
+  // its outcome from missed to met.
+  let found = for seed in 1L..<40L {
+    let before = sea(posts=[Drive], ticks=1800L, seed~)
+    guard before.crossing() is Some(c) && c.outcomes() is Some(out) else {
+      continue
+    }
+    let flipped = for i, d in c.demands {
+      guard out[i].status == Missed && d.status is (Waiting | Open) else {
+        continue
+      }
+      let after = propose(before, "1", Posted(post=d.hazard.post()))
+      guard after.crossing() is Some(a) && a.outcomes() is Some(now) else {
+        continue
+      }
+      if now[i].status == Met {
+        break Some(effect(before, after, you="1"))
+      }
+    } nobreak {
+      None
+    }
+    if flipped is Some(lines) {
+      break Some(lines)
+    }
+  } nobreak {
+    None
   }
   debug_inspect(
-    effect(before, after, you="0"),
+    found,
     content=(
-      #|["Flare will now be missed.", "Breach will now be met."]
+      #|Some(["Breach will now be met.", "The hull now mends."])
     ),
   )
 }
@@ -213,7 +232,7 @@ test "ledger totals do not fall across a docking" {
   debug_inspect(
     since(early, Ledger::of(docked, you="0")),
     content=(
-      #|["You earned about 18 hours of regard."]
+      #|["You earned 18 hours of regard."]
     ),
   )
   debug_inspect(
@@ -242,7 +261,7 @@ test "since names what was earned" {
     since(before, now),
     content=(
       #|[
-      #|  "You earned about 6 hours of regard.",
+      #|  "You earned 6 hours of regard.",
       #|  "You finished 2 works.",
       #|  "You reached rank 1.",
       #|  "The ship made a crossing.",
@@ -264,10 +283,9 @@ test "what a driver earns" {
     earning_sentences(s, you="0"),
     content=(
       #|[
-      #|  "No regard yet this crossing.",
-      #|  "Your regard grows about 2 hours an hour.",
-      #|  "×2: the ship asked for the drive.",
-      #|  "You need about 2 days of regard for rank 1.",
+      #|  "No regard yet this crossing, earning 2 an hour.",
+      #|  "Doubled: the ship asks for the drive.",
+      #|  "40 hours of regard to rank 1.",
       #|]
     ),
   )
@@ -286,10 +304,9 @@ test "what an artist earns" {
     earning_sentences(s, you="0"),
     content=(
       #|[
-      #|  "You have earned about 4 hours of regard this crossing.",
-      #|  "Your regard grows about 2 hours an hour.",
+      #|  "4 hours of regard this crossing, earning 2 an hour.",
       #|  "Work 1: 2 of 6 crew-hours.",
-      #|  "You need about 2 days of regard for rank 1.",
+      #|  "36 hours of regard to rank 1.",
       #|]
     ),
   )
@@ -297,10 +314,9 @@ test "what an artist earns" {
     earning_sentences(sea(posts=[Craft]), you="0"),
     content=(
       #|[
-      #|  "No regard yet this crossing.",
-      #|  "Your regard grows about 2 hours an hour.",
+      #|  "No regard yet this crossing, earning 2 an hour.",
       #|  "Work 1: 0 of 6 crew-hours.",
-      #|  "You need about 2 days of regard for rank 1.",
+      #|  "40 hours of regard to rank 1.",
       #|]
     ),
   )

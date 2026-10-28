@@ -74,15 +74,26 @@ fn tenths_words(tenths : Int64) -> String {
 }
 
 ///|
-/// Regard per hour in the units players see: hours an hour.
+/// Regard per hour as the hours of regard it earns in an hour, to one
+/// decimal place at most: "2.5".
 fn regard_rate_words(per_hour : Int64) -> String {
   let tenths = per_hour * 10L / @core.REGARD_HOUR
   if tenths < 10L {
-    "0.\{tenths} hours an hour"
-  } else if tenths % 10L == 0L {
-    "\{plural(tenths / 10L, "hour", "hours")} an hour"
+    "0.\{tenths}"
   } else {
-    "\{tenths_words(tenths)} hours an hour"
+    tenths_words(tenths)
+  }
+}
+
+///|
+/// An amount of regard as whole hours: "6 hours of regard", or "under an
+/// hour of regard".
+fn regard_words(regard : Int64) -> String {
+  let hours = regard / @core.REGARD_HOUR
+  if hours < 1L {
+    "under an hour of regard"
+  } else {
+    "\{plural(hours, "hour", "hours")} of regard"
   }
 }
 
@@ -185,15 +196,24 @@ pub fn effect(
   }
   match b {
     Some(bc) => {
-      for i, d in a.demands {
-        guard bc.demands.get(i) is Some(was) else { continue }
-        match (was.status, d.status) {
-          (Waiting | Open, Met) =>
-            lines.push("\{hazard_title(d.hazard)} will now be met.")
-          (Waiting | Open, Missed) =>
-            lines.push("\{hazard_title(d.hazard)} will now be missed.")
-          _ => ()
-        }
+      // Both states are the same instant, so a demand changes only in how
+      // it will close.
+      match (bc.outcomes(), a.outcomes()) {
+        (Some(was), Some(now)) =>
+          for i, d in a.demands {
+            guard d.status is (Waiting | Open) else { continue }
+            guard was.get(i) is Some(w) && now.get(i) is Some(n) else {
+              continue
+            }
+            match (w.status, n.status) {
+              (Missed, Met) =>
+                lines.push("\{hazard_title(d.hazard)} will now be met.")
+              (Met, Missed) =>
+                lines.push("\{hazard_title(d.hazard)} will now be missed.")
+              _ => ()
+            }
+          }
+        _ => ()
       }
       let was = bc.trend(you)
       let now = a.trend(you)
@@ -211,17 +231,12 @@ pub fn effect(
           lines.push("Your regard no longer grows.")
         } else {
           lines.push(
-            "Your regard now grows about \{regard_rate_words(now.regard)}.",
+            "You now earn \{regard_rate_words(now.regard)} hours of regard an hour.",
           )
         }
       }
       if lines.is_empty() {
-        let drive = bc.quarters(Drive) != a.quarters(Drive)
-        if drive && a.phase is Coast {
-          lines.push("No change to arrival: the coast doesn't need the drive.")
-        } else {
-          lines.push("No change to arrival.")
-        }
+        lines.push("No change to arrival.")
       }
     }
     None => ()
@@ -258,7 +273,7 @@ pub fn Ledger::of(s : @core.State, you~ : String) -> Ledger {
   {
     at: s.at,
     regard: record.regard + tally.regard,
-    works: record.works + tally.work / @core.WORK_SIZE,
+    works: record.works + (record.carry + tally.work) / @core.WORK_SIZE,
     crossings: s.ship.crossings +
     (if s.crossing() is Some(_) { 1L } else { 0L }),
   }
@@ -271,9 +286,7 @@ pub fn since(before : Ledger, now : Ledger) -> Array[String] {
   let lines : Array[String] = []
   let regard = now.regard - before.regard
   if regard > 0L {
-    lines.push(
-      "You earned \{about(regard * 3600L / @core.REGARD_HOUR)} of regard.",
-    )
+    lines.push("You earned \{regard_words(regard)}.")
   }
   let works = now.works - before.works
   if works == 1L {
@@ -305,25 +318,25 @@ pub fn earning_sentences(s : @core.State, you~ : String) -> Array[String] {
   let tally = c.tallies.get(you).unwrap_or(zero_tally())
   let record = s.ship.records.get(you).unwrap_or(zero_record())
   let lines : Array[String] = []
-  if tally.regard > 0L {
-    lines.push(
-      "You have earned \{about(tally.regard * 3600L / @core.REGARD_HOUR)} of regard this crossing.",
-    )
+  let earned = if tally.regard > 0L {
+    "\{regard_words(tally.regard)} this crossing"
   } else {
-    lines.push("No regard yet this crossing.")
+    "No regard yet this crossing"
   }
   let rate = c.trend(you).regard
   if rate > 0L {
-    lines.push("Your regard grows about \{regard_rate_words(rate)}.")
+    lines.push("\{earned}, earning \{regard_rate_words(rate)} an hour.")
   } else {
-    lines.push("This post earns no regard now.")
+    lines.push("\{earned}. This post earns none now.")
   }
   if c.ask == Some(h.post) {
-    lines.push("×2: the ship asked for \{post_name(h.post)}.")
+    lines.push("Doubled: the ship asks for \{post_name(h.post)}.")
   }
   for d in c.demands {
     if d.status == Open && d.hazard.post() == h.post {
-      lines.push("×2: \{hazard_title(d.hazard)} needs \{post_name(h.post)}.")
+      lines.push(
+        "Doubled: \{hazard_title(d.hazard)} needs \{post_name(h.post)}.",
+      )
     }
   }
   if h.post == Craft && h.craft == Artist {
@@ -340,8 +353,9 @@ pub fn earning_sentences(s : @core.State, you~ : String) -> Array[String] {
     lines.push("You have reached the highest rank.")
   } else {
     let next = @core.rank_thresholds[rank.to_int() + 1] * @core.REGARD_HOUR
+    let hours = (next - regard + @core.REGARD_HOUR - 1L) / @core.REGARD_HOUR
     lines.push(
-      "You need \{about((next - regard) * 3600L / @core.REGARD_HOUR)} of regard for rank \{rank + 1L}.",
+      "\{plural(hours, "hour", "hours")} of regard to rank \{rank + 1L}.",
     )
   }
   lines
