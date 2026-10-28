@@ -285,7 +285,7 @@ pub fn Ledger::of(s : @core.State, you~ : String) -> Ledger {
 pub fn since(before : Ledger, now : Ledger) -> Array[String] {
   let lines : Array[String] = []
   let regard = now.regard - before.regard
-  if regard > 0L {
+  if regard >= @core.REGARD_HOUR {
     lines.push("You earned \{regard_words(regard)}.")
   }
   let works = now.works - before.works
@@ -298,12 +298,6 @@ pub fn since(before : Ledger, now : Ledger) -> Array[String] {
   let reached = @core.rank_of(now.regard)
   if reached > was {
     lines.push("You reached rank \{reached}.")
-  }
-  let crossings = now.crossings - before.crossings
-  if crossings == 1L {
-    lines.push("The ship made a crossing.")
-  } else if crossings > 1L {
-    lines.push("The ship made \{crossings} crossings.")
   }
   lines
 }
@@ -319,7 +313,7 @@ pub fn earning_sentences(s : @core.State, you~ : String) -> Array[String] {
   let record = s.ship.records.get(you).unwrap_or(zero_record())
   let lines : Array[String] = []
   let earned = if tally.regard > 0L {
-    "\{regard_words(tally.regard)} this crossing"
+    "\{capitalized(regard_words(tally.regard))} this crossing"
   } else {
     "No regard yet this crossing"
   }
@@ -450,11 +444,11 @@ fn refit_under_way(fit : @core.Fit, rate : Int64) -> Array[String] {
       if rate > 0L {
         let left = (cost - fit.progress).max(0L)
         [
-          "Building \{refit_name(refit)}, level \{level}: \{done}% done, \{about(left * 3600L / rate)} to go at this rate.",
+          "\{capitalized(refit_name(refit))} to level \{level}: \{done}% built, \{about(left * 3600L / rate)} to go at this rate.",
         ]
       } else {
         [
-          "Building \{refit_name(refit)}, level \{level}: \{done}% done, but nobody is building it.",
+          "\{capitalized(refit_name(refit))} to level \{level}: \{done}% built, with no engineer at work.",
         ]
       }
     }
@@ -489,7 +483,7 @@ pub fn ship_sentences(s : @core.State) -> Array[String] {
         lines.push(
           "Hull at \{hull}%, wearing about \{tenths_words(-rate)}% an hour.",
         )
-      } else if rate > 0L {
+      } else if rate > 0L && hull < 100L {
         lines.push(
           "Hull at \{hull}%, mending about \{tenths_words(rate)}% an hour.",
         )
@@ -557,5 +551,16 @@ pub fn refit_effect(refit : @core.Refit, level : Int64) -> String {
       let higher = if got - 100L == 20L { "a fifth" } else { "\{got - 100L}%" }
       "the γ cap \{higher} higher, from the next departure"
     }
+  }
+}
+
+///|
+/// `s` with its first letter in capitals.
+fn capitalized(s : String) -> String {
+  match s.get_char(0) {
+    Some(c) if c >= 'a' && c <= 'z' =>
+      (c.to_int() - 32).unsafe_to_char().to_string() +
+      s.view(start_offset=1).to_owned()
+    _ => s
   }
 }

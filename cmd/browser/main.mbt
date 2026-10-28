@@ -724,9 +724,9 @@ fn you_page(
     away_section(model, You, "Since you were here", since),
     @html.section(
       [
-        @html.h3("You"),
-        ..sentences(@words.earning_sentences(s, you~)),
+        @html.h3("Your post"),
         ..sentences(@words.you_sentences(s, you)),
+        ..sentences(@words.earning_sentences(s, you~)),
         ..bars,
       ],
     ),

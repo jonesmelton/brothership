@@ -264,8 +264,8 @@ test "since names what was earned" {
       #|  "You earned 6 hours of regard.",
       #|  "You finished 2 works.",
       #|  "You reached rank 1.",
-      #|  "The ship made a crossing.",
       #|]
+
     ),
   )
   debug_inspect(
@@ -366,10 +366,11 @@ test "the ship page in port and under way" {
     content=(
       #|[
       #|  "Hull at 97%, wearing about 2.9% an hour.",
-      #|  "Building plating, level 1: 0% done, but nobody is building it.",
+      #|  "Plating to level 1: 0% built, with no engineer at work.",
       #|  "Recruits: 0 of 6.",
       #|  "0 of 3 works toward the next recruit.",
       #|]
+
     ),
   )
   debug_inspect(
@@ -377,10 +378,11 @@ test "the ship page in port and under way" {
     content=(
       #|[
       #|  "Hull at 100%.",
-      #|  "Building plating, level 1: 0% done, but nobody is building it.",
+      #|  "Plating to level 1: 0% built, with no engineer at work.",
       #|  "Recruits: 0 of 6.",
       #|  "0 of 3 works toward the next recruit.",
       #|]
+
     ),
   )
 }
@@ -401,10 +403,11 @@ test "the ship page with a refit under way" {
     content=(
       #|[
       #|  "Hull at 99%, wearing about 1% an hour.",
-      #|  "Building baffles, level 1: 50% done, about an hour to go at this rate.",
+      #|  "Baffles to level 1: 50% built, about an hour to go at this rate.",
       #|  "Recruits: 0 of 6.",
       #|  "0 of 3 works toward the next recruit.",
       #|]
+
     ),
   )
 }
