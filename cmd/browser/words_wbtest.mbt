@@ -36,8 +36,11 @@ test "arrival words coarsen with distance" {
 
 ///|
 test "a voyage from port to its first moments, in sentences" {
-  let p = @ships.flagship()
-  let (_, s) = p.due(@core.State::initial(p.ship(seed=1)), 1_800_000_000)
+  let p = @ships.fleet()[0].profile
+  let (_, s) = p.due(
+    @core.State::initial(p.ship(seed=1), profile=p.name),
+    1_800_000_000,
+  )
   debug_inspect(
     where_sentences(s),
     content=(

@@ -52,11 +52,15 @@ proposal itself; `seq` counts them all. Between receipts the client applies
 a local `Tick(at=now)` to its prediction for display and never proposes one.
 It also polls the snapshot, since the ship acts on its own.
 
-The ship clock in `cmd/server` sleeps until the ship next has something to
-do (`Profile::wake`: a rate boundary, arrival, or the end of the port stay),
-at most a minute, then calls `Store::advance`. What the ship does at an
-instant is the pure function `Profile::due` in `ships`, tested without
-sleeping.
+`cmd/server` runs one clock per ship in `@ships.fleet()`. Each sleeps
+until its berth's next advance (`Berth::next_advance`), then calls
+`Store::advance` for that ship. A berth has a `lag`, its own second in the
+minute: it advances at that second when idle, and that long after each of
+the ship's instants (`Profile::wake`: a rate boundary, arrival, or the end
+of the port stay). Ships with the same instant, such as ships departing
+together, therefore take their turns, and will call a model, at different
+seconds. What a ship does at an instant is the pure function `Profile::due`
+in `ships`, tested without sleeping.
 
 ## model latency
 
@@ -90,21 +94,27 @@ expect it to take longer.
 
 ## api
 
-- `GET /api/snapshot` returns `@core.Snapshot`.
-- `POST /api/proposals` takes `@core.Proposal` and returns `@core.Receipt`.
+- `GET /api/ships` returns `Array[@core.Listing]`, in order of commission.
+- `GET /api/ships/:id/snapshot` returns `@core.Snapshot`.
+- `POST /api/ships/:id/proposals` takes `@core.Proposal` and returns
+  `@core.Receipt`. An unknown ship is a 404.
   A proposal is a crew id and an `Intent`. Nothing checks the id: until
   there are accounts, any client can act as any crew member. A body naming
   a server event fails to decode and gets a 400.
 
 ## store
 
-Every accepted event is a row in `event` with a json body: crew intents,
-ticks, departures and dockings, and the ship's asks and refits. A tick is
-written at least once a minute while the server runs. The events one call
-appends go in one transaction. The log starts from the ship profile and
-seed the store is opened with (`@ships.flagship()`), which are not in the
-log, so a database must always be opened with the same ones. The in-memory
-snapshot is the log replayed through `State::apply` and is rebuilt on open.
+Every accepted event is a row in `event` with the ship's id and a json
+body: crew intents, ticks, departures and dockings, and the ship's asks and
+refits. Each ship's log begins with `Commissioned`, which carries the ship
+and the name of the profile it flies by, so replay needs nothing outside
+the log. The server commissions every berth in `@ships.fleet()` that isn't
+in service yet when it starts. A tick is written for each ship at least once
+a minute while the server runs. The events one call appends go in one
+transaction. A snapshot's `seq` is the log position of the ship's latest
+row, so it rises but skips. Each ship's in-memory snapshot is its rows
+replayed through `State::apply` and is rebuilt on open. Logs from before
+commissioning are kept in `event_legacy` and not replayed.
 Migrations live in `store/schema.mbt`, are forward-only and are tracked with
 `pragma user_version`; append new ones, never edit a shipped one. Writes are
 serialized by a mutex so validation sees the state the event will follow.

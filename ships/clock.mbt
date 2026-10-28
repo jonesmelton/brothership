@@ -78,11 +78,67 @@ pub fn Profile::wake(_self : Profile, state : @core.State) -> Int64 {
 }
 
 ///|
-/// The ship the server flies. A database must always be opened with the
-/// same ship and seed.
-pub fn flagship() -> Profile {
-  profiles()[1]
+/// Longest the ship clock waits between advances of one ship, in seconds,
+/// so a changed clock or a missed instant is caught within a minute.
+pub const MAX_SLEEP : Int64 = 60L
+
+///|
+/// A ship in service: its id in the API and the log, the profile and seed it
+/// was commissioned with, and its place in the clock's minute.
+pub(all) struct Berth {
+  id : String
+  profile : Profile
+  seed : Int64
+  /// Seconds into each minute at which the clock advances this ship, and
+  /// how long after each of its instants. Berths have different lags so
+  /// ships never take their turns, and later call a model, in the same
+  /// second. Only timing: nothing replayed depends on it.
+  lag : Int64
+} derive(Debug, Eq)
+
+///|
+/// The ships the server flies, each with its own lag.
+pub fn fleet() -> Array[Berth] {
+  let ps = profiles()
+  let berths = [("tigress", ps[1]), ("scorpion", ps[2]), ("flea", ps[3])]
+  let n = berths.length().to_int64()
+  berths.mapi((i, b) => {
+    id: b.0,
+    profile: b.1,
+    seed: 1L,
+    lag: i.to_int64() * MAX_SLEEP / n,
+  })
 }
 
 ///|
-pub const FLAGSHIP_SEED : Int64 = 1L
+/// The profile a ship was commissioned under.
+pub fn profile_named(name : String) -> Profile? {
+  profiles().iter().find_first(p => p.name == name)
+}
+
+///|
+/// The ship's first event.
+pub fn Berth::commission(self : Berth) -> @core.Event {
+  Commissioned(
+    ship=self.profile.ship(seed=self.seed),
+    profile=self.profile.name,
+  )
+}
+
+///|
+/// When, in Unix seconds, the clock should next advance this ship after
+/// `now`: `lag` after the ship's next instant, or at its next slot in the
+/// minute, whichever is sooner. Always after `now`, and `lag` after it if
+/// the ship is overdue.
+pub fn Berth::next_advance(
+  self : Berth,
+  state : @core.State,
+  now : Int64,
+) -> Int64 {
+  let into = ((self.lag - now) % MAX_SLEEP + MAX_SLEEP) % MAX_SLEEP
+  let slot = now + (if into == 0L { MAX_SLEEP } else { into })
+  let due = self.profile.wake(state) + self.lag
+  // An overdue ship, as after a restart, keeps its lag from now.
+  let due = if due <= now { now + 1L + self.lag } else { due }
+  due.min(slot)
+}

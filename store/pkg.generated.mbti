@@ -14,12 +14,13 @@ import {
 pub struct Store {
   // private fields
 }
-pub async fn Store::advance(Self, now~ : Int64) -> Unit
+pub async fn Store::advance(Self, String, now~ : Int64) -> Unit
 pub fn Store::close(Self) -> Unit raise
-pub async fn Store::open(String, ship~ : @ships.Profile, seed~ : Int64) -> Self
-pub async fn Store::propose(Self, @core.Proposal, now~ : Int64) -> @core.Receipt
-pub fn Store::snapshot(Self) -> @core.Snapshot
-pub fn Store::wake(Self) -> Int64
+pub async fn Store::commission(Self, @ships.Berth) -> Unit
+pub async fn Store::open(String) -> Self
+pub async fn Store::propose(Self, String, @core.Proposal, now~ : Int64) -> @core.Receipt?
+pub fn Store::ships(Self) -> Array[String]
+pub fn Store::snapshot(Self, String) -> @core.Snapshot?
 
 // Type aliases
 

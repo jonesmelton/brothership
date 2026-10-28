@@ -18,6 +18,10 @@ pub(all) enum Intent {
 /// One row of the log: a crew member's intent, or something only the server
 /// writes.
 pub(all) enum Event {
+  /// A ship's first event, and only that: the ship as it enters service, and
+  /// the name of the profile the server flies it by (its routes and
+  /// temperament). Replay needs nothing outside the log.
+  Commissioned(ship~ : Ship, profile~ : String)
   Crew(crew~ : String, intent~ : Intent)
   /// The wall clock reached `at`, in Unix seconds. One tick is one second.
   Tick(at~ : Int64)
@@ -40,6 +44,8 @@ pub(all) suberror Rejected {
   /// The ship docks only once the crossing has arrived.
   NotArrived(event~ : Event)
   Crossing(reason~ : CrossingRejected)
+  /// A ship's log begins with `Commissioned`, and has it nowhere else.
+  NotFirst(event~ : Event)
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
@@ -56,6 +62,8 @@ pub(all) enum Leg {
 pub(all) struct State {
   /// Unix seconds of the last tick; 0 before the first.
   at : Int64
+  /// The profile named when the ship was commissioned.
+  profile : String
   /// The ship as it last left port.
   ship : Ship
   leg : Leg
@@ -63,8 +71,15 @@ pub(all) struct State {
 
 ///|
 /// A voyage that has not begun: `ship` in port, before any tick.
-pub fn State::initial(ship : Ship) -> State {
-  { at: 0, ship, leg: InPort(since=0), }
+pub fn State::initial(ship : Ship, profile~ : String) -> State {
+  { at: 0, profile, ship, leg: InPort(since=0), }
+}
+
+///|
+/// The state a log begins with, from its first event.
+pub fn State::commission(event : Event) -> State raise Rejected {
+  guard event is Commissioned(ship~, profile~) else { raise NotFirst(event~) }
+  State::initial(ship, profile~)
 }
 
 ///|
@@ -102,6 +117,7 @@ pub fn State::apply(self : State, event : Event) -> State raise Rejected {
     { ..self, leg: Underway(crossing~, spoke~), }
   }
   match event {
+    Commissioned(_) => raise NotFirst(event~)
     Tick(at~) if at <= self.at => self
     Tick(at~) =>
       match self.leg {
@@ -146,10 +162,16 @@ pub fn State::apply(self : State, event : Event) -> State raise Rejected {
 }
 
 ///|
-pub fn replay(ship : Ship, events : Iter[Event]) -> State raise Rejected {
-  let mut state = State::initial(ship)
+/// One ship's log, from its `Commissioned`, replayed. `None` for an empty log.
+pub fn replay(events : Iter[Event]) -> State? raise Rejected {
+  let mut state = None
   for event in events {
-    state = state.apply(event)
+    state = Some(
+      match state {
+        None => State::commission(event)
+        Some(s) => s.apply(event)
+      },
+    )
   }
   state
 }

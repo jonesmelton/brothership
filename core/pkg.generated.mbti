@@ -55,7 +55,7 @@ pub let rank_thresholds : Array[Int64]
 
 pub let refits : Array[Refit]
 
-pub fn replay(Ship, Iter[Event]) -> State raise Rejected
+pub fn replay(Iter[Event]) -> State? raise Rejected
 
 // Errors
 pub(all) suberror CrossingRejected {
@@ -72,6 +72,7 @@ pub(all) suberror Rejected {
   NotInPort(event~ : Event)
   NotArrived(event~ : Event)
   Crossing(reason~ : CrossingRejected)
+  NotFirst(event~ : Event)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Types and methods
@@ -130,6 +131,7 @@ pub(all) struct Demand {
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum Event {
+  Commissioned(ship~ : Ship, profile~ : String)
   Crew(crew~ : String, intent~ : Intent)
   Tick(at~ : Int64)
   Departed(plan~ : Plan)
@@ -182,6 +184,11 @@ pub(all) enum Intent {
 pub(all) enum Leg {
   InPort(since~ : Int64)
   Underway(crossing~ : Crossing, spoke~ : Moment?)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Listing {
+  id : String
+  name : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Moment {
@@ -274,16 +281,17 @@ pub(all) struct Snapshot {
   seq : Int64
   state : State
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-pub fn Snapshot::initial(Ship) -> Self
 
 pub(all) struct State {
   at : Int64
+  profile : String
   ship : Ship
   leg : Leg
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn State::apply(Self, Event) -> Self raise Rejected
+pub fn State::commission(Event) -> Self raise Rejected
 pub fn State::crossing(Self) -> Crossing?
-pub fn State::initial(Ship) -> Self
+pub fn State::initial(Ship, profile~ : String) -> Self
 
 pub(all) enum Status {
   Waiting

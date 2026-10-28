@@ -9,11 +9,10 @@ async fn main {
     @path.Path(@env.args()[0]).resolve().dirname().to_string(),
   )
   let db = @env.get_env_var("BROTHERSHIP_DB").unwrap_or("brothership.sqlite")
-  let store = @store.Store::open(
-    db,
-    ship=@ships.flagship(),
-    seed=@ships.FLAGSHIP_SEED,
-  )
+  let store = @store.Store::open(db)
+  for berth in @ships.fleet() {
+    store.commission(berth)
+  }
   defer store.close()
   let assets = warren_assets()
   let dev = @env.get_env_var("WARREN_MODE") == Some("DEV")
@@ -59,24 +58,23 @@ async fn main {
   let listener = @moonback.listen(host~, port=port.to_uint16(), reuse_addr=true)
   println("Server is running on http://\{host}:\{port} (db: \{db})")
   @async.with_task_group(group => {
-    group.spawn_bg(() => ship_clock(store))
+    for berth in @ships.fleet() {
+      group.spawn_bg(() => ship_clock(store, berth))
+    }
     app.serve(listener)
   })
 }
 
 ///|
-/// Longest the ship clock sleeps, in seconds, so a changed clock or a missed
-/// instant is caught within a minute.
-const MAX_SLEEP : Int64 = 60L
-
-///|
-/// Moves game time on its own: sleeps until the ship next has something to
-/// do, or a minute, then appends the tick and whatever the ship does then.
-async fn ship_clock(store : @store.Store) -> Unit {
+/// Moves one ship's game time on its own: advances it, then sleeps until
+/// the berth's next advance (`Berth::next_advance`). Each berth has its own
+/// second in the minute, so ships never take their turns together.
+async fn ship_clock(store : @store.Store, berth : @ships.Berth) -> Unit {
   while true {
+    let state = store.snapshot(berth.id).unwrap().state
     let now = @api.unix_now()
-    store.advance(now~)
-    let wait = (store.wake() - now).clamp(min=1L, max=MAX_SLEEP)
+    let wait = berth.next_advance(state, now) - now
     @async.sleep((wait * 1000L).to_int())
+    store.advance(berth.id, now=@api.unix_now())
   }
 }

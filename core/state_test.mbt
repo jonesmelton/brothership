@@ -5,7 +5,9 @@ const DEPART_AT : Int64 = 1_800_000_000L
 ///|
 /// `ship` underway on `plan`, ticked to `DEPART_AT`.
 fn underway(plan : @core.Plan, ship : @core.Ship) -> @core.State {
-  @core.State::initial(ship).apply(Tick(at=DEPART_AT)).apply(Departed(plan~)) catch {
+  @core.State::initial(ship, profile="test")
+  .apply(Tick(at=DEPART_AT))
+  .apply(Departed(plan~)) catch {
     _ => panic()
   }
 }
@@ -88,7 +90,7 @@ test "rejections" {
       _ => fail("expected a rejection")
     }
   }
-  let port = @core.State::initial(ship())
+  let port = @core.State::initial(ship(), profile="test")
   debug_inspect(
     reject(port, Crew(crew="ann", intent=Left)),
     content=(
@@ -226,16 +228,35 @@ test "a proposal cannot name a server event" {
 }
 
 ///|
-test "replay" {
+test "replay begins at the commission, and only there" {
   let s = @core.replay(
-    ship(),
     [
-      @core.Event::Tick(at=DEPART_AT),
+      @core.Event::Commissioned(ship=ship(), profile="test"),
+      Tick(at=DEPART_AT),
       Departed(plan=plan20()),
       Crew(crew="ann", intent=Posted(post=Hull)),
       Tick(at=DEPART_AT + 60),
     ].iter(),
-  )
+  ).unwrap()
   inspect(crossing_of(s).t, content="60")
   inspect(crossing_of(s).count(Hull), content="1")
+  debug_inspect(@core.replay([].iter()), content="None")
+  let late = try @core.replay([@core.Event::Tick(at=1)].iter()) catch {
+    err => Some(err)
+  } noraise {
+    _ => None
+  }
+  debug_inspect(
+    late,
+    content=(
+      #|Some(NotFirst(event=Tick(at=1)))
+    ),
+  )
+  let twice = try s.apply(Commissioned(ship=ship(), profile="test")) catch {
+    NotFirst(_) => true
+    _ => false
+  } noraise {
+    _ => false
+  }
+  inspect(twice, content="true")
 }

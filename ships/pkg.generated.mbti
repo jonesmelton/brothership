@@ -8,17 +8,19 @@ import {
 }
 
 // Values
-pub const FLAGSHIP_SEED : Int64 = 1
+pub const MAX_SLEEP : Int64 = 60
 
 pub const PORT_STAY : Int64 = 600
 
-pub fn flagship() -> Profile
+pub fn fleet() -> Array[Berth]
 
 pub fn gamma(Int64) -> Double
 
 pub let itinerary : Array[Double]
 
 pub fn open_post(@core.Crossing) -> @core.Post?
+
+pub fn profile_named(String) -> Profile?
 
 pub fn profiles() -> Array[Profile]
 
@@ -29,6 +31,15 @@ pub(all) enum Act {
   Ask(@core.Post?)
   Refit(@core.Refit?)
 } derive(Eq, @debug.Debug)
+
+pub(all) struct Berth {
+  id : String
+  profile : Profile
+  seed : Int64
+  lag : Int64
+} derive(Eq, @debug.Debug)
+pub fn Berth::commission(Self) -> @core.Event
+pub fn Berth::next_advance(Self, @core.State, Int64) -> Int64
 
 pub(all) struct Profile {
   name : String

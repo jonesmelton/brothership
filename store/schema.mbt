@@ -9,6 +9,17 @@ let migrations : Array[String] = [
     #|  recorded_at integer not null default (unixepoch())
     #|) strict
   ),
+  // Logs from before ships were commissioned no longer replay: they hold
+  // client-sent `Elapsed` events. Kept aside, not dropped.
+  "alter table event rename to event_legacy",
+  (
+    #|create table event (
+    #|  seq         integer primary key,
+    #|  ship        text    not null,
+    #|  body        text    not null check (json_valid(body)),
+    #|  recorded_at integer not null default (unixepoch())
+    #|) strict
+  ),
 ]
 
 ///|

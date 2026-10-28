@@ -21,10 +21,19 @@ extern "js" fn crew_id() -> String =
   #|}
 
 ///|
-/// The state this browser last showed, as JSON, or "" on a first visit.
-extern "js" fn load_seen() -> String =
-  #|() => localStorage.getItem("brothership.seen") ?? ""
+/// The state this browser last showed of `ship`, as JSON, or "" if none.
+extern "js" fn load_seen(ship : String) -> String =
+  #|(ship) => localStorage.getItem("brothership.seen." + ship) ?? ""
 
 ///|
-extern "js" fn store_seen(json : String) -> Unit =
-  #|(json) => localStorage.setItem("brothership.seen", json)
+extern "js" fn store_seen(ship : String, json : String) -> Unit =
+  #|(ship, json) => localStorage.setItem("brothership.seen." + ship, json)
+
+///|
+/// The ship this browser last boarded, or "".
+extern "js" fn stored_ship() -> String =
+  #|() => localStorage.getItem("brothership.ship") ?? ""
+
+///|
+extern "js" fn store_ship(ship : String) -> Unit =
+  #|(ship) => localStorage.setItem("brothership.ship", ship)

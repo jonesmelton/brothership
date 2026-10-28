@@ -7,11 +7,6 @@ pub(all) struct Snapshot {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
-pub fn Snapshot::initial(ship : Ship) -> Snapshot {
-  { seq: 0, state: State::initial(ship), }
-}
-
-///|
 /// A client's request for `crew` to do `intent`. `id` is assigned by the
 /// client and only identifies the proposal within that client's session.
 /// Nothing checks `crew`: until there are accounts, any client can act as
@@ -49,3 +44,11 @@ pub fn Receipt::snapshot(self : Receipt) -> Snapshot {
     Accepted(snapshot~, ..) | Refused(snapshot~, ..) => snapshot
   }
 }
+
+///|
+/// One ship in `GET /api/ships`.
+pub(all) struct Listing {
+  id : String
+  /// The profile's name, which is the ship's name in English.
+  name : String
+} derive(Debug, Eq, ToJson, FromJson)
