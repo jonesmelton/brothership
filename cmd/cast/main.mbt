@@ -5,6 +5,12 @@
 //   moon run cmd/cast -- approve <pennant> <stage> <sample>
 //   moon run cmd/cast -- status [pennant...]
 //
+// A pennant with no ship directory yet gets entry drafts from a seed built
+// out of pennants.tsv, starting-cast.md and other ships' entries; approve
+// one as its entry.md, then run again for the portrait. A pennant that is
+// not in pennants.tsv at all fails in `run` rather than drafting an entry
+// for a ship that does not exist.
+//
 // Replies are cached in .cache/llm, so rerunning only calls the model for
 // prompts that changed. The Meta Model API key is read from MODEL_API_KEY,
 // or else ~/.config/brothership/meta-api.key. Get one at dev.meta.ai.
@@ -59,6 +65,11 @@ async fn run(args : Array[String]) -> Unit {
   let mode : @cache.Mode = if args.contains("--replay") { Replay } else { Live }
   let cast = @pipeline.Cast::load(root, backend(mode))
   let ships = pennants(cast, args.filter(a => !a.has_prefix("--")))
+  for ship in ships {
+    guard cast.known(ship) else {
+      fail("\{ship} is not in \{root}/pennants.tsv")
+    }
+  }
   let cost = Ref(0.0)
   @async.with_task_group(g => {
     for ship in ships {
@@ -77,10 +88,16 @@ async fn run(args : Array[String]) -> Unit {
             }
             Failed(stage~, sample~, error~) =>
               println("\{ship} \{stage}.\{sample} FAILED: \{error}")
-            Waiting(stage) =>
+            Waiting(stage) => {
+              let check = if stage == "entry" {
+                "; check it against the novel before approving"
+              } else {
+                ""
+              }
               println(
-                "\{ship} waits for an approved \{stage}: approve \{ship} \{stage} <sample>",
+                "\{ship} waits for an approved \{stage}: approve \{ship} \{stage} <sample>\{check}",
               )
+            }
           }
         }
       })

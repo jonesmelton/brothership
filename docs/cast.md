@@ -7,7 +7,7 @@ and keeps its prompts and its reasons for them.
 
 | file | written by | read by | players see it |
 |---|---|---|---|
-| `entry.md` | the author, from the source | portrait, faces | never |
+| `entry.md` | model, from the source; checked and edited by the author | portrait, faces | never |
 | `notes.md` | the author, optional | portrait | never |
 | `portrait.md` | model, third person | faces | never |
 | `captain.md` | model, first person | planner, speaker | never directly |
@@ -41,8 +41,32 @@ moon run cmd/cast -- run --replay           # cache only; a miss fails
 
 `run` drafts `samples` drafts (from `cast.json`) of every stage a ship is
 missing, all concurrently, and prints each draft's cost and check problems.
-A ship without a canon portrait gets portrait drafts and waits. A ship with
-one gets drafts of every face it has no canon file for.
+A ship without a canon entry gets entry drafts and waits. A ship without a
+canon portrait gets portrait drafts and waits. A ship with one gets drafts
+of every face it has no canon file for.
+
+## the entry stage
+
+A ship starts from its pennant alone. `run <pennant>` on a pennant with no
+directory drafts its `entry.md` from a seed the code builds out of what the
+repo already knows: the pennant's row in `pennants.tsv` (conventional name,
+epithet, and the tier its prefix names), the ship's section of
+`starting-cast.md` if it has one, and every line naming the pennant in
+other ships' canon entries. The draft also gets all 108 pennants and
+epithets, so its relationship lines carry the right pennants. Everything
+else, the source figure's life, episodes, kinships and star, the model
+writes from its knowledge of the Water Margin.
+
+The entry prompt keeps the draft in the novel: no liveships, no setting
+translation, heroes named by conventional name outside the relationship
+lines. That is what makes the author's check possible. The entry is a
+canon file like the others, so the check is the approval step: read the
+drafts, correct one against the novel, `approve <pennant> entry <sample>`,
+then edit `entry.md` by hand where the model got the book wrong. `status`
+shows the result as `edited from <n>`, and portrait and faces made from an
+earlier entry go `stale` when it changes, the same as any other stage.
+`notes.md` can be written before the first run, as before; it still goes
+to the portrait, not the entry.
 
 Drafts live in `ships/<pennant>/drafts/` as `<stage>.<n>.md`, each with a
 `.json` record of model, settings, input hashes, usage and the raw response.
@@ -61,9 +85,12 @@ every face's key and the next `run` drafts new faces from it.
 In order of leverage. Nothing a player writes reaches these models (see
 [content.md](content.md)); players steer through game events.
 
-1. **`entry.md` and `notes.md`, before anything is generated.** The notes go
-   into the portrait prompt, ranked above the entry ("lean into its debt to
-   the Wise Star", "she, not he"). Models keep the source figure's gender
+1. **The entry check, and `notes.md`.** An entry draft is model memory of
+   the novel, not the novel. Read it against the source before approving,
+   and correct the canon file by hand after; that pass is the only place
+   facts enter. `notes.md`, written before the portrait run, goes into the
+   portrait prompt, ranked above the entry ("lean into its debt to the
+   Wise Star", "she, not he"). Models keep the source figure's gender
    unless told otherwise; both HS-242 drafts in the first run did.
 2. **Approving the portrait.** Everything downstream inherits it. Pick a
    draft, edit it by hand if needed, then approve.
@@ -86,6 +113,8 @@ variable is an error that names the template and line.
 
 | template | renders |
 |---|---|
+| `entry.system.md` | entry task, then `setting.md` |
+| `entry.user.md` | `seed`, and `ships` (all 108 pennants and epithets) |
 | `portrait.system.md` | portrait task, then `setting.md`, then `world.md` |
 | `portrait.user.md` | `entry`, and `notes` if any |
 | `face.system.md` | the shared face preamble, `faces/<face>.md`, setting, world rules |

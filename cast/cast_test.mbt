@@ -3,6 +3,7 @@ let config : String =
   #|{
   #|  "model": "fake:m",
   #|  "samples": 2,
+  #|  "entry": { "name": "entry", "max_tokens": 100 },
   #|  "portrait": { "name": "portrait", "max_tokens": 100 },
   #|  "faces": [
   #|    { "name": "captain", "max_tokens": 100, "max_words": 500 },
@@ -14,6 +15,8 @@ let config : String =
 ///|
 let prompts : Array[(String, String)] = [
   ("setting.md", "SETTING\n"),
+  ("entry.system.md", "ENTRY TASK\n{% include \"setting.md\" %}"),
+  ("entry.user.md", "# seed\n\n{{ seed }}\n"),
   ("portrait.system.md", "PORTRAIT TASK\n{% include \"setting.md\" %}"),
   (
     "portrait.user.md", "# cast entry\n\n{{ entry }}\n{% if notes %}\n# notes\n\n{{ notes }}\n{% endif %}",
@@ -48,6 +51,14 @@ async fn fixture() -> String {
   for p in prompts {
     write("\{root}/prompts/\{p.0}", p.1)
   }
+  write(
+    "\{root}/pennants.tsv",
+    "pennant\tconventional_name\tepithet\nHS-1\t甲\tThe One\nHS-2\t乙\tThe Two\nHS-3\t丙\tThe Three\n",
+  )
+  write(
+    "\{root}/starting-cast.md",
+    "# starting cast\n\n### HS-2 The Two\n\nThe second ship, in short.\n\n### HS-3 The Three\n\nThe third.\n",
+  )
   write("\{root}/ships/HS-1/entry.md", "ENTRY")
   root
 }
@@ -99,7 +110,7 @@ test "stages parse with optional fields absent" {
 ///|
 test "a stage's reasoning_effort reaches the call and the draft record" {
   let config_json =
-    #|{"model":"fake:m","samples":1,"portrait":{"name":"portrait","max_tokens":100,"reasoning_effort":"xhigh"},"faces":[],"banned":[]}
+    #|{"model":"fake:m","samples":1,"entry":{"name":"entry","max_tokens":100},"portrait":{"name":"portrait","max_tokens":100,"reasoning_effort":"xhigh"},"faces":[],"banned":[]}
   let c : @cast.Config = @json.from_json(@json.parse(config_json))
   assert_eq(c.portrait.reasoning_effort, Some("xhigh"))
   let draft_json =
@@ -213,6 +224,7 @@ async test "status tracks approval, hand edits and stale faces" {
     cast.status("HS-1"),
     content=(
       #|[
+      #|  { stage: "entry", canon: ByHand, drafts: 0 },
       #|  { stage: "portrait", canon: Missing, drafts: 2 },
       #|  { stage: "captain", canon: Missing, drafts: 0 },
       #|  { stage: "voyage", canon: Missing, drafts: 0 },
@@ -227,6 +239,7 @@ async test "status tracks approval, hand edits and stale faces" {
     cast.status("HS-1"),
     content=(
       #|[
+      #|  { stage: "entry", canon: ByHand, drafts: 0 },
       #|  { stage: "portrait", canon: Approved(2), drafts: 2 },
       #|  { stage: "captain", canon: Edited(1), drafts: 2 },
       #|  { stage: "voyage", canon: Missing, drafts: 2 },
@@ -235,7 +248,116 @@ async test "status tracks approval, hand edits and stale faces" {
   )
   // Approving another portrait leaves the captain built on the old one.
   cast.approve("HS-1", "portrait", 1)
-  assert_true(cast.status("HS-1")[1].canon is Stale(_))
+  assert_true(cast.status("HS-1")[2].canon is Stale(_))
+}
+
+///|
+
+///|
+test "a pennant parses and a tier follows its prefix" {
+  debug_inspect(
+    @cast.crew("HS-212\t解寶\tThe Twin-Tailed Scorpion"),
+    content=(
+      #|Some(
+      #|  {
+      #|    pennant: "HS-212",
+      #|    conventional_name: "解寶",
+      #|    epithet: "The Twin-Tailed Scorpion",
+      #|  },
+      #|)
+    ),
+  )
+  debug_inspect(@cast.crew("garbage line"), content="None")
+  assert_eq(
+    @cast.crew("EF-287\t時遷\tThe Flea on the Drum").unwrap().tier(),
+    "Earthly Fiend",
+  )
+  assert_eq(
+    @cast.crew("HS-212\t解寶\tThe Twin-Tailed Scorpion").unwrap().tier(),
+    "Heavenly Spirit",
+  )
+}
+
+///|
+test "a seed carries identity, the starting-cast blurb and references from other entries" {
+  let seed = @cast.seed(
+    pennant="EF-287",
+    crew=[@cast.crew("EF-287\t時遷\tThe Flea on the Drum").unwrap()],
+    starting="### EF-287 The Flea on the Drum\n\nThief and tomb-raider.\n\n## On their own\n",
+    references=["- kinship: EF-287 The Flea on the Drum (her cousin)"],
+  )
+  inspect(
+    seed,
+    content=(
+      #|## The Flea on the Drum
+      #|
+      #|Earthly Fiend 時遷
+      #|
+      #|## starting cast
+      #|
+      #|Thief and tomb-raider.
+      #|
+      #|## in other ships' entries
+      #|
+      #|- kinship: EF-287 The Flea on the Drum (her cousin)
+      #|
+    ),
+  )
+}
+
+///|
+async test "without an entry, a ship gets entry drafts and waits" {
+  let root = fixture()
+  @fs.mkdir("\{root}/ships/HS-2", recursive=true)
+  // An existing entry elsewhere already names HS-2.
+  write(
+    "\{root}/ships/HS-1/entry.md",
+    "ENTRY\n- kinship: HS-2 The Two (his brother)\n",
+  )
+  let cast = @cast.Cast::load(root, echo([]))
+  debug_inspect(
+    names(cast.advance("HS-2")),
+    content=(
+      #|["waiting entry", "drafted entry.1", "drafted entry.2"]
+    ),
+  )
+  let draft = read("\{root}/ships/HS-2/drafts/entry.1.md")
+  assert_true(draft.contains("## The Two"))
+  assert_true(draft.contains("The second ship, in short."))
+  assert_true(draft.contains("- kinship: HS-2 The Two (his brother)"))
+  // HS-1 already has an entry, so its run is untouched by HS-2's drafts.
+  debug_inspect(
+    cast.status("HS-2")[0],
+    content="{ stage: \"entry\", canon: Missing, drafts: 2 }",
+  )
+}
+
+///|
+async test "an approved entry makes the ship wait for a portrait, not an entry" {
+  let root = fixture()
+  @fs.mkdir("\{root}/ships/HS-3", recursive=true)
+  let cast = @cast.Cast::load(root, echo([]))
+  ignore(cast.advance("HS-3"))
+  cast.approve("HS-3", "entry", 1)
+  let outcomes = names(cast.advance("HS-3"))
+  debug_inspect(
+    outcomes,
+    content=(
+      #|["waiting portrait", "drafted portrait.1", "drafted portrait.2"]
+    ),
+  )
+  assert_true(read("\{root}/ships/HS-3/entry.md").contains("## The Three"))
+}
+
+///|
+async test "editing an approved entry leaves the portrait stale" {
+  let root = fixture()
+  let cast = @cast.Cast::load(root, echo([]))
+  ignore(cast.advance("HS-1"))
+  cast.approve("HS-1", "portrait", 1)
+  write("\{root}/ships/HS-1/entry.md", "ENTRY, corrected\n")
+  let statuses = cast.status("HS-1")
+  assert_true(statuses[1].canon is Stale(_))
 }
 
 ///|

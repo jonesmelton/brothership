@@ -24,6 +24,7 @@ pub(all) struct Config {
   model : String
   /// Drafts per stage per run.
   samples : Int32
+  entry : Stage
   portrait : Stage
   faces : Array[Stage]
   /// Phrases no file may contain, matched case-insensitively.
@@ -81,15 +82,105 @@ pub(all) struct StageStatus {
 } derive(Debug, Eq)
 
 ///|
-/// A cast directory: `cast.json`, `prompts/`, and `ships/<pennant>/` holding
-/// `entry.md`, an optional `notes.md`, canon files, `record.json` and
-/// `drafts/`. Drafts are regenerated freely; canon files are only written by
-/// `approve`, or by hand.
+/// A cast directory: `cast.json`, `prompts/`, `pennants.tsv`,
+/// `starting-cast.md`, and `ships/<pennant>/` holding `entry.md`, an
+/// optional `notes.md`, canon files, `record.json` and `drafts/`. Drafts
+/// are regenerated freely; canon files are only written by `approve`, or
+/// by hand. A ship with no directory yet still drafts an entry: the draft
+/// makes the directory.
 pub struct Cast {
   priv root : String
   priv config : Config
   priv prompts : @prompt.Prompts
   priv backend : @llm.Backend
+  /// Every ship in `pennants.tsv`, in file order. The seed an entry draft
+  /// is made from is built from this, `starting-cast.md` and other entries.
+  priv crew : Array[Crew]
+  priv starting : String
+}
+
+///|
+/// One row of `pennants.tsv`: a ship's pennant, Chinese conventional name
+/// and English epithet.
+pub(all) struct Crew {
+  pennant : String
+  conventional_name : String
+  epithet : String
+} derive(Debug, Eq)
+
+///|
+pub fn Crew::tier(self : Crew) -> String {
+  if self.pennant.has_prefix("HS-") {
+    "Heavenly Spirit"
+  } else {
+    "Earthly Fiend"
+  }
+}
+
+///|
+/// Parses one `pennants.tsv` row. The header and any short line give `None`.
+pub fn crew(line : String) -> Crew? {
+  let cols = line.split("\t").map(c => c.to_owned()).collect()
+  if cols.length() < 3 || cols[0] == "pennant" {
+    return None
+  }
+  Some({ pennant: cols[0], conventional_name: cols[1], epithet: cols[2], })
+}
+
+///|
+/// The seed an entry draft is made from: what this repo already knows about
+/// the ship, before the model fills the entry in from the source novel.
+/// `starting` is the whole of `starting-cast.md`; `references` is every line
+/// naming the pennant in other ships' entries.
+pub fn seed(
+  pennant~ : String,
+  crew~ : Array[Crew],
+  starting~ : String,
+  references~ : Array[String],
+) -> String {
+  let mut found : Crew? = None
+  for m in crew {
+    if m.pennant == pennant {
+      found = Some(m)
+    }
+  }
+  let (epithet, heading) = match found {
+    Some(m) => (m.epithet, "\{m.tier()} \{m.conventional_name}")
+    None => (pennant, pennant)
+  }
+  let parts = ["## \{epithet}", heading]
+  let note = starting_note(starting, pennant, epithet)
+  if note != "" {
+    parts.push("## starting cast\n\n\{note}")
+  }
+  if references.length() > 0 {
+    parts.push("## in other ships' entries\n\n\{references.join("\n")}")
+  }
+  parts.join("\n\n") + "\n"
+}
+
+///|
+/// The ship's section of `starting-cast.md`, without its heading.
+fn starting_note(
+  starting : String,
+  pennant : String,
+  epithet : String,
+) -> String {
+  let heading = "### \{pennant} \{epithet}"
+  let out = []
+  let mut on = false
+  for line in starting.split("\n") {
+    let line = line.to_owned()
+    if line.has_prefix("#") {
+      if on {
+        break
+      }
+      on = line.has_prefix(heading)
+    } else if on {
+      out.push(line)
+    }
+  }
+  out.join("\n").trim().to_owned()
 }
 
 ///|
@@ -99,7 +190,22 @@ pub async fn Cast::load(root : String, backend : @llm.Backend) -> Cast {
   )
   let sources = Map([])
   read_tree("\{root}/prompts", "", sources)
-  { root, config, prompts: @prompt.Prompts::new(sources), backend, }
+  let members = []
+  let pennants = @fs.read_file("\{root}/pennants.tsv").text()
+  for line in pennants.split("\n") {
+    match crew(line.to_owned()) {
+      Some(m) => members.push(m)
+      None => ()
+    }
+  }
+  {
+    root,
+    config,
+    prompts: @prompt.Prompts::new(sources),
+    backend,
+    crew: members,
+    starting: read_or_empty("\{root}/starting-cast.md"),
+  }
 }
 
 ///|
@@ -124,13 +230,19 @@ pub async fn Cast::ships(self : Cast) -> Array[String] {
 }
 
 ///|
+/// Whether the pennant names a ship in `pennants.tsv`.
+pub fn Cast::known(self : Cast, pennant : String) -> Bool {
+  self.crew.iter().any(m => m.pennant == pennant)
+}
+
+///|
 fn Cast::dir(self : Cast, pennant : String) -> String {
   "\{self.root}/ships/\{pennant}"
 }
 
 ///|
 fn Cast::stages(self : Cast) -> Array[Stage] {
-  [self.config.portrait, ..self.config.faces]
+  [self.config.entry, self.config.portrait, ..self.config.faces]
 }
 
 ///|
@@ -143,20 +255,53 @@ async fn read_or_empty(path : String) -> String {
 }
 
 ///|
-/// Drafts the next stage the ship is missing: portraits until one is
-/// approved, then every face without a canon file. All drafts run
-/// concurrently; a failed draft is reported and does not stop the others.
+/// Lines in other ships' entries that name this pennant, with their ship.
+async fn Cast::references(self : Cast, pennant : String) -> Array[String] {
+  let refs = []
+  for other in self.ships() {
+    if other == pennant {
+      continue
+    }
+    let text = read_or_empty("\{self.dir(other)}/entry.md")
+    for line in text.split("\n") {
+      let line = line.to_owned()
+      if line.contains(pennant) {
+        refs.push(line.trim().to_owned())
+      }
+    }
+  }
+  refs
+}
+
+///|
+/// Drafts the next stage the ship is missing: an entry until one is
+/// approved, then portraits until one is approved, then every face without
+/// a canon file. All drafts run concurrently; a failed draft is reported
+/// and does not stop the others.
 pub async fn Cast::advance(self : Cast, pennant : String) -> Array[Outcome] {
   let dir = self.dir(pennant)
-  let entry = @fs.read_file("\{dir}/entry.md").text()
   let outcomes = []
   let jobs : Array[(Stage, String, Map[String, String])] = []
-  if !@fs.exists("\{dir}/portrait.md") {
+  if !@fs.exists("\{dir}/entry.md") {
+    let refs = self.references(pennant)
+    let draft_seed = seed(
+      pennant~,
+      crew=self.crew,
+      starting=self.starting,
+      references=refs,
+    )
+    let roster = self.crew.map(m => "\{m.pennant} \{m.epithet}").join("\n")
+    jobs.push(
+      (self.config.entry, "entry", { "seed": draft_seed, "ships": roster }),
+    )
+  } else if !@fs.exists("\{dir}/portrait.md") {
+    let entry = @fs.read_file("\{dir}/entry.md").text()
     let notes = read_or_empty("\{dir}/notes.md")
     jobs.push(
       (self.config.portrait, "portrait", { "entry": entry, "notes": notes }),
     )
   } else {
+    let entry = @fs.read_file("\{dir}/entry.md").text()
     let portrait = @fs.read_file("\{dir}/portrait.md").text()
     for face in self.config.faces {
       if !@fs.exists("\{dir}/\{face.name}.md") {
@@ -174,7 +319,9 @@ pub async fn Cast::advance(self : Cast, pennant : String) -> Array[Outcome] {
       }
     }
   })
-  if !@fs.exists("\{dir}/portrait.md") {
+  if !@fs.exists("\{dir}/entry.md") {
+    outcomes.push(Waiting("entry"))
+  } else if !@fs.exists("\{dir}/portrait.md") {
     outcomes.push(Waiting("portrait"))
   }
   outcomes

@@ -12,6 +12,10 @@ pub fn check(Stage, Array[String], String) -> Array[String]
 
 pub fn clean(String, String) -> String
 
+pub fn crew(String) -> Crew?
+
+pub fn seed(pennant~ : String, crew~ : Array[Crew], starting~ : String, references~ : Array[String]) -> String
+
 // Errors
 
 // Types and methods
@@ -28,6 +32,7 @@ pub struct Cast {
 }
 pub async fn Cast::advance(Self, String) -> Array[Outcome]
 pub async fn Cast::approve(Self, String, String, Int32) -> Unit
+pub fn Cast::known(Self, String) -> Bool
 pub async fn Cast::load(String, @llm.Backend) -> Self
 pub async fn Cast::ships(Self) -> Array[String]
 pub async fn Cast::status(Self, String) -> Array[StageStatus]
@@ -35,10 +40,18 @@ pub async fn Cast::status(Self, String) -> Array[StageStatus]
 pub(all) struct Config {
   model : String
   samples : Int32
+  entry : Stage
   portrait : Stage
   faces : Array[Stage]
   banned : Array[String]
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Crew {
+  pennant : String
+  conventional_name : String
+  epithet : String
+} derive(Eq, @debug.Debug)
+pub fn Crew::tier(Self) -> String
 
 pub(all) struct Draft {
   stage : String
