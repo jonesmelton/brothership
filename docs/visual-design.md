@@ -38,7 +38,7 @@ Rules:
 
 ## type scale
 
-Sizes are in `rem`, so the whole page follows the system text size. The root stays at the browser default (16px).
+Sizes are in `rem`, so the whole page follows the system text size. The root stays at the browser default (16px); on iOS it asks for `-apple-system-body` so Dynamic Type applies (see `public/styles.css`).
 
 | role | face | size / leading | details |
 | --- | --- | --- | --- |
@@ -49,6 +49,7 @@ Sizes are in `rem`, so the whole page follows the system text size. The root sta
 | sentence (`p`, `li`) | Fira Sans 400 | 1rem / 1.5 | proportional lining figures |
 | ship's voice | EB Garamond 400 | 1.1875rem / 1.4 | accent rule at the left |
 | label, legend | Fira Sans 500 | 1rem | `all-small-caps`, tracked 0.06em, `--quiet` |
+| voyage track label | Fira Sans 500 | 0.875rem | `all-small-caps`, tracked 0.06em, `--quiet`; `aria-hidden` and repeats a sentence |
 | control | Fira Sans 400 | 1rem | pressed 600 |
 | conventional name in a control | Noto Serif TC 500 | 0.95em | Medium at text sizes, per [typography](typography.md) |
 | figures in a table | Fira Sans 400 | 0.9375rem | `tabular-nums lining-nums slashed-zero` |
@@ -93,6 +94,8 @@ What the ship itself says, as opposed to telemetry about it: today the ask ("The
 Three stretches, burn, coast and approach, each as wide as its expected duration at the current setting and filled by the share of that phase's stock already spent. The current phase's label is `--ink` and bold, the others `--quiet`; the fill is `--accent` on a `--rule` groove. It sits under "Where the ship is" while underway and is absent in port.
 
 It is `aria-hidden` and adds nothing the sentences don't say: the phase sentence names the phase, the arrival sentence gives the time. Its widths are a forecast that moves with the drive setting, so it must not grow labels with times or percentages. That would make it a second, more precise forecast than the coarsened one in the sentence. Computed by `stretches` in `cmd/browser/track.mbt`.
+
+The track is a container query context. Below 13em wide, which is a narrow phone or any page at large text, only the current phase keeps its label; the others are hidden rather than allowed to collide. The threshold comes from the widest label, `approach`, which needs about 4.3em in a third of the track. Stretches may be narrower than their labels, and the current label overflows to the right but is clipped by the track.
 
 ### log
 
