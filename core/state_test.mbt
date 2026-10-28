@@ -24,6 +24,7 @@ fn as_event(e : @core.CrossingEvent) -> @core.Event {
     Ordered(crew~, order~) => Crew(crew~, intent=Ordered(order~))
     Refitting(refit~) => Refitting(refit~)
     Asked(post~) => Asked(post~)
+    Promoted(crew~, rank~) => Promoted(crew~, rank~)
   }
 }
 

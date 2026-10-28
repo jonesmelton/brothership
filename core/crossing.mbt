@@ -74,7 +74,8 @@ pub(all) struct Order {
 pub(all) struct Hand {
   post : Post
   craft : Craft
-  /// Rank at joining, from the ship's records. Sets the longest watch.
+  /// Rank aboard: from the ship's records at joining, raised by a promotion
+  /// at arrival. Gates nothing.
   rank : Int64
   watch : Watch?
   /// A standing order: the post to take when a phase begins. A watch in
@@ -155,15 +156,19 @@ pub(all) enum CrossingEvent {
   Refitting(refit~ : Refit?)
   /// The ship asks for hands on a post, or stops asking.
   Asked(post~ : Post?)
+  /// The ship promotes `crew` to `rank`, one step, once arrived.
+  Promoted(crew~ : String, rank~ : Int64)
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
 pub(all) suberror CrossingRejected {
   BadTicks(ticks~ : Int64)
   NotAboard(crew~ : String)
-  BadWatch(ticks~ : Int64, longest~ : Int64)
+  BadWatch(ticks~ : Int64)
   OnWatch(crew~ : String)
   Unbuildable(refit~ : Refit)
+  /// A promotion is one step up, to at most `COMMANDER`, at arrival.
+  BadPromotion(crew~ : String, rank~ : Int64)
   /// Orders are for a phase still to come.
   BadOrder(phase~ : Phase)
 } derive(Debug, Eq, ToJson, FromJson)
@@ -641,10 +646,7 @@ pub fn Crossing::apply(
     Watched(crew~, ticks~) => {
       let h = self.hand(crew)
       guard h.watch is None else { raise OnWatch(crew~) }
-      let longest = max_watch(h.rank)
-      guard ticks >= HOUR && ticks <= longest else {
-        raise BadWatch(ticks~, longest~)
-      }
+      guard ticks >= HOUR else { raise BadWatch(ticks~) }
       self.with_hand(crew, {
         ..h,
         watch: Some({ from: self.t, until: self.t + ticks, }),
@@ -664,6 +666,13 @@ pub fn Crossing::apply(
       { ..self, fit: { ..self.fit, refit, }, }
     }
     Asked(post~) => { ..self, ask: post, }
+    Promoted(crew~, rank~) => {
+      let h = self.hand(crew)
+      guard self.phase == Arrived && rank == h.rank + 1L && rank <= COMMANDER else {
+        raise BadPromotion(crew~, rank~)
+      }
+      self.with_hand(crew, { ..h, rank, })
+    }
   }
   c.settle()
 }
@@ -719,13 +728,20 @@ pub fn Crossing::dock(self : Crossing) -> Ship? {
   let records = ship.records.copy()
   let mut delivered = 0L
   for crew, t in self.tallies {
-    let r = records.get(crew).unwrap_or({ regard: 0, works: 0, carry: 0, })
+    let r = records
+      .get(crew)
+      .unwrap_or({ regard: 0, works: 0, carry: 0, rank: None, })
+    let rank = match self.hands.get(crew) {
+      Some(h) => h.rank
+      None => ship.rank(crew)
+    }
     let units = r.carry + t.work
     delivered += units / WORK_SIZE
     records[crew] = {
       regard: r.regard + t.regard,
       works: r.works + units / WORK_SIZE,
       carry: units % WORK_SIZE,
+      rank: Some(rank),
     }
   }
   let toward = ship.toward_recruit + delivered

@@ -191,8 +191,8 @@ test "rejections" {
   )
   debug_inspect(reject(Left(crew="3")), content="NotAboard(crew=\"3\")")
   debug_inspect(
-    reject(Watched(crew="0", ticks=3L * @core.HOUR)),
-    content="BadWatch(ticks=10800, longest=7200)",
+    reject(Watched(crew="0", ticks=0L)),
+    content="BadWatch(ticks=0)",
   )
   let watching = c.apply(Watched(crew="0", ticks=@core.HOUR)) catch {
     _ => panic()
@@ -330,21 +330,6 @@ test "works delivered at port bring recruits" {
   )
   inspect(ship.crossings, content="1")
   inspect(c.dock() is None, content="true")
-}
-
-///|
-test "ranks and watch lengths" {
-  for i, at in @core.rank_thresholds {
-    let i = i.to_int64()
-    assert_eq(@core.rank_of(at * @core.REGARD_HOUR), i)
-    if i > 0L {
-      assert_eq(@core.rank_of(at * @core.REGARD_HOUR - 1L), i - 1L)
-    }
-  }
-  debug_inspect(
-    [0L, 1L, 2L, 3L].map(r => @core.max_watch(r) / @core.HOUR),
-    content="[2, 4, 8, 12]",
-  )
 }
 
 ///|

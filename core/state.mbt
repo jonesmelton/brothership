@@ -33,6 +33,8 @@ pub(all) enum Event {
   Asked(post~ : Post?)
   /// The ship chooses what its engineers build next.
   Refitting(refit~ : Refit?)
+  /// The ship promotes `crew` one rank, at arrival before `Docked`.
+  Promoted(crew~ : String, rank~ : Int64)
   /// The ship said `line`, in answer to the happening at log position
   /// `about`. Written by a model and passed by the content gate; changes no
   /// state, so replay never needs the model.
@@ -149,6 +151,7 @@ pub fn State::apply(self : State, event : Event) -> State raise Rejected {
       { ..self, ship, leg: InPort(since=self.at), }
     }
     Spoke(_) => self
+    Promoted(crew~, rank~) => forward(Promoted(crew~, rank~), false)
     Asked(post~) => forward(Asked(post~), true)
     Refitting(refit~) => forward(Refitting(refit~), false)
     Crew(crew~, intent~) =>

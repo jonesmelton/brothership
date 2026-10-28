@@ -187,3 +187,41 @@ async test "a ship's line is appended after its tick and joins the story" {
   inspect(last.at, content="1800000700")
   inspect(last.seq == snap(store, "tigress").seq, content="true")
 }
+
+///|
+async test "a promotion row replays and joins the story" {
+  let dir = @fs.tmpdir(prefix="brothership-store-")
+  defer @fs.rmdir(dir, recursive=true)
+  let path = "\{dir}/game.sqlite"
+  let live = open(path)
+  let mut now = T0
+  let mut id = 1L
+  live.advance("tigress", now~)
+  let promoted = () => {
+    live
+    .story("tigress", after=0)
+    .unwrap()
+    .iter()
+    .any(e => e.happening is Promoted(..))
+  }
+  for _ in 0..<50_000 {
+    guard !promoted() else { break }
+    ignore(live.propose("tigress", post(id, "ann", Drive), now~))
+    id += 1L
+    now = @ships.fleet()[0].next_advance(snap(live, "tigress").state, now)
+    live.advance("tigress", now~)
+  }
+  let story = live.story("tigress", after=0).unwrap()
+  let at = story.search_by(e => e.happening is Promoted(..)).unwrap()
+  debug_inspect(story[at].happening, content="Promoted(crew=\"ann\", rank=1)")
+  guard story[at + 1].happening is Docked(..) else {
+    fail("expected docking right after the promotion")
+  }
+  let snapshot = snap(live, "tigress")
+  inspect(snapshot.state.ship.records["ann"].rank, content="Some(1)")
+  live.close()
+  let reopened = @store.Store::open(path)
+  defer reopened.close()
+  inspect(snap(reopened, "tigress") == snapshot, content="true")
+  assert_eq(reopened.story("tigress", after=0), Some(story))
+}

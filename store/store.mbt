@@ -181,7 +181,7 @@ pub async fn Store::propose(
   self.write.acquire()
   defer self.write.release()
   guard self.voyages.get(ship) is Some(v) else { return None }
-  let (due, state) = v.profile.due(v.snapshot.state, now)
+  let (due, state) = v.profile.due(v.snapshot.state, now, officer=_ => true)
   let accepted = state.apply(proposal.event()) catch {
     reason => {
       self.commit(ship, v, due, state)
@@ -200,7 +200,7 @@ pub async fn Store::advance(self : Store, ship : String, now~ : Int64) -> Unit {
   self.write.acquire()
   defer self.write.release()
   guard self.voyages.get(ship) is Some(v) else { return }
-  let (due, state) = v.profile.due(v.snapshot.state, now)
+  let (due, state) = v.profile.due(v.snapshot.state, now, officer=_ => true)
   self.commit(ship, v, due, state)
 }
 
@@ -230,7 +230,7 @@ pub async fn Store::speak(
   self.write.acquire()
   defer self.write.release()
   guard self.voyages.get(ship) is Some(v) else { return }
-  let (due, state) = v.profile.due(v.snapshot.state, now)
+  let (due, state) = v.profile.due(v.snapshot.state, now, officer=_ => true)
   let spoke : @core.Event = Spoke(line~, about~)
   self.commit(ship, v, [..due, spoke], state)
 }

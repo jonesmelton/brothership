@@ -27,14 +27,14 @@ pub fn Actor::is_player(self : Actor) -> Bool {
 
 ///|
 /// The watch a player stands at each check-in: as long as the shortest
-/// absence they expect, in whole hours, within what their rank allows.
-/// NPCs stand none, since they change post at every boundary.
-fn Actor::watch(self : Actor, rank : Int64) -> Int64 {
+/// absence they expect, in whole hours. NPCs stand none, since they change
+/// post at every boundary.
+fn Actor::watch(self : Actor) -> Int64 {
   match self.cadence {
     Reactive => 0L
     Every(every~, jitter~) => {
       let hours = ((every - jitter) / @core.HOUR).max(1L)
-      (hours * @core.HOUR).min(@core.max_watch(rank))
+      hours * @core.HOUR
     }
   }
 }
@@ -267,8 +267,7 @@ pub fn Scenario::fly(self : Scenario, ship : @core.Ship, seed : Int64) -> Run {
           Crafted(crew~, craft=actor.craft),
         )
       }
-      let rank = c.hands.get(crew).map(h => h.rank).unwrap_or(0L)
-      let watch = actor.watch(rank)
+      let watch = actor.watch()
       let roll = draw(seed, i, rounds[i], 1)
       let options = posts.map(p => {
         prospect(try_option(c, crew, p, watch, order=handover(c)), crew)
@@ -387,6 +386,8 @@ pub(all) struct Leg {
   distance_ly : Double
   run : Run
   docked : @core.Ship
+  /// The promotions made at arrival, before docking, as (crew, new rank).
+  promotions : Array[(String, Int64)]
 } derive(Debug, Eq)
 
 ///|
@@ -402,8 +403,17 @@ pub fn Scenario::voyage(
   for d in distances {
     let s = { ..self, route: { ..self.route, distance_ly: d, }, }
     let run = s.fly(ship, seed + ship.crossings * 7919L)
-    ship = run.last.dock().unwrap()
-    legs.push({ distance_ly: d, run, docked: ship, })
+    let promoted = @ships.promotions(run.last, officer=crew => {
+      self.actor_of(crew).map(a => a.is_player()).unwrap_or(false)
+    })
+    let mut arrived = run.last
+    for pair in promoted {
+      arrived = arrived.apply(Promoted(crew=pair.0, rank=pair.1)) catch {
+        err => abort("promotion: \{err.to_json().stringify()}")
+      }
+    }
+    ship = arrived.dock().unwrap()
+    legs.push({ distance_ly: d, run, docked: ship, promotions: promoted, })
   }
   legs
 }

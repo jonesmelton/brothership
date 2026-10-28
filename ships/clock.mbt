@@ -1,12 +1,14 @@
 ///|
 /// The ship's own events at `now`, in Unix seconds, applied in order to
-/// `state`: the tick, docking once the crossing has arrived, departure for
+/// `state`: the tick, the promotions an arrived crossing has earned (of the
+/// hands for which `officer` holds) and then docking, departure for
 /// the next hop once the port stay is over, and the ship's turn. Returns the
 /// events and the state after them.
 pub fn Profile::due(
   self : Profile,
   state : @core.State,
   now : Int64,
+  officer~ : (String) -> Bool,
 ) -> (Array[@core.Event], @core.State) {
   let events = []
   let mut s = state
@@ -21,6 +23,9 @@ pub fn Profile::due(
     push(Tick(at=now))
   }
   if s.crossing() is Some(c) && c.arrived_at is Some(_) {
+    for pair in promotions(c, officer~) {
+      push(Promoted(crew=pair.0, rank=pair.1))
+    }
     push(Docked)
   }
   if s.leg is InPort(since~) && s.at >= since + PORT_STAY {

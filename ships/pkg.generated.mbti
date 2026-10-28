@@ -24,6 +24,10 @@ pub fn profile_named(String) -> Profile?
 
 pub fn profiles() -> Array[Profile]
 
+pub fn promotions(@core.Crossing, officer~ : (String) -> Bool) -> Array[(String, Int64)]
+
+pub fn rank_caps(Int64) -> Array[Int64?]
+
 // Errors
 
 // Types and methods
@@ -49,7 +53,7 @@ pub(all) struct Profile {
   temperament : Temperament
 } derive(Eq, @debug.Debug)
 pub fn Profile::default() -> Self
-pub fn Profile::due(Self, @core.State, Int64) -> (Array[@core.Event], @core.State)
+pub fn Profile::due(Self, @core.State, Int64, officer~ : (String) -> Bool) -> (Array[@core.Event], @core.State)
 pub fn Profile::next_plan(Self, legs~ : Int64, coils~ : Int64) -> @core.Plan
 pub fn Profile::respond(Self, @core.State) -> (Array[@core.Event], @core.State)
 pub fn Profile::ship(Self, seed~ : Int64) -> @core.Ship

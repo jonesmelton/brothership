@@ -177,35 +177,45 @@ pub(all) struct Record {
   works : Int64
   /// Work units toward the next work, carried to the next crossing.
   carry : Int64
+  /// Rank held. Missing in a record written before promotions: the rank
+  /// falls back to `rank_floor(regard)` until the next dock writes it.
+  rank : Int64?
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
-/// Regard, in `REGARD_HOUR`s, at which each rank begins.
-pub let rank_thresholds : Array[Int64] = [0, 40, 120, 280]
+/// Ensign, the first rank.
+pub const ENSIGN : Int64 = 0L
 
 ///|
-/// Rank for a regard: 0 to 3.
-pub fn rank_of(regard : Int64) -> Int64 {
+/// Lieutenant junior grade.
+pub const LIEUTENANT_JUNIOR : Int64 = 1L
+
+///|
+pub const LIEUTENANT : Int64 = 2L
+
+///|
+pub const LIEUTENANT_COMMANDER : Int64 = 3L
+
+///|
+/// Commander, the highest rank.
+pub const COMMANDER : Int64 = 4L
+
+///|
+/// Regard, in `REGARD_HOUR`s, at which each rank becomes available.
+pub let rank_thresholds : Array[Int64] = [0, 40, 120, 280, 500]
+
+///|
+/// The highest rank a regard makes someone eligible for: 0 to 4. A rank held
+/// is a record's `rank`, not this.
+pub fn rank_floor(regard : Int64) -> Int64 {
   let hours = regard / REGARD_HOUR
-  let mut rank = 0L
+  let mut rank = ENSIGN
   for i, at in rank_thresholds {
     if hours >= at {
       rank = i.to_int64()
     }
   }
   rank
-}
-
-///|
-/// The longest watch a rank may stand: 2, 4, 8 or 12 hours. The ship trusts
-/// a long watch only to someone it has watched.
-pub fn max_watch(rank : Int64) -> Int64 {
-  match rank {
-    0L => 2L * HOUR
-    1L => 4L * HOUR
-    2L => 8L * HOUR
-    _ => 12L * HOUR
-  }
 }
 
 ///|
@@ -239,6 +249,12 @@ pub fn Ship::new(values : Values, fit : Fit, seed~ : Int64) -> Ship {
 }
 
 ///|
+/// `crew`'s rank: the record's explicit rank, else the floor for its regard,
+/// else 0.
 pub fn Ship::rank(self : Ship, crew : String) -> Int64 {
-  rank_of(self.records.get(crew).map(r => r.regard).unwrap_or(0L))
+  match self.records.get(crew) {
+    Some({ rank: Some(r), .. }) => r
+    Some(r) => rank_floor(r.regard)
+    None => ENSIGN
+  }
 }

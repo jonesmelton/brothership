@@ -40,7 +40,7 @@ test "left alone, the ship clock flies the itinerary and its log replays" {
   let mut docked = 0
   let mut departed = 0
   for _ in 0..<10_000 {
-    let (events, next) = p.due(s, now)
+    let (events, next) = p.due(s, now, officer=_ => true)
     for e in events {
       match e {
         Docked => docked += 1
@@ -95,11 +95,11 @@ test "left alone, the ship clock flies the itinerary and its log replays" {
 test "the ship clock does nothing before the next instant" {
   let p = @ships.profiles()[1]
   let s = @core.State::initial(p.ship(seed=1), profile=p.name)
-  let (_, s) = p.due(s, 1_800_000_000L)
+  let (_, s) = p.due(s, 1_800_000_000L, officer=_ => true)
   inspect(p.wake(s), content="1800000600")
-  let (events, _) = p.due(s, 1_800_000_000L)
+  let (events, _) = p.due(s, 1_800_000_000L, officer=_ => true)
   inspect(events.length(), content="0")
-  let (events, _) = p.due(s, 1_800_000_599L)
+  let (events, _) = p.due(s, 1_800_000_599L, officer=_ => true)
   debug_inspect(events, content="[Tick(at=1800000599)]")
 }
 
@@ -115,7 +115,7 @@ test "each berth advances on its own second of the minute" {
   let now = 1_800_000_000L
   let slots = fleet.map(b => {
     let s = @core.State::commission(b.commission())
-    let (_, s) = b.profile.due(s, now)
+    let (_, s) = b.profile.due(s, now, officer=_ => true)
     b.next_advance(s, now) % @ships.MAX_SLEEP
   })
   debug_inspect(
@@ -130,7 +130,7 @@ test "each berth advances on its own second of the minute" {
 test "a berth acts its lag after the ship's instant" {
   let b = @ships.fleet()[2]
   let s = @core.State::commission(b.commission())
-  let (_, s) = b.profile.due(s, 1_800_000_000L)
+  let (_, s) = b.profile.due(s, 1_800_000_000L, officer=_ => true)
   // The stay ends at +600; the slot in the minute comes first until then.
   let at = b.next_advance(s, 1_800_000_570L)
   inspect(

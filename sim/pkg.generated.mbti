@@ -69,6 +69,7 @@ pub(all) struct Leg {
   distance_ly : Double
   run : Run
   docked : @core.Ship
+  promotions : Array[(String, Int64)]
 } derive(Eq, @debug.Debug)
 
 pub(all) struct Outcome {

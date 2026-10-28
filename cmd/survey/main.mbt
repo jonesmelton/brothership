@@ -266,9 +266,11 @@ fn voyages() -> Unit {
       ("works", 6),
       ("recruits", 9),
       ("rank", 5),
+      ("promoted", 9),
       ("live", 5),
     ])
-    for leg in s.voyage(legs, 11L) {
+    let voyage = s.voyage(legs, 11L)
+    for leg in voyage {
       let r = leg.run
       let f = r.last.fit
       let ds = r.last.demands
@@ -289,9 +291,20 @@ fn voyages() -> Unit {
         (delivered.to_string(), 6),
         (leg.docked.recruits.to_string(), 9),
         (leg.docked.rank(@sim.actor_id(0)).to_string(), 5),
+        (leg.promotions.length().to_string(), 9),
         (pct(r.live_checkins.to_int64(), r.checkins.to_int64()), 5),
       ])
     }
+    let last = voyage[voyage.length() - 1].docked
+    let counts = Array::make(@core.rank_thresholds.length(), 0)
+    for crew in last.records.keys() {
+      if s.actor_of(crew).map(a => a.is_player()).unwrap_or(false) {
+        counts[last.rank(crew).to_int()] += 1
+      }
+    }
+    println(
+      "players by rank 0..\{@core.COMMANDER}: \{counts.map(n => n.to_string()).join(" ")}, promotions: \{voyage.fold(init=0, (n, l) => n + l.promotions.length())}",
+    )
     println("")
   }
 }
