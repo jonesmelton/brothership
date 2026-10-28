@@ -68,3 +68,27 @@ async test "check sends the call and decodes the reply" {
   assert_eq(gate().check(backend, "gore"), @gate.Violation("gore"))
   assert_eq(seen.val, Some(gate().call("gore")))
 }
+
+///|
+async test "clear passes clean text and raises on a violation" {
+  let reply = (verdict : String) => @llm.Backend::new("fixed", fn(c) {
+    {
+      model: c.model,
+      text: verdict,
+      reasoning: None,
+      finish: Some("stop"),
+      usage: @llm.Usage::zero(),
+      raw: Json::null(),
+    }
+  })
+  let clean = reply("{\"violation\": 0}")
+  inspect(gate().clear(clean, "hello").text(), content="hello")
+  let blocked = try {
+    ignore(gate().clear(reply("{\"violation\": 1, \"evidence\": \"x\"}"), "x"))
+    ""
+  } catch {
+    @gate.Blocked(e) => e
+    _ => "other"
+  }
+  inspect(blocked, content="x")
+}

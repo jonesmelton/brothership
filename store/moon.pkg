@@ -1,5 +1,6 @@
 import {
   "local/brothership/core",
+  "local/brothership/llm/gate" @llm_gate,
   "local/brothership/ships",
   "moonbit-community/sqlite3",
   "moonbitlang/async",
@@ -8,6 +9,8 @@ import {
 
 import {
   "local/brothership/core",
+  "local/brothership/llm",
+  "local/brothership/llm/gate" @llm_gate,
   "local/brothership/ships",
   "moonbitlang/async/fs",
 } for "test"

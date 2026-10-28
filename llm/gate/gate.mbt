@@ -49,6 +49,44 @@ pub fn Gate::call(self : Gate, text : String) -> @llm.Call {
 }
 
 ///|
+/// Text the gate passed. Only `Gate::clear` makes one, so a function that
+/// takes `Cleared` cannot be handed text that skipped the gate.
+pub struct Cleared {
+  priv text : String
+} derive(Eq, Debug)
+
+///|
+pub fn Cleared::text(self : Cleared) -> String {
+  self.text
+}
+
+///|
+/// The gate judged the text a violation; carries the evidence.
+pub(all) suberror Blocked {
+  Blocked(String)
+} derive(Debug)
+
+///|
+pub impl Show for Blocked with fn output(self, logger) {
+  let Blocked(evidence) = self
+  logger.write_string("blocked (\{evidence})")
+}
+
+///|
+/// `text`, if the gate passes it. Raises `Blocked` on a violation, and
+/// `Unreadable` or the backend's error if there is no verdict.
+pub async fn Gate::clear(
+  self : Gate,
+  backend : @llm.Backend,
+  text : String,
+) -> Cleared {
+  match self.check(backend, text) {
+    Clean => { text, }
+    Violation(evidence) => raise Blocked(evidence)
+  }
+}
+
+///|
 pub async fn Gate::check(
   self : Gate,
   backend : @llm.Backend,

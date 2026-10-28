@@ -286,17 +286,17 @@ pub async fn Speaker::step(
       return
     }
     let written = @async.now()
-    match self.speech.gate.check(self.backend, line) {
-      Clean => ()
-      Violation(evidence) => {
-        report("blocked (\{evidence}): \{line}")
+    let cleared = self.speech.gate.clear(self.backend, line) catch {
+      @llm_gate.Blocked(_) as err => {
+        report("\{err}: \{line}")
         return
       }
+      err => raise err
     }
     report(
       "written in \{written - started} ms, gated in \{@async.now() - written} ms",
     )
-    line
+    cleared
   } catch {
     err => {
       report("failed: \{err}")

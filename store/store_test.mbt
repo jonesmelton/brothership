@@ -170,13 +170,29 @@ async test "the story tells what happened, after a given seq" {
 }
 
 ///|
+/// `line` passed by a gate that passes everything.
+async fn cleared(line : String) -> @llm_gate.Cleared {
+  let pass = @llm.Backend::new("pass", fn(c) {
+    {
+      model: c.model,
+      text: "{\"violation\": 0}",
+      reasoning: None,
+      finish: Some("stop"),
+      usage: @llm.Usage::zero(),
+      raw: Json::null(),
+    }
+  })
+  @llm_gate.Gate::new(model="gate", policy="").clear(pass, line)
+}
+
+///|
 async test "a ship's line is appended after its tick and joins the story" {
   let store = open(":memory:")
   defer store.close()
   store.advance("tigress", now=T0)
   store.advance("tigress", now=T0 + 600)
   let about = store.story("tigress", after=0).unwrap()[0].seq
-  store.speak("tigress", line="Who will sit with me?", about~, now=T0 + 700)
+  store.speak("tigress", line=cleared("Who will sit with me?"), about~, now=T0 + 700)
   let last = store.story("tigress", after=0).unwrap().last().unwrap()
   debug_inspect(
     last.happening,

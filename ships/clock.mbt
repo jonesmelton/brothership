@@ -1,14 +1,34 @@
 ///|
+/// How long, in seconds, an arrived ship with a mind waits for it to choose
+/// promotions before the clock promotes by script and docks.
+pub const MIND_WAIT : Int64 = 300L
+
+///|
+/// When the crossing under way arrived, in Unix seconds, if it has.
+pub fn arrived_at(state : @core.State) -> Int64? {
+  guard state.crossing() is Some(c) && c.arrived_at is Some(ticks) else {
+    return None
+  }
+  // A tick is a second, and `t` keeps counting after arrival.
+  Some(state.at - (c.t - ticks))
+}
+
+///|
 /// The ship's own events at `now`, in Unix seconds, applied in order to
 /// `state`: the tick, the promotions an arrived crossing has earned (of the
 /// hands for which `officer` holds) and then docking, departure for
 /// the next hop once the port stay is over, and the ship's turn. Returns the
 /// events and the state after them.
+///
+/// A `minded` ship's mind, a model on the server, makes its turn and
+/// chooses promotions instead: the clock leaves the turn out, and docks an
+/// arrived ship by script only `MIND_WAIT` after arrival.
 pub fn Profile::due(
   self : Profile,
   state : @core.State,
   now : Int64,
   officer~ : (String) -> Bool,
+  minded~ : Bool = false,
 ) -> (Array[@core.Event], @core.State) {
   let events = []
   let mut s = state
@@ -22,8 +42,8 @@ pub fn Profile::due(
   if now > s.at {
     push(Tick(at=now))
   }
-  if s.crossing() is Some(c) && c.arrived_at is Some(_) {
-    for pair in promotions(c, officer~) {
+  if arrived_at(s) is Some(at) && (!minded || s.at >= at + MIND_WAIT) {
+    for pair in promotions(s.crossing().unwrap(), officer~) {
       push(Promoted(crew=pair.0, rank=pair.1))
     }
     push(Docked)
@@ -35,29 +55,27 @@ pub fn Profile::due(
       ),
     )
   }
-  let (turn, s) = self.respond(s)
+  let (turn, s) = self.respond(s, minded~)
   (events + turn, s)
 }
 
 ///|
 /// What the ship says and chooses at this instant, if underway: see
 /// `Temperament::turn`. Run after the clock and after every crew intent,
-/// since either can open a moment.
+/// since either can open a moment. Nothing for a `minded` ship.
 pub fn Profile::respond(
   self : Profile,
   state : @core.State,
+  minded~ : Bool = false,
 ) -> (Array[@core.Event], @core.State) {
-  guard state.leg is Underway(crossing~, spoke~) && crossing.arrived_at is None else {
+  guard !minded &&
+    state.leg is Underway(crossing~, spoke~) &&
+    crossing.arrived_at is None else {
     ([], state)
   }
   let events : Array[@core.Event] = self.temperament
     .turn(crossing, spoke)
-    .map(act => {
-      match act {
-        Refit(refit) => Refitting(refit~)
-        Ask(post) => Asked(post~)
-      }
-    })
+    .map(Act::event)
   let s = events.fold(init=state, (s, e) => {
     s.apply(e) catch {
       err => abort("ship turn: \{err.to_json().stringify()}")
@@ -67,15 +85,32 @@ pub fn Profile::respond(
 }
 
 ///|
+pub fn Act::event(self : Act) -> @core.Event {
+  match self {
+    Refit(refit) => Refitting(refit~)
+    Ask(post) => Asked(post~)
+  }
+}
+
+///|
 /// The next instant, in Unix seconds, at which the ship has something to
 /// do: a rate boundary of the crossing, its arrival, or the end of the port
-/// stay. Never before `state.at`.
-pub fn Profile::wake(_self : Profile, state : @core.State) -> Int64 {
+/// stay. Never before `state.at`. For a `minded` ship, arrival is followed
+/// by `MIND_WAIT`.
+pub fn Profile::wake(
+  _self : Profile,
+  state : @core.State,
+  minded~ : Bool = false,
+) -> Int64 {
   match state.leg {
     InPort(since~) => (since + PORT_STAY).max(state.at)
     Underway(crossing~, ..) =>
-      if crossing.arrived_at is Some(_) {
-        state.at
+      if arrived_at(state) is Some(at) {
+        if minded {
+          (at + MIND_WAIT).max(state.at)
+        } else {
+          state.at
+        }
       } else {
         state.at + crossing.next_boundary()
       }
@@ -139,10 +174,11 @@ pub fn Berth::next_advance(
   self : Berth,
   state : @core.State,
   now : Int64,
+  minded~ : Bool = false,
 ) -> Int64 {
   let into = ((self.lag - now) % MAX_SLEEP + MAX_SLEEP) % MAX_SLEEP
   let slot = now + (if into == 0L { MAX_SLEEP } else { into })
-  let due = self.profile.wake(state) + self.lag
+  let due = self.profile.wake(state, minded~) + self.lag
   // An overdue ship, as after a restart, keeps its lag from now.
   let due = if due <= now { now + 1L + self.lag } else { due }
   due.min(slot)

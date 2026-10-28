@@ -21,6 +21,10 @@ priv struct Voyage {
   /// Every happening since commissioning, oldest first. Derived from the
   /// rows on open and on commit; never stored.
   story : Array[@core.Entry]
+  /// The ship's mind makes its turn and chooses its promotions, and the
+  /// clock leaves them out (see `Profile::due`). Set by `Store::mind`, not
+  /// stored.
+  mut minded : Bool
 }
 
 ///|
@@ -58,7 +62,7 @@ fn voyage(state : @core.State) -> Voyage {
   guard @ships.profile_named(state.profile) is Some(profile) else {
     abort("no ship profile named \{state.profile}")
   }
-  { profile, snapshot: { seq: 0, state, }, story: [], }
+  { profile, snapshot: { seq: 0, state, }, story: [], minded: false, }
 }
 
 ///|
@@ -181,14 +185,19 @@ pub async fn Store::propose(
   self.write.acquire()
   defer self.write.release()
   guard self.voyages.get(ship) is Some(v) else { return None }
-  let (due, state) = v.profile.due(v.snapshot.state, now, officer=_ => true)
+  let (due, state) = v.profile.due(
+    v.snapshot.state,
+    now,
+    officer=_ => true,
+    minded=v.minded,
+  )
   let accepted = state.apply(proposal.event()) catch {
     reason => {
       self.commit(ship, v, due, state)
       return Some(Refused(id=proposal.id, reason~, snapshot=v.snapshot))
     }
   }
-  let (response, state) = v.profile.respond(accepted)
+  let (response, state) = v.profile.respond(accepted, minded=v.minded)
   self.commit(ship, v, [..due, proposal.event(), ..response], state)
   Some(Accepted(id=proposal.id, snapshot=v.snapshot))
 }
@@ -200,7 +209,12 @@ pub async fn Store::advance(self : Store, ship : String, now~ : Int64) -> Unit {
   self.write.acquire()
   defer self.write.release()
   guard self.voyages.get(ship) is Some(v) else { return }
-  let (due, state) = v.profile.due(v.snapshot.state, now, officer=_ => true)
+  let (due, state) = v.profile.due(
+    v.snapshot.state,
+    now,
+    officer=_ => true,
+    minded=v.minded,
+  )
   self.commit(ship, v, due, state)
 }
 
@@ -219,20 +233,124 @@ pub fn Store::story(
 
 ///|
 /// Append the ship's line `line`, answering the happening at `about`, after
-/// the ship's own events at `now`. Does nothing for an unknown ship.
+/// the ship's own events at `now`. Does nothing for an unknown ship. The
+/// line is shown to players, so it must have passed the gate.
 pub async fn Store::speak(
   self : Store,
   ship : String,
-  line~ : String,
+  line~ : @llm_gate.Cleared,
   about~ : Int64,
   now~ : Int64,
 ) -> Unit {
   self.write.acquire()
   defer self.write.release()
   guard self.voyages.get(ship) is Some(v) else { return }
-  let (due, state) = v.profile.due(v.snapshot.state, now, officer=_ => true)
-  let spoke : @core.Event = Spoke(line~, about~)
+  let (due, state) = v.profile.due(
+    v.snapshot.state,
+    now,
+    officer=_ => true,
+    minded=v.minded,
+  )
+  let spoke : @core.Event = Spoke(line=line.text(), about~)
   self.commit(ship, v, [..due, spoke], state)
+}
+
+///|
+/// Leave `ship`'s turn and promotions to its mind from now on, which acts
+/// through `decide` and `muster`. Lasts until the store closes.
+pub fn Store::mind(self : Store, ship : String) -> Unit {
+  if self.voyages.get(ship) is Some(v) {
+    v.minded = true
+  }
+}
+
+///|
+/// Whether `ship`'s mind takes its turn.
+pub fn Store::minded(self : Store, ship : String) -> Bool {
+  self.voyages.get(ship).map(v => v.minded).unwrap_or(false)
+}
+
+///|
+/// Append the turn `acts` that `ship`'s mind chose at `moment`, after the
+/// ship's own events at `now`. Nothing of the turn is appended if the ship
+/// is no longer underway at that moment, since the mind weighed another;
+/// an act that no longer applies, such as an unbuildable refit, is dropped.
+/// Returns whether the turn was taken.
+pub async fn Store::decide(
+  self : Store,
+  ship : String,
+  acts : Array[@ships.Act],
+  moment~ : @core.Moment,
+  now~ : Int64,
+) -> Bool {
+  self.write.acquire()
+  defer self.write.release()
+  guard self.voyages.get(ship) is Some(v) else { return false }
+  let (due, state) = v.profile.due(
+    v.snapshot.state,
+    now,
+    officer=_ => true,
+    minded=v.minded,
+  )
+  guard state.crossing() is Some(c) &&
+    c.arrived_at is None &&
+    c.moment() == moment else {
+    self.commit(ship, v, due, state)
+    return false
+  }
+  let events = [..due]
+  let mut s = state
+  for act in acts {
+    let e = act.event()
+    s = s.apply(e) catch {
+      _ => continue
+    }
+    events.push(e)
+  }
+  self.commit(ship, v, events, s)
+  true
+}
+
+///|
+/// Append the promotions `ship`'s mind chose from `picks`, in order, that
+/// `@ships.allowed` lets stand, then dock, after the ship's own events at
+/// `now`. Nothing if the ship is not arrived and waiting to dock. Returns
+/// the promotions appended, as (crew, new rank).
+pub async fn Store::muster(
+  self : Store,
+  ship : String,
+  picks : Array[String],
+  now~ : Int64,
+) -> Array[(String, Int64)] {
+  self.write.acquire()
+  defer self.write.release()
+  guard self.voyages.get(ship) is Some(v) else { return [] }
+  let (due, state) = v.profile.due(
+    v.snapshot.state,
+    now,
+    officer=_ => true,
+    minded=v.minded,
+  )
+  guard state.crossing() is Some(c) && c.arrived_at is Some(_) else {
+    self.commit(ship, v, due, state)
+    return []
+  }
+  let promoted = @ships.allowed(c, picks, officer=_ => true)
+  let events = [..due]
+  let mut s = state
+  for pair in promoted {
+    let e : @core.Event = Promoted(crew=pair.0, rank=pair.1)
+    s = s.apply(e) catch {
+      err => abort("store: allowed promotion refused: \{err.to_json().stringify()}")
+    }
+    events.push(e)
+  }
+  s = s.apply(Docked) catch {
+    err => abort("store: docking refused: \{err.to_json().stringify()}")
+  }
+  events.push(Docked)
+  self.commit(ship, v, events, s)
+  promoted
 }
 
 ///|

@@ -24,11 +24,6 @@ pub fn promotions(
       aboard.push((crew, h.rank))
     }
   }
-  let caps = rank_caps(aboard.length().to_int64())
-  let counts = Array::make(caps.length(), 0L)
-  for pair in aboard {
-    counts[pair.1.to_int()] += 1L
-  }
   let candidates = []
   for pair in aboard {
     let (crew, rank) = pair
@@ -46,9 +41,37 @@ pub fn promotions(
       a.0.compare(b.0)
     }
   })
-  let out = []
-  for cand in candidates {
-    let (crew, rank, _) = cand
+  allowed(c, candidates.map(cand => cand.0), officer~)
+}
+
+///|
+/// The promotions `picks` asks for, as (crew, new rank), that an arrived
+/// crossing allows: each a hand aboard for which `officer` holds, once, one
+/// rank up to at most commander, and only into a rank with room under
+/// `rank_caps` once earlier picks are counted. Picks are taken in order, so
+/// an earlier pick can free or fill a rank for a later one.
+pub fn allowed(
+  c : @core.Crossing,
+  picks : Array[String],
+  officer~ : (String) -> Bool,
+) -> Array[(String, Int64)] {
+  guard c.phase == Arrived else { return [] }
+  let aboard = []
+  for crew, h in c.hands {
+    if officer(crew) {
+      aboard.push(h.rank)
+    }
+  }
+  let caps = rank_caps(aboard.length().to_int64())
+  let counts = Array::make(caps.length(), 0L)
+  for rank in aboard {
+    counts[rank.to_int()] += 1L
+  }
+  let out : Array[(String, Int64)] = []
+  for crew in picks {
+    guard officer(crew) && c.hands.get(crew) is Some(h) else { continue }
+    guard !out.iter().any(p => p.0 == crew) else { continue }
+    let rank = h.rank
     let next = rank + 1L
     guard next <= @core.COMMANDER else { continue }
     let room = match caps[next.to_int()] {
