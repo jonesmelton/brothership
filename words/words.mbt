@@ -216,7 +216,11 @@ pub fn where_sentences(s : @core.State) -> Array[String] {
         "Hull at \{pct(c.hull, @core.HULL_FULL)}%.",
         ..drive,
         hands,
-        ..ask_sentence(c),
+        ..if c.phase == Arrived {
+          []
+        } else {
+          ask_sentence(c)
+        },
         ..c.demands.filter(d => d.status == Open).map(demand_sentence),
       ]
     }

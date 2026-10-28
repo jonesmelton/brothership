@@ -1,4 +1,6 @@
 import {
+  "local/brothership/core",
+  "local/brothership/mind",
   "local/brothership/words",
   "local/brothership/llm/cache",
   "local/brothership/ships",
