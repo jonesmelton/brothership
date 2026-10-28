@@ -56,13 +56,6 @@ test "unread counts entries on the page past what was viewed" {
 }
 
 ///|
-test "nav links say how many are new, in words" {
-  assert_eq(nav_label("Voyage", 0), "Voyage")
-  assert_eq(nav_label("Voyage", 2), "Voyage, 2 new")
-  assert_eq(nav_label("You", 1), "You, 1 new")
-}
-
-///|
 test "going to a page marks it read and drops the last effect" {
   let model : Model = {
     ..aboard(),

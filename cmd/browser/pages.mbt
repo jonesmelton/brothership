@@ -97,17 +97,6 @@ fn Model::unread_on(self : Model, page : @words.Page) -> Int32 {
 }
 
 ///|
-/// A link's name: the page, and how many entries are new there, in words
-/// that read the same aloud as they look.
-fn nav_label(name : String, news : Int32) -> String {
-  if news == 0 {
-    name
-  } else {
-    "\{name}, \{news} new"
-  }
-}
-
-///|
 /// The bar of links between the pages, outside `main`. Each link's name
 /// carries the count; the figure beside the name is for the eye only.
 fn pages_nav(model : Model) -> @rabbita.Html {
