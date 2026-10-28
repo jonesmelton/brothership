@@ -265,7 +265,6 @@ test "since names what was earned" {
       #|  "You finished 2 works.",
       #|  "You reached rank 1.",
       #|]
-
     ),
   )
   debug_inspect(
@@ -370,7 +369,6 @@ test "the ship page in port and under way" {
       #|  "Recruits: 0 of 6.",
       #|  "0 of 3 works toward the next recruit.",
       #|]
-
     ),
   )
   debug_inspect(
@@ -382,7 +380,6 @@ test "the ship page in port and under way" {
       #|  "Recruits: 0 of 6.",
       #|  "0 of 3 works toward the next recruit.",
       #|]
-
     ),
   )
 }
@@ -407,7 +404,6 @@ test "the ship page with a refit under way" {
       #|  "Recruits: 0 of 6.",
       #|  "0 of 3 works toward the next recruit.",
       #|]
-
     ),
   )
 }
