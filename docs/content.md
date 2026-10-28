@@ -22,6 +22,10 @@ The ships don't know the novel. Each ship is written from a short sketch of a te
 
 The language models that voice the ships have read the novel, though, and some of it can bleed through. So every ship's character material is reviewed against this policy before it ships, and text generated during play is checked against it by a second language model before it's shown. That check also holds back text that names people or places from the novel, and text that has stopped making sense. A message that fails the check is not shown.
 
+## what a ship may see
+
+A ship's model may see a server-issued handle for each officer and structured facts about them: posts held, watches stood and broken, works finished, regard and rank. It may use a handle to remember who did what and to single an officer out. It never sees freeform text a player wrote. There is no player freeform text today; proposals are enums and numbers. Display names are interface text only, and a name a player can type stays out of prompts. A display name is substituted into a ship's line, if ever, only after the gate, and only if it was validated when set.
+
 ## if something gets through
 
 It's a bug. Please report it.

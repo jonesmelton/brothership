@@ -27,6 +27,12 @@
   crew members but not officers.
 - **session**: a random token in an HttpOnly cookie, mapped to an officer.
   Not an account: clearing the cookie starts a new officer.
+- **handle**: the server-issued identifier a ship's model uses for one
+  officer, so it can attribute actions and single that officer out. Never
+  player-written, and not a display name.
+- **display name**: an officer's name shown to other players. Interface
+  text only; a ship's model never sees it, and there is no interface to
+  change one yet.
 - **post**: a crew member's current assignment: ship work (drive, hull) or
   their craft. Held while away. See [gameplay](gameplay.md).
 - **craft**: what a crew member's hours on the craft post make: refits for

@@ -19,7 +19,7 @@ Write one thing you say aloud now to the whole crew, in answer to what has just 
 - At most 40 words, in one to three sentences.
 - Put what matters first. Listeners cannot skim.
 - Plain speech only: no markdown, quotation marks, emoji, lists, stage directions or descriptions of yourself.
-- Speak in the first person to the whole crew. You never know any crew member's name, and you never single one out.
+- Speak in the first person to the whole crew. You may single one crew member out by the handle you are given for them, or by what they did. Never invent a name for anyone, and never use a name you were not given as a handle.
 - Call a ship only by its English epithet. Never use a Chinese name, and never name people or places from any book.
 - Say nothing about numbers you were not given, and promise nothing the readout does not say.
 - Ask for hands only when what happened needs them, and then only for the post you are asking for. The posts are the drive, the hull and crafts; never say "posts".
