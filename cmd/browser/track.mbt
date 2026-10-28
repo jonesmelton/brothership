@@ -55,13 +55,7 @@ fn track(c : @core.Crossing) -> @rabbita.Html {
     stretches(c).map(s => {
       let now = if s.phase == c.phase { " now" } else { "" }
       @html.div(class="stretch\{now}", style=["flex: \{s.width} 1 0"], [
-        @html.div(class="bar", [
-          @html.div(
-            class="fill",
-            style=["width: \{s.done / 10L}.\{s.done % 10L}%"],
-            "",
-          ),
-        ]),
+        bar(s.done, 1000L),
         @html.span(class="label", @words.phase_name(s.phase)),
       ])
     }),

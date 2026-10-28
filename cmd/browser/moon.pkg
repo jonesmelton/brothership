@@ -8,6 +8,7 @@ import {
   "moonbit-community/rabbita/html",
   "moonbit-community/rabbita/http",
   "moonbit-community/rabbita/sub",
+  "moonbitlang/core/json",
   "moonbitlang/core/string",
 }
 

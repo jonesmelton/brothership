@@ -14,6 +14,17 @@ struct Model {
   /// The newest `seq` of the ship's story this browser had seen before this
   /// visit, for "while you were away"; `None` on a first visit.
   seen : Int64?
+  /// The page shown, from the address.
+  page : @words.Page
+  /// The newest story `seq` viewed on each page, kept in `localStorage`.
+  viewed : Viewed
+  /// The player's totals when this visit began, for "since you were here";
+  /// `None` on a first visit. The current totals are stored as they move.
+  ledger : @words.Ledger?
+  /// Hours of the last watch chosen, or 0; kept in `localStorage`.
+  last_watch : Int64
+  /// What the last choice changed. Dropped on leaving the You page.
+  effect : Array[String]
   told : Told
   hear : Hear
   said : Said
@@ -39,6 +50,8 @@ enum Msg {
   Settled(String, Result[@core.Receipt, Error])
   Storied(String, Result[@core.Story, Error])
   Hear(Hear)
+  /// The address now names this page.
+  Went(@words.Page)
   /// The local clock moved.
   Tock
   Poll
@@ -116,6 +129,11 @@ fn board(
   emit : @rabbita.Emit[Msg],
 ) -> (Model, @rabbita.Cmd) {
   let seen = @string.parse_int64(load_seen(ship)) catch { _ => -1L }
+  let viewed = Viewed::parse(load_viewed(ship)).unwrap_or({
+    you: seen,
+    voyage: seen,
+    ship: seen,
+  })
   (
     {
       ..model,
@@ -125,6 +143,9 @@ fn board(
       } else {
         Some(seen)
       },
+      viewed,
+      ledger: parse_ledger(load_ledger(ship)),
+      effect: [],
       told: Told::new(),
       sync: Loading,
     },
@@ -186,6 +207,28 @@ fn page_title(model : Model) -> String {
 }
 
 ///|
+/// Keep what the player has viewed on each page of this ship.
+fn keep_viewed(model : Model) -> @rabbita.Cmd {
+  match model.ship {
+    Some(ship) => @rabbita.effect(() => store_viewed(ship, model.viewed.name()))
+    None => @rabbita.none
+  }
+}
+
+///|
+/// Keep the player's current totals for the next visit's "since you were
+/// here". `model.ledger` stays the one this visit began with.
+fn keep_ledger(model : Model) -> @rabbita.Cmd {
+  match (model.ship, model.sync) {
+    (Some(ship), Ready(sync)) if model.officer != "" => {
+      let ledger = @words.Ledger::of(shown(model, sync), you=model.officer)
+      @rabbita.effect(() => store_ledger(ship, ledger.to_json().stringify()))
+    }
+    _ => @rabbita.none
+  }
+}
+
+///|
 fn title_cmd(model : Model) -> @rabbita.Cmd {
   @rabbita.effect(() => set_document_title(page_title(model)))
 }
@@ -205,15 +248,31 @@ fn update(
     (_, Session(Err(err))) =>
       ({ ..model, sync: Offline(reason=err.to_string()), }, @rabbita.none)
     // A line is on its way: look for it sooner than the poll would.
-    (_, Tock) =>
-      (
-        { ..model, now: unix_now(), },
-        match model.ship {
-          Some(ship) if model.told.speaking =>
-            tell(emit, ship, model.told.last())
-          _ => @rabbita.none
-        },
-      )
+    (_, Tock) => {
+      let ticked = { ..model, now: unix_now(), }
+      // A link followed without the browser telling us still changes page.
+      let page = page_from_hash(current_hash())
+      let moved = ticked.goto(page)
+      let focus = if moved.page != model.page {
+        focus_cmd("page")
+      } else {
+        @rabbita.none
+      }
+      let ask = match model.ship {
+        Some(ship) if model.told.speaking => tell(emit, ship, model.told.last())
+        _ => @rabbita.none
+      }
+      (moved, @rabbita.batch([ask, focus, keep_ledger(ticked)]))
+    }
+    (_, Went(page)) => {
+      let moved = model.goto(page)
+      let cmds = if moved.page != model.page {
+        [focus_cmd("page"), keep_viewed(moved)]
+      } else {
+        []
+      }
+      (moved, @rabbita.batch(cmds))
+    }
     (_, Poll) =>
       match model.ship {
         Some(ship) =>
@@ -243,9 +302,14 @@ fn update(
         { polite, assertive, count: model.said.count + 1, }
       }
       let last = told.last()
+      let viewed = model.viewed.settle(last).mark(model.page, last)
+      let next = { ..model, told, said, viewed, }
       (
-        { ..model, told, said, },
-        @rabbita.effect(() => store_seen(ship, last.to_string())),
+        next,
+        @rabbita.batch([
+          @rabbita.effect(() => store_seen(ship, last.to_string())),
+          keep_viewed(next),
+        ]),
       )
     }
     (_, Listed(Ok(ships))) => {
@@ -295,9 +359,28 @@ fn update(
                 Some(id) => focus_cmd(id)
                 None => @rabbita.none
               }
+              let effect = @words.effect(
+                shown(model, sync),
+                shown(model, next),
+                you=model.officer,
+              )
+              let hours = match intent {
+                Watched(ticks~) => ticks / @core.HOUR
+                _ => model.last_watch
+              }
               (
-                { ..model, sync: Ready(next), },
-                @rabbita.batch([send_next(emit, ship, sync, next), focus]),
+                { ..model, sync: Ready(next), last_watch: hours, }.with_effect(
+                  effect,
+                ),
+                @rabbita.batch([
+                  send_next(emit, ship, sync, next),
+                  focus,
+                  if hours != model.last_watch {
+                    @rabbita.effect(() => store_watch(hours.to_string()))
+                  } else {
+                    @rabbita.none
+                  },
+                ]),
               )
             }
           }
@@ -382,7 +465,7 @@ fn where_section(s : @core.State) -> @rabbita.Html {
       body.push(track(c))
     }
   }
-  @html.section([@html.h2("Where the ship is"), ..body])
+  @html.section([@html.h3("Where the ship is"), ..body])
 }
 
 ///|
@@ -416,13 +499,14 @@ fn group(
 }
 
 ///|
-/// The five choices of a check-in, always in the same order: post, watch,
-/// standing order, craft, and refit for engineers. Only the post is offered
-/// to someone not yet aboard.
+/// The choices of the You page, always in the same order: post, watch,
+/// standing order and craft. Only the post is offered to someone not yet
+/// aboard. `reup` is a watch just stood, offered again first.
 fn choices(
   emit : @rabbita.Emit[Msg],
   c : @core.Crossing,
   officer : String,
+  reup : Int64?,
 ) -> Array[@rabbita.Html] {
   let hand = c.hands.get(officer)
   let at = hand.map(h => h.post)
@@ -442,10 +526,15 @@ fn choices(
     None => {
       let longest = @core.max_watch(h.rank) / @core.HOUR
       let hours : Array[Int64] = [1, 2, 4, 8, 12]
+      let again = match reup {
+        Some(n) => [choice(emit, reup_label(n), Watched(ticks=n * @core.HOUR))]
+        None => []
+      }
       [
         group(
           "watch",
           "Watch",
+          again +
           hours
           .filter(n => n <= longest)
           .map(n => {
@@ -498,27 +587,45 @@ fn choices(
       )
     }),
   )
-  let refit = if h.craft == Engineer {
-    [
-      group(
-        "refit",
-        "Refit",
-        @core.refits
-        .filter(r => c.fit.can_refit(r))
-        .map(r => {
-          choice(
-            emit,
-            @words.refit_label(r),
-            Refitting(refit=Some(r)),
-            pressed=c.fit.refit == Some(r),
-          )
-        }),
-      ),
-    ]
-  } else {
-    []
-  }
-  [post, ..watch, ..order, craft, ..refit]
+  [post, ..watch, ..order, craft]
+}
+
+///|
+/// The refit choice, for engineers; the Ship page offers it.
+fn refit_choices(
+  emit : @rabbita.Emit[Msg],
+  c : @core.Crossing,
+  officer : String,
+) -> Array[@rabbita.Html] {
+  guard c.hands.get(officer) is Some(h) && h.craft == Engineer else { [] }
+  [
+    group(
+      "refit",
+      "Refit",
+      @core.refits
+      .filter(r => c.fit.can_refit(r))
+      .map(r => {
+        choice(
+          emit,
+          @words.refit_label(r),
+          Refitting(refit=Some(r)),
+          pressed=c.fit.refit == Some(r),
+        )
+      }),
+    ),
+  ]
+}
+
+///|
+/// How many hours of watch to offer again to `officer`, if any.
+fn Model::reup_hours(self : Model, c : @core.Crossing) -> Int64? {
+  guard c.hands.get(self.officer) is Some(h) && h.watch is None else { None }
+  reup(
+    self.told.entries,
+    self.officer,
+    self.last_watch,
+    @core.max_watch(h.rank) / @core.HOUR,
+  )
 }
 
 ///|
@@ -548,7 +655,7 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
       _ if model.ships.is_empty() => [@html.p("Reaching the fleet.")]
       _ => [ship_choices(model, emit)]
     }
-    return page(model, [masthead("Choose a ship"), ..body])
+    return page(model, [masthead("Choose a ship"), ..body], [])
   }
   let name = model.ships
     .iter()
@@ -560,30 +667,196 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
     Offline(reason~) => [@html.p("Out of contact with the ship: \{reason}")]
     Ready(sync) => {
       let s = shown(model, sync)
-      let away = model.told
-        .away(model.seen, you=model.officer, ship=epithet(model))
-        .map(line => @html.li(line))
+      let sections = match model.page {
+        You => you_page(model, emit, s)
+        Voyage => voyage_page(model, emit, s)
+        Ship => ship_page(model, emit, s)
+      }
       [
-        where_section(s),
-        @html.section([@html.h2("While you were away"), @html.ul(away)]),
-        @html.section(
-          [@html.h2("You"), ..sentences(@words.you_sentences(s, model.officer))],
+        @html.h2(
+          class="page",
+          id="page",
+          attrs=@html.Attrs::build().tabindex(-1),
+          model.page.name(),
         ),
-        @html.section(
-          [
-            @html.h2("Choices"),
-            ..match s.crossing() {
-              Some(c) => choices(emit, c, model.officer)
-              None => [@html.p("Choices open when the ship departs.")]
-            },
-          ],
-        ),
-        log_section(model, emit),
+        ..sections,
       ]
     }
   }
-  let other = @html.section([@html.h2("Other ships"), ship_choices(model, emit)])
-  page(model, [masthead(title(name)), ..body, other])
+  let nav = match model.sync {
+    Ready(_) => [pages_nav(model)]
+    _ => []
+  }
+  page(model, [masthead(title(name)), ..body], nav)
+}
+
+///|
+/// The You page: what changed since the last visit, what the player earns,
+/// the choices that are theirs and what the last one did, and their log.
+fn you_page(
+  model : Model,
+  emit : @rabbita.Emit[Msg],
+  s : @core.State,
+) -> Array[@rabbita.Html] {
+  let you = model.officer
+  let since = match model.ledger {
+    Some(before) => @words.since(before, @words.Ledger::of(s, you~))
+    None => []
+  }
+  let bars = match s.crossing() {
+    Some(c) =>
+      [
+        ..match work_span(c, you) {
+          Some((done, of)) => [measure("Work toward the next work", done, of)]
+          None => []
+        },
+        ..match regard_span(c, you) {
+          Some((done, of)) => [measure("Regard toward the next rank", done, of)]
+          None => []
+        },
+      ]
+    None => []
+  }
+  let effect = if model.effect.is_empty() {
+    []
+  } else {
+    [@html.p(class="effect", model.effect.join(" "))]
+  }
+  [
+    away_section(model, You, "Since you were here", since),
+    @html.section(
+      [
+        @html.h3("You"),
+        ..sentences(@words.earning_sentences(s, you~)),
+        ..sentences(@words.you_sentences(s, you)),
+        ..bars,
+      ],
+    ),
+    @html.section(
+      [
+        @html.h3("Choices"),
+        ..match s.crossing() {
+          Some(c) => choices(emit, c, you, model.reup_hours(c))
+          None => [@html.p("Choices open when the ship departs.")]
+        },
+        ..effect,
+      ],
+    ),
+    log_section(model, You),
+  ]
+}
+
+///|
+/// The Voyage page: where the ship is, how its demands will close, a way to
+/// answer each open one, and the voyage's log.
+fn voyage_page(
+  model : Model,
+  emit : @rabbita.Emit[Msg],
+  s : @core.State,
+) -> Array[@rabbita.Html] {
+  let outlook = match s.crossing() {
+    Some(c) =>
+      [
+        ..sentences(@words.outlook_sentences(c)),
+        ..demand_choices(emit, c, model.officer),
+      ]
+    None => [@html.p("The ship is in port. Demands open once it departs.")]
+  }
+  [
+    where_section(s),
+    @html.section([@html.h3("Demands"), ..outlook]),
+    away_section(model, Voyage, "While you were away", []),
+    log_section(model, Voyage),
+  ]
+}
+
+///|
+/// The Ship page: the hull and fit, the refit choice, the ship's log, what is
+/// read aloud, and the other ships.
+fn ship_page(
+  model : Model,
+  emit : @rabbita.Emit[Msg],
+  s : @core.State,
+) -> Array[@rabbita.Html] {
+  let refit = match s.crossing() {
+    Some(c) =>
+      [
+        ..match refit_span(c) {
+          Some((r, done, of)) =>
+            [measure("Refit: \{@words.refit_label(r)}", done, of)]
+          None => []
+        },
+        ..refit_choices(emit, c, model.officer),
+      ]
+    None => []
+  }
+  [
+    @html.section(
+      [@html.h3("The ship"), ..sentences(@words.ship_sentences(s)), ..refit],
+    ),
+    away_section(model, Ship, "While you were away", []),
+    log_section(model, Ship),
+    hear_section(model, emit),
+    @html.section([@html.h3("Other ships"), ship_choices(model, emit)]),
+  ]
+}
+
+///|
+/// What happened on `page` while the player was away, with `extra` lines
+/// first. "Nothing new" is dropped when `extra` says something.
+fn away_section(
+  model : Model,
+  page : @words.Page,
+  heading : String,
+  extra : Array[String],
+) -> @rabbita.Html {
+  let entries = model.told.entries
+  let lines = model.told.away(
+    model.seen,
+    you=model.officer,
+    ship=epithet(model),
+    on=e => @words.page_of(e, you=model.officer, story=entries) == page,
+  )
+  let lines = if extra.is_empty() || lines != [NOTHING_NEW] {
+    extra + lines
+  } else {
+    extra
+  }
+  @html.section([@html.h3(heading), @html.ul(lines.map(l => @html.li(l)))])
+}
+
+///|
+/// A button to take the post of each open demand, with how far along it is.
+/// Not offered to someone already on that post.
+fn demand_choices(
+  emit : @rabbita.Emit[Msg],
+  c : @core.Crossing,
+  officer : String,
+) -> Array[@rabbita.Html] {
+  let at = c.hands.get(officer).map(h => h.post)
+  let out = []
+  for i, d in c.demands {
+    guard d.status == Open else { continue }
+    let post = d.hazard.post()
+    let take = if at == Some(post) {
+      []
+    } else {
+      [choice(emit, take_label(post), Posted(post~))]
+    }
+    out.push(
+      group(
+        "demand-\{i}",
+        @words.hazard_name(d.hazard),
+        [measure("Done", d.done, d.need), ..take],
+      ),
+    )
+  }
+  out
+}
+
+///|
+fn take_label(post : @core.Post) -> String {
+  "Take " + @words.post_name(post)
 }
 
 ///|
@@ -591,24 +864,34 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
 const LOG_LENGTH : Int32 = 20
 
 ///|
-/// The ship's log, newest first, and the choice of what is read aloud.
-fn log_section(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
+/// One page's log, newest first. Entries newer than this visit's `seen` are
+/// marked; the away list says the same in words.
+fn log_section(model : Model, page : @words.Page) -> @rabbita.Html {
   let ship = epithet(model)
   let entries = model.told.entries
-  let start = (entries.length() - LOG_LENGTH).max(0)
-  let items = entries[start:]
+  let mine = entries.filter(e => {
+    @words.page_of(e, you=model.officer, story=entries) == page
+  })
+  let start = (mine.length() - LOG_LENGTH).max(0)
+  let items = mine[start:]
     .to_owned()
     .rev()
     .map(e => {
       let line = @words.told(e.happening, you=model.officer, ship~)
       let when = @words.ago((model.now - e.at).max(0L))
-      @html.li(class=if e.happening is Spoke(_) { "voice" } else { "" }, [
-        @html.text(line),
-        @html.text(" "),
-        @html.span(class="when", when),
-      ])
+      let fresh = model.seen is Some(seen) && e.seq > seen
+      let voice = if e.happening is Spoke(_) { "voice" } else { "" }
+      @html.li(
+        class=match (voice, fresh) {
+          ("", false) => ""
+          ("", true) => "new"
+          (v, false) => v
+          (v, true) => "\{v} new"
+        },
+        [@html.text(line), @html.text(" "), @html.span(class="when", when)],
+      )
     })
-  let speaking = if model.told.speaking {
+  let speaking = if page == Ship && model.told.speaking {
     [@html.p(class="pending", "\{ship} is finding words.")]
   } else {
     []
@@ -621,6 +904,12 @@ fn log_section(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
       @html.ul(class="log", attrs=@html.Attrs::build().role("list"), items),
     ]
   }
+  @html.section([@html.h3("Log"), ..speaking, ..log])
+}
+
+///|
+/// The choice of what is read aloud as it happens.
+fn hear_section(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
   let hears : Array[(Hear, String)] = [
     (Everything, "Everything"),
     (Urgent, "Urgent only"),
@@ -638,13 +927,18 @@ fn log_section(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
       )
     }),
   )
-  @html.section([@html.h2("Log"), ..speaking, ..log, hear])
+  @html.section([@html.h3("Read aloud"), hear])
 }
 
 ///|
-/// The page: `content` and the two live regions, which are always present
-/// so that screen readers are watching them before anything is said.
-fn page(model : Model, content : Array[@rabbita.Html]) -> @rabbita.Html {
+/// The page: `content`, the bar of links between pages if any, and the two
+/// live regions, which are always present so that screen readers are
+/// watching them before anything is said.
+fn page(
+  model : Model,
+  content : Array[@rabbita.Html],
+  nav : Array[@rabbita.Html],
+) -> @rabbita.Html {
   // A trailing space on alternate updates makes repeated words new text.
   let pad = if model.said.count % 2 == 1 { "\u{a0}" } else { "" }
   let region = (politeness : String, text : String) => {
@@ -654,11 +948,14 @@ fn page(model : Model, content : Array[@rabbita.Html]) -> @rabbita.Html {
       text + pad,
     )
   }
-  @html.div([
-    @html.main_(class="checkin", content),
-    region("polite", model.said.polite),
-    region("assertive", model.said.assertive),
-  ])
+  @html.div(
+    [
+      @html.main_(class="checkin", content),
+      ..nav,
+      region("polite", model.said.polite),
+      region("assertive", model.said.assertive),
+    ],
+  )
 }
 
 ///|
@@ -685,6 +982,13 @@ fn main {
             Some(ship)
           },
           seen: None,
+          page: page_from_hash(current_hash()),
+          viewed: { you: -1L, voyage: -1L, ship: -1L, },
+          ledger: None,
+          last_watch: @string.parse_int64(stored_watch()) catch {
+            _ => 0L
+          },
+          effect: [],
           told: Told::new(),
           hear: Hear::parse(stored_hear()),
           said: { polite: "", assertive: "", count: 0, },
@@ -697,6 +1001,9 @@ fn main {
         @sub.batch([
           @sub.every(TOCK_MS, emit(Tock)),
           @sub.every(POLL_MS, emit(Poll)),
+          @sub.on_url_changed(
+            emit.map(u => Went(page_from_hash(u.fragment.unwrap_or("")))),
+          ),
         ])
       },
     )

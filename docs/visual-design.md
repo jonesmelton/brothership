@@ -4,7 +4,7 @@ How the game looks, concretely enough to build from. Fonts and their features ar
 
 ## direction
 
-The screen is a ship's papers: a registry entry and a log, typeset. The design is done with type, rules and space. It has no panels, glows, gradients, shadows, textures, rounded cards, icons or animated readouts, because those are the science-fiction interface trope the typography already refuses. The only graphic is the voyage track, and it repeats a sentence (see [the voyage track](#the-voyage-track)).
+The screen is a ship's papers: a registry entry and a log, typeset. The design is done with type, rules and space. It has no panels, glows, gradients, shadows, textures, rounded cards, icons or animated readouts, because those are the science-fiction interface trope the typography already refuses. The only graphics are the voyage track and the progress bars, and each repeats a sentence (see [the voyage track](#the-voyage-track) and [bars](#bars)).
 
 Two voices, as in [typography](typography.md): the book (EB Garamond) for names, headings and the ship's own words; the system (Fira Sans) for telemetry sentences, labels, controls and figures.
 
@@ -18,7 +18,7 @@ Two schemes, chosen by `prefers-color-scheme`: **paper** in light mode, **night 
 | `--ink` | `#1b1914` | `#e9e0cf` | text, pressed controls |
 | `--quiet` | `#6b6254` | `#8f9b92` | labels, secondary text, control borders |
 | `--rule` | `#c9bca4` | `#2b3630` | hairlines between sections; decorative only |
-| `--accent` | `#7e2e22` | `#c6a15b` | the masthead rule, the track's fill, focus |
+| `--accent` | `#7e2e22` | `#c6a15b` | the masthead rule, the fill of the track and bars, the new-entry marker, focus |
 
 Contrast against `--paper` (WCAG 2.x):
 
@@ -60,8 +60,9 @@ Small caps are always `all-small-caps` from the font (`smcp`, `c2sc`), with `fon
 
 - One column at every width, `max-width: 36rem`, centered, with `1rem` side padding (`1.5rem` from 40rem wide). Desktop gets the phone layout with more margin, not a second layout.
 - Sections are separated by a `--rule` hairline and `2rem` of space, not boxes.
-- The vertical order is fixed and never changes with state: masthead, where the ship is, while you were away, you, choices, log, other ships. A section with nothing to say says so in a sentence rather than disappearing.
-- Nothing is fixed or sticky; at 400% zoom the page is a plain scroll.
+- The game has three pages, You, Voyage and Ship, each with its own log, reached from the [bar of pages](#bar-of-pages). The masthead is on all of them. A page opens with its `h2`, which takes focus when the page changes; its sections are `h3`.
+- The vertical order of each page is fixed and never changes with state. You: since you were here, you, choices, log. Voyage: where the ship is, demands, while you were away, log. Ship: the ship, while you were away, log, read aloud, other ships. A section with nothing to say says so in a sentence rather than disappearing.
+- The bar of pages is the only fixed element, and only on viewports at least 34em tall (see below). Otherwise the page is a plain scroll, and at 400% zoom it is.
 
 ## components
 
@@ -81,6 +82,12 @@ The ship's title, `EF-147 顧大嫂 The Tigress`, as the page's `h1`, under a 3p
 
 The pennant sits on its own line above; the conventional name and the epithet share a baseline and wrap together. The accessible name is `EF-147 The Tigress`, since the surrounding text is English (see [translation](translation.md)). A ship with no title (the plain ship of the simulator) shows its name as the epithet.
 
+### bar of pages
+
+`<nav aria-label="Pages">` at the bottom with three links, `#you`, `#voyage` and `#ship`, each at least 2.75rem tall with a `--quiet` edge. The current page has `aria-current="page"`, an `--ink` edge, weight 600 and a 4px `--ink` rule under it, so it is not marked by color. A link's accessible name carries the count of entries new on that page: "Voyage" or "Voyage, 2 new". The figure beside the name, in a small box, is `aria-hidden` and for the eye only.
+
+The bar is `position: fixed` at the bottom edge only under `(min-height: 34em)`, with matching padding under the page. On a shorter viewport, or at large zoom, it sits in the flow at the end of the page, so it never eats the space that is left for reading.
+
 ### section
 
 `<section>` with an `h2` and sentences. Sentences are one per `p`, front-loaded, written in `cmd/browser/words.mbt` before any layout. "While you were away" is a `ul` whose markers are `--quiet`; keep the default markers so Safari keeps the list semantics.
@@ -88,6 +95,10 @@ The pennant sits on its own line above; the conventional name and the epithet sh
 ### ship's voice
 
 What the ship itself says, as opposed to telemetry about it: today the ask ("The ship asks for hands on the drive."), later the model's own lines. A `p class="voice"` in EB Garamond with a 2px `--accent` rule at its left. Model text goes here once it has passed the gate; while it is pending, the sentence that prompted it stands alone (see "model latency" in [architecture](architecture.md)).
+
+### bars
+
+A groove in `--rule` with an `--accent` fill, as in the track, under a small-caps `--quiet` label, for work toward the next work, regard toward the next rank, each open demand and a refit under way. `aria-hidden`, shown beside the sentence it repeats, and given no numbers of its own. It updates in place with each tick; nothing animates. Built by `bar` and `measure` in `cmd/browser/bars.mbt`.
 
 ### the voyage track
 
@@ -99,15 +110,17 @@ The track is a container query context. Below 13em wide, which is a narrow phone
 
 ### log
 
-The ship's story, newest first, the latest 20 entries: one `li` per happening, its sentence, then how long ago in `--quiet` at 0.875rem. A ship's line in the log is set as the ship's voice. The list has no markers, so it carries `role="list"`, which Safari otherwise drops. While a line is being written, a `--quiet` italic Garamond sentence above the list says the ship is finding words; it is not a live region, since the line itself is announced when it lands.
+The ship's story, newest first, the latest 20 entries: one `li` per happening, its sentence, then how long ago in `--quiet` at 0.875rem. A ship's line in the log is set as the ship's voice. Each page's log holds only its own happenings (`@words.page_of`). An entry newer than the last visit has a 4px `--accent` rule at its left; the away list says the same in words, so the rule is never the only signal. The list has no markers, so it carries `role="list"`, which Safari otherwise drops. While a line is being written, a `--quiet` italic Garamond sentence above the list says the ship is finding words; it is not a live region, since the line itself is announced when it lands.
 
-Under the list, a choice group sets what is read aloud as it happens: everything, urgent only, or nothing.
+On the Ship page, a choice group sets what is read aloud as it happens: everything, urgent only, or nothing.
 
 ### announcements
 
 Two visually hidden live regions, polite and assertive, are rendered from the first frame and outside `main`, so screen readers watch them before anything is said. New happenings go to them by priority (`@words.priority`); at most three sentences, then how many more wait in the log.
 
 ### choices
+
+What the last choice changed is a `p` under the You choices, in weight 500, and also goes to the polite live region.
 
 Each choice group is a `fieldset` whose `legend` is a label. Controls are native `button`s:
 

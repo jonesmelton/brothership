@@ -112,25 +112,34 @@ fn Told::merge(
 
 ///|
 /// "While you were away": what happened between the player's last visit,
-/// at `seen`, and this one, leaving out what is kept in the log only.
+/// at `seen`, and this one, leaving out what is kept in the log only. `on`
+/// picks the entries of one page.
 fn Told::away(
   self : Told,
   seen : Int64?,
   you~ : String,
   ship~ : String,
+  on~ : (@core.Entry) -> Bool = _ => true,
 ) -> Array[String] {
-  guard seen is Some(seen) else { ["This is your first visit to this ship."] }
+  guard seen is Some(seen) else { [FIRST_VISIT] }
   guard self.arrived is Some(arrived) else { [] }
   let lines = self.entries
     .filter(e => {
       e.seq > seen &&
       e.seq <= arrived &&
+      on(e) &&
       @words.priority(e, you~, story=self.entries) != Quiet
     })
     .map(e => @words.told(e.happening, you~, ship~))
   if lines.is_empty() {
-    ["Nothing new since your last visit."]
+    [NOTHING_NEW]
   } else {
     lines
   }
 }
+
+///|
+const FIRST_VISIT : String = "This is your first visit to this ship."
+
+///|
+const NOTHING_NEW : String = "Nothing new since your last visit."
