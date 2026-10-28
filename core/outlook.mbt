@@ -22,8 +22,22 @@ pub(all) struct Trend {
 /// The trend for `crew`, who need not be aboard (then their rates are 0).
 /// Rates are `@math.per_hour` of the change over `span`.
 pub fn Crossing::trend(self : Crossing, crew : String) -> Trend {
-  ignore((self, crew))
-  ...
+  guard self.phase != Arrived else {
+    { span: @math.TICKS_PER_HOUR, regard: 0, work: 0, hull: 0, refit: 0, }
+  }
+  let span = self.next_boundary().min(@math.TICKS_PER_HOUR).max(1L)
+  // `flow` rather than `apply`: the boundary's own settling (a watch's
+  // bonus, a missed demand's loss, a salvage) is a jump, not a rate.
+  let after = self.flow(span)
+  let before_tally = self.tallies.get(crew).unwrap_or(no_tally)
+  let after_tally = after.tallies.get(crew).unwrap_or(no_tally)
+  {
+    span,
+    regard: @math.per_hour(after_tally.regard - before_tally.regard, span),
+    work: @math.per_hour(after_tally.work - before_tally.work, span),
+    hull: @math.per_hour(after.hull - self.hull, span),
+    refit: @math.per_hour(after.fit.progress - self.fit.progress, span),
+  }
 }
 
 ///|
@@ -42,6 +56,41 @@ pub(all) struct Outcome {
 /// post: the closed status of one already closed, or the first instant a
 /// waiting or open demand closes. `None` for all when `project` fails.
 pub fn Crossing::outcomes(self : Crossing) -> Array[Outcome]? {
-  ignore(self)
-  ...
+  let out : Array[Outcome?] = self.demands.map(d => closed_outcome(self.t, d))
+  let mut c = self
+  for _ in 0..<MAX_BOUNDARIES {
+    if c.arrived_at is Some(_) {
+      return Some(out.map(o => o.unwrap()))
+    }
+    let step = c.next_boundary()
+    let next = c.advance(step)
+    for i, d in next.demands {
+      if out[i] is None && (d.status == Met || d.status == Missed) {
+        // Closing happens somewhere in `(c.t, c.t + step]`: find the first tick.
+        let mut lo = 1L
+        let mut hi = step
+        while lo < hi {
+          let mid = lo + (hi - lo) / 2L
+          if c.advance(mid).demands[i].status is (Met | Missed) {
+            hi = mid
+          } else {
+            lo = mid + 1L
+          }
+        }
+        out[i] = closed_outcome(c.t + lo, c.advance(lo).demands[i])
+      }
+    }
+    c = next
+  }
+  None
+}
+
+///|
+/// `d` as it stands at tick `at`, if closed.
+fn closed_outcome(at : Int64, d : Demand) -> Outcome? {
+  match d.status {
+    Met => Some({ status: Met, at, short: 0, })
+    Missed => Some({ status: Missed, at, short: (d.need - d.done).max(0L), })
+    Waiting | Open => None
+  }
 }

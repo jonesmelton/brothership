@@ -1,0 +1,15 @@
+///|
+/// Bounds that keep `delta * 3600` inside `Int64`: a stock's worth either
+/// way, over at most an hour.
+predicate per_hour_pre(delta : Int64, span : Int64) {
+  1L <= span &&
+  span <= 3600L &&
+  -1000000000000000L <= delta &&
+  delta <= 1000000000000000L
+}
+
+///|
+/// `result` is `delta * 3600 / span` rounded toward negative infinity.
+predicate per_hour_post(delta : Int64, span : Int64, result : Int64) {
+  result * span <= delta * 3600L && delta * 3600L < (result + 1L) * span
+}
