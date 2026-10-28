@@ -3,6 +3,7 @@ import {
   "local/brothership/store",
   "moonbitlang/async",
   "moonbitlang/core/json",
+  "moonbitlang/core/string",
   "moonbitlang/moonback",
 }
 

@@ -47,6 +47,8 @@ pub fn band_of(Int64) -> Int64
 
 pub fn demands_for(Plan, Int64, Int64) -> Array[Demand]
 
+pub fn happenings(State, Event, State) -> Array[Happening]
+
 pub fn max_watch(Int64) -> Int64
 
 pub fn rank_of(Int64) -> Int64
@@ -130,6 +132,12 @@ pub(all) struct Demand {
   status : Status
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct Entry {
+  seq : Int64
+  at : Int64
+  happening : Happening
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) enum Event {
   Commissioned(ship~ : Ship, profile~ : String)
   Crew(crew~ : String, intent~ : Intent)
@@ -138,6 +146,7 @@ pub(all) enum Event {
   Docked
   Asked(post~ : Post?)
   Refitting(refit~ : Refit?)
+  Spoke(line~ : String, about~ : Int64)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Fit {
@@ -164,6 +173,22 @@ pub(all) struct Hand {
   order : Order?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn Hand::quarters(Self) -> Int64
+
+pub(all) enum Happening {
+  Departed
+  Began(phase~ : Phase)
+  Docked(recruits~ : Int64)
+  Opened(hazard~ : Hazard)
+  Met(hazard~ : Hazard)
+  Missed(hazard~ : Hazard)
+  Landed(refit~ : Refit, level~ : Int64)
+  Asked(post~ : Post?)
+  Took(crew~ : String, post~ : Post)
+  Left(crew~ : String)
+  Stood(crew~ : String)
+  Finished(crew~ : String)
+  Spoke(line~ : String, about~ : Int64)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum Hazard {
   Breach
@@ -299,6 +324,11 @@ pub(all) enum Status {
   Met
   Missed
 } derive(Compare, Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Story {
+  entries : Array[Entry]
+  speaking : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Tally {
   drive : Int64

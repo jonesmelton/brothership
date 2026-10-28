@@ -125,6 +125,10 @@ async test "a store reopened from its file equals the live one" {
   }
   inspect(snap(live, "tigress").state.ship.crossings, content="2")
   let snapshots = live.ships().map(s => snap(live, s))
+  let stories = Map::from_array(
+    live.ships().map(s => (s, live.story(s, after=0))),
+  )
+  inspect(stories["tigress"].unwrap().length() > 10, content="true")
   live.close()
   let reopened = @store.Store::open(path)
   defer reopened.close()
@@ -133,4 +137,53 @@ async test "a store reopened from its file equals the live one" {
     reopened.ships().map(s => snap(reopened, s)) == snapshots,
     content="true",
   )
+  for ship in live.ships() {
+    assert_eq(reopened.story(ship, after=0), stories[ship], msg=ship)
+  }
+}
+
+///|
+fn kinds(entries : Array[@core.Entry]) -> Array[@core.Happening] {
+  entries.map(e => e.happening)
+}
+
+///|
+async test "the story tells what happened, after a given seq" {
+  let store = open(":memory:")
+  defer store.close()
+  ignore(store.propose("tigress", post(1, "ann", Drive), now=T0))
+  ignore(store.propose("tigress", post(2, "ann", Drive), now=T0 + 600))
+  let story = store.story("tigress", after=0).unwrap()
+  debug_inspect(
+    kinds(story),
+    content=(
+      #|[Departed, Asked(post=Some(Drive)), Took(crew="ann", post=Drive)]
+    ),
+  )
+  let first = story[0].seq
+  inspect(
+    store.story("tigress", after=first).unwrap().length() == story.length() - 1,
+    content="true",
+  )
+  inspect(story.iter().all(e => e.at == T0 + 600), content="true")
+  debug_inspect(store.story("nobody", after=0), content="None")
+}
+
+///|
+async test "a ship's line is appended after its tick and joins the story" {
+  let store = open(":memory:")
+  defer store.close()
+  store.advance("tigress", now=T0)
+  store.advance("tigress", now=T0 + 600)
+  let about = store.story("tigress", after=0).unwrap()[0].seq
+  store.speak("tigress", line="Who will sit with me?", about~, now=T0 + 700)
+  let last = store.story("tigress", after=0).unwrap().last().unwrap()
+  debug_inspect(
+    last.happening,
+    content=(
+      #|Spoke(line="Who will sit with me?", about=6)
+    ),
+  )
+  inspect(last.at, content="1800000700")
+  inspect(last.seq == snap(store, "tigress").seq, content="true")
 }

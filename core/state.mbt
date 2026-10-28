@@ -33,6 +33,10 @@ pub(all) enum Event {
   Asked(post~ : Post?)
   /// The ship chooses what its engineers build next.
   Refitting(refit~ : Refit?)
+  /// The ship said `line`, in answer to the happening at log position
+  /// `about`. Written by a model and passed by the content gate; changes no
+  /// state, so replay never needs the model.
+  Spoke(line~ : String, about~ : Int64)
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
@@ -144,6 +148,7 @@ pub fn State::apply(self : State, event : Event) -> State raise Rejected {
       }
       { ..self, ship, leg: InPort(since=self.at), }
     }
+    Spoke(_) => self
     Asked(post~) => forward(Asked(post~), true)
     Refitting(refit~) => forward(Refitting(refit~), false)
     Crew(crew~, intent~) =>

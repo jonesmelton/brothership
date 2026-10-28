@@ -6,14 +6,30 @@
 /// - `GET /api/ships` -> `Array[@core.Listing]`, in order of commission
 /// - `GET /api/ships/:id/snapshot` -> `@core.Snapshot`
 /// - `POST /api/ships/:id/proposals` with `@core.Proposal` -> `@core.Receipt`
+/// - `GET /api/ships/:id/story?after=seq` -> `@core.Story`
 ///
 /// An unknown ship is a 404. `clock` gives the wall clock in Unix seconds;
-/// proposals are applied at it.
+/// proposals are applied at it. `speaking` says whether a ship is writing a
+/// line now.
 pub fn routes(
   store : @store.Store,
   clock~ : () -> Int64 = unix_now,
+  speaking~ : (String) -> Bool = _ => false,
 ) -> @moonback.Module {
   ctx => {
+    ctx.get("/api/ships/:id/story", (req, res) => {
+      let ship = req.params["id"].to_owned()
+      let after = @string.parse_int64(req.query().get("after").unwrap_or("0")) catch {
+        _ => 0L
+      }
+      match store.story(ship, after~) {
+        Some(entries) => {
+          let story : @core.Story = { entries, speaking: speaking(ship), }
+          res.send_json(story.to_json())
+        }
+        None => res.send_json({ "error": "no such ship" }, status=404)
+      }
+    })
     // The listener binds only after the store opens and commissions its
     // ships, so answering at all proves boot got that far. Keep this free of
     // the game API's routes: Fly takes the whole machine out of rotation when

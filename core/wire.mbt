@@ -52,3 +52,20 @@ pub(all) struct Listing {
   /// The profile's name, which is the ship's name in English.
   name : String
 } derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// One happening in a ship's story: the log position of the row it came
+/// from, and the game time then, in Unix seconds.
+pub(all) struct Entry {
+  seq : Int64
+  at : Int64
+  happening : Happening
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// `GET /api/ships/:id/story`: the entries after the asked-for `seq`, oldest
+/// first, and whether the ship is writing a line now.
+pub(all) struct Story {
+  entries : Array[Entry]
+  speaking : Bool
+} derive(Debug, Eq, ToJson, FromJson)

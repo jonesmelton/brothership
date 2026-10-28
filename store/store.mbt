@@ -18,6 +18,24 @@ pub struct Store {
 priv struct Voyage {
   profile : @ships.Profile
   mut snapshot : @core.Snapshot
+  /// Every happening since commissioning, oldest first. Derived from the
+  /// rows on open and on commit; never stored.
+  story : Array[@core.Entry]
+}
+
+///|
+/// Apply `event` to `state`, recording what it tells in `story`.
+fn Voyage::tell(
+  self : Voyage,
+  state : @core.State,
+  event : @core.Event,
+  seq : Int64,
+) -> @core.State raise @core.Rejected {
+  let next = state.apply(event)
+  for h in @core.happenings(state, event, next) {
+    self.story.push({ seq, at: next.at, happening: h, })
+  }
+  next
 }
 
 ///|
@@ -40,7 +58,7 @@ fn voyage(state : @core.State) -> Voyage {
   guard @ships.profile_named(state.profile) is Some(profile) else {
     abort("no ship profile named \{state.profile}")
   }
-  { profile, snapshot: { seq: 0, state, }, }
+  { profile, snapshot: { seq: 0, state, }, story: [], }
 }
 
 ///|
@@ -68,7 +86,7 @@ async fn load(conn : @sqlite3.Connection) -> Map[String, Voyage] {
         continue
       }
     }
-    v.snapshot = { seq, state: v.snapshot.state.apply(event), }
+    v.snapshot = { seq, state: v.tell(v.snapshot.state, event, seq), }
   }
   voyages
 }
@@ -121,6 +139,7 @@ async fn Store::commit(
   )
   defer stmt.finalize()
   let mut seq = v.snapshot.seq
+  let seqs = []
   for event in events {
     stmt.reset()
     stmt.bind(index=1, ship)
@@ -131,8 +150,18 @@ async fn Store::commit(
     while stmt.step_async() is Row {
 
     }
+    seqs.push(seq)
   }
   exec(self.conn, "commit")
+  // `Commissioned` begins the state rather than applying to it.
+  let mut s = v.snapshot.state
+  for i, event in events {
+    guard !(event is Commissioned(_)) else { continue }
+    s = v.tell(s, event, seqs[i]) catch {
+      err =>
+        abort("store: committed event refused: \{err.to_json().stringify()}")
+    }
+  }
   v.snapshot = { seq, state, }
 }
 
@@ -173,6 +202,37 @@ pub async fn Store::advance(self : Store, ship : String, now~ : Int64) -> Unit {
   guard self.voyages.get(ship) is Some(v) else { return }
   let (due, state) = v.profile.due(v.snapshot.state, now)
   self.commit(ship, v, due, state)
+}
+
+///|
+/// The ship's happenings after log position `after`, oldest first, or
+/// `None` for an unknown ship.
+pub fn Store::story(
+  self : Store,
+  ship : String,
+  after~ : Int64,
+) -> Array[@core.Entry]? {
+  self.voyages
+  .get(ship)
+  .map(v => v.story.iter().filter(e => e.seq > after).collect())
+}
+
+///|
+/// Append the ship's line `line`, answering the happening at `about`, after
+/// the ship's own events at `now`. Does nothing for an unknown ship.
+pub async fn Store::speak(
+  self : Store,
+  ship : String,
+  line~ : String,
+  about~ : Int64,
+  now~ : Int64,
+) -> Unit {
+  self.write.acquire()
+  defer self.write.release()
+  guard self.voyages.get(ship) is Some(v) else { return }
+  let (due, state) = v.profile.due(v.snapshot.state, now)
+  let spoke : @core.Event = Spoke(line~, about~)
+  self.commit(ship, v, [..due, spoke], state)
 }
 
 ///|

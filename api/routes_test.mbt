@@ -95,3 +95,26 @@ async test "a proposal naming a server event is refused with 400" {
     inspect(store.snapshot("tigress").unwrap().seq, content="1")
   })
 }
+
+///|
+async test "the story route returns entries after a seq" {
+  let store = fleet_store()
+  defer store.close()
+  store.advance("tigress", now=1_800_000_000)
+  store.advance("tigress", now=1_800_000_600)
+  with_server(store, 1_800_000_660, base => {
+    let (_, body) = @http.get("\{base}/api/ships/tigress/story?after=0")
+    let story : @core.Story = @json.from_json(body.json())
+    inspect(
+      story.entries == store.story("tigress", after=0).unwrap(),
+      content="true",
+    )
+    inspect(story.speaking, content="false")
+    let last = story.entries.last().unwrap().seq
+    let (_, body) = @http.get("\{base}/api/ships/tigress/story?after=\{last}")
+    let story : @core.Story = @json.from_json(body.json())
+    inspect(story.entries.length(), content="0")
+    let (response, _) = @http.get("\{base}/api/ships/nobody/story")
+    inspect(response.code, content="404")
+  })
+}
