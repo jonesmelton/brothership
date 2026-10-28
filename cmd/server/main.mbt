@@ -93,11 +93,12 @@ async fn ship_clock(store : @store.Store, berth : @ships.Berth) -> Unit {
 const CONTENT : String = "content"
 
 ///|
-/// The model that writes ships' lines, and the one that gates them.
-const WRITER : String = "meta:muse-spark-1.3"
+/// The model that writes ships' lines, and the one that gates them. Both use
+/// the contributor tier of Muse Spark 1.3: much cheaper, about twice as slow.
+const WRITER : String = "meta:muse-spark-1.3-contributor"
 
 ///|
-const GATE : String = "meta:muse-spark-1.3"
+const GATE : String = "meta:muse-spark-1.3-contributor"
 
 ///|
 /// How often a speaker looks for something to answer, in milliseconds.
