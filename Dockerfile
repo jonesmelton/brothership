@@ -30,12 +30,14 @@ COPY cmd/cast/moon.pkg cmd/cast/
 COPY cmd/gate/moon.pkg cmd/gate/
 COPY cmd/harness/moon.pkg cmd/harness/
 COPY cmd/server/moon.pkg cmd/server/
+COPY cmd/survey/moon.pkg cmd/survey/
 COPY core/moon.pkg core/
 COPY core/math/moon.pkg core/math/
 COPY llm/moon.pkg llm/
 COPY llm/cache/moon.pkg llm/cache/
 COPY llm/gate/moon.pkg llm/gate/
 COPY llm/prompt/moon.pkg llm/prompt/
+COPY ships/moon.pkg ships/
 COPY sim/moon.pkg sim/
 COPY store/moon.pkg store/
 RUN moon update \

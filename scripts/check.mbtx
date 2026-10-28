@@ -8,6 +8,11 @@ import {
 }
 
 async fn main {
+  println("==> scripts/check-dockerfile.sh")
+  let code = @shell.Cmd("scripts/check-dockerfile.sh", []).status()
+  if code != 0 {
+    fail("scripts/check-dockerfile.sh exited with \{code}")
+  }
   let steps : Array[Array[String]] = [
     ["fmt", "--check"],
     ["check", "--target", "all", "--deny-warn"],
