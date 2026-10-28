@@ -4,6 +4,10 @@ import {
   "local/brothership/ships",
 }
 
+import {
+  "moonbitlang/quickcheck" @qc,
+} for "wbtest"
+
 supported_targets = "js + native"
 
 warnings = "-79"

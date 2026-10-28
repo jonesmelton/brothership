@@ -14,10 +14,102 @@ pub(all) enum Page {
 } derive(Debug, Eq, Compare)
 
 ///|
+/// A tally of zero, for a crew member with no hours this crossing.
+fn zero_tally() -> @core.Tally {
+  {
+    drive: 0,
+    hull: 0,
+    craft: 0,
+    regard: 0,
+    work: 0,
+    watches_stood: 0,
+    watches_broken: 0,
+  }
+}
+
+///|
+/// A record of zero, for a crew member the ship has never carried.
+fn zero_record() -> @core.Record {
+  { regard: 0, works: 0, carry: 0, }
+}
+
+///|
+/// A hazard at the start of a sentence: "Breach", not "A breach".
+fn hazard_title(h : @core.Hazard) -> String {
+  match h {
+    Breach => "Breach"
+    Flare => "Flare"
+    Salvage => "Salvage"
+  }
+}
+
+///|
+fn int_abs(x : Int64) -> Int64 {
+  if x < 0L {
+    -x
+  } else {
+    x
+  }
+}
+
+///|
+fn int_sign(x : Int64) -> Int32 {
+  if x < 0L {
+    -1
+  } else if x > 0L {
+    1
+  } else {
+    0
+  }
+}
+
+///|
+/// `tenths` as a number with at most one decimal place: 25 becomes "2.5".
+fn tenths_words(tenths : Int64) -> String {
+  if tenths % 10L == 0L {
+    (tenths / 10L).to_string()
+  } else {
+    "\{tenths / 10L}.\{tenths % 10L}"
+  }
+}
+
+///|
+/// Regard per hour in the units players see: hours an hour.
+fn regard_rate_words(per_hour : Int64) -> String {
+  let tenths = per_hour * 10L / @core.REGARD_HOUR
+  if tenths < 10L {
+    "0.\{tenths} hours an hour"
+  } else if tenths % 10L == 0L {
+    "\{plural(tenths / 10L, "hour", "hours")} an hour"
+  } else {
+    "\{tenths_words(tenths)} hours an hour"
+  }
+}
+
+///|
+/// A span under an hour in minutes to the nearest 5, then in the words of
+/// `about`.
+fn coarse_span(seconds : Int64) -> String {
+  if seconds < 3600L {
+    let minutes = (seconds + 150L) / 300L * 5L
+    if minutes < 5L {
+      "under 5 minutes"
+    } else {
+      "about \{minutes} minutes"
+    }
+  } else {
+    about(seconds)
+  }
+}
+
+///|
 /// The page's name as the navigation and headings say it.
 pub fn Page::name(self : Page) -> String {
-  ignore(self)
-  ...
+  match self {
+    You => "You"
+    Voyage => "Voyage"
+    Ship => "Ship"
+  }
 }
 
 ///|
@@ -29,8 +121,35 @@ pub fn page_of(
   you~ : String,
   story~ : Array[@core.Entry],
 ) -> Page {
-  ignore((e, you, story))
-  ...
+  page_of_entry(e, you~, story~, 0)
+}
+
+///|
+fn page_of_entry(
+  e : @core.Entry,
+  you~ : String,
+  story~ : Array[@core.Entry],
+  depth : Int32,
+) -> Page {
+  match e.happening {
+    Departed | Began(_) | Docked(_) | Opened(_) | Met(_) | Missed(_) => Voyage
+    Landed(..) | Asked(_) => Ship
+    Took(crew~, ..) | Left(crew~) | Stood(crew~) | Finished(crew~) =>
+      if crew == you {
+        You
+      } else {
+        Ship
+      }
+    Spoke(about~, ..) =>
+      if depth >= 8 {
+        Ship
+      } else {
+        match story.iter().find_first(x => x.seq == about) {
+          Some(x) => page_of_entry(x, you~, story~, depth + 1)
+          None => Ship
+        }
+      }
+  }
 }
 
 ///|
@@ -44,8 +163,74 @@ pub fn effect(
   after : @core.State,
   you~ : String,
 ) -> Array[String] {
-  ignore((before, after, you))
-  ...
+  guard after.crossing() is Some(a) else { return [] }
+  let b = before.crossing()
+  let lines : Array[String] = []
+  let was_arrival = match b {
+    Some(c) => c.forecast()
+    None => None
+  }
+  match (was_arrival, a.forecast()) {
+    (Some(was), Some(now)) =>
+      if now != was && int_abs(now - was) >= 300L {
+        let when = if now < was { "sooner" } else { "later" }
+        lines.push("Arrival \{coarse_span(int_abs(now - was))} \{when}.")
+      }
+    (None, Some(now)) =>
+      if b is Some(_) {
+        lines.push("Arrival is \{in_words(now - a.t)}.")
+      }
+    (Some(_), None) => lines.push("Arrival is now too far off to forecast.")
+    _ => ()
+  }
+  match b {
+    Some(bc) => {
+      for i, d in a.demands {
+        guard bc.demands.get(i) is Some(was) else { continue }
+        match (was.status, d.status) {
+          (Waiting | Open, Met) =>
+            lines.push("\{hazard_title(d.hazard)} will now be met.")
+          (Waiting | Open, Missed) =>
+            lines.push("\{hazard_title(d.hazard)} will now be missed.")
+          _ => ()
+        }
+      }
+      let was = bc.trend(you)
+      let now = a.trend(you)
+      if int_sign(was.hull) != int_sign(now.hull) {
+        if now.hull > 0L {
+          lines.push("The hull now mends.")
+        } else if now.hull < 0L {
+          lines.push("The hull now wears.")
+        } else {
+          lines.push("The hull holds steady.")
+        }
+      }
+      if was.regard != now.regard {
+        if now.regard <= 0L {
+          lines.push("Your regard no longer grows.")
+        } else {
+          lines.push(
+            "Your regard now grows about \{regard_rate_words(now.regard)}.",
+          )
+        }
+      }
+      if lines.is_empty() {
+        let drive = bc.quarters(Drive) != a.quarters(Drive)
+        if drive && a.phase is Coast {
+          lines.push("No change to arrival: the coast doesn't need the drive.")
+        } else {
+          lines.push("No change to arrival.")
+        }
+      }
+    }
+    None => ()
+  }
+  if lines.length() > 2 {
+    lines[0:2].to_owned()
+  } else {
+    lines
+  }
 }
 
 ///|
@@ -65,16 +250,49 @@ pub(all) struct Ledger {
 
 ///|
 pub fn Ledger::of(s : @core.State, you~ : String) -> Ledger {
-  ignore((s, you))
-  ...
+  let record = s.ship.records.get(you).unwrap_or(zero_record())
+  let tally = match s.crossing() {
+    Some(c) => c.tallies.get(you).unwrap_or(zero_tally())
+    None => zero_tally()
+  }
+  {
+    at: s.at,
+    regard: record.regard + tally.regard,
+    works: record.works + tally.work / @core.WORK_SIZE,
+    crossings: s.ship.crossings +
+    (if s.crossing() is Some(_) { 1L } else { 0L }),
+  }
 }
 
 ///|
 /// What `you` earned between two ledgers, for the top of the You page:
 /// regard, works, rank reached. Empty when nothing changed.
 pub fn since(before : Ledger, now : Ledger) -> Array[String] {
-  ignore((before, now))
-  ...
+  let lines : Array[String] = []
+  let regard = now.regard - before.regard
+  if regard > 0L {
+    lines.push(
+      "You earned \{about(regard * 3600L / @core.REGARD_HOUR)} of regard.",
+    )
+  }
+  let works = now.works - before.works
+  if works == 1L {
+    lines.push("You finished a work.")
+  } else if works > 1L {
+    lines.push("You finished \{works} works.")
+  }
+  let was = @core.rank_of(before.regard)
+  let reached = @core.rank_of(now.regard)
+  if reached > was {
+    lines.push("You reached rank \{reached}.")
+  }
+  let crossings = now.crossings - before.crossings
+  if crossings == 1L {
+    lines.push("The ship made a crossing.")
+  } else if crossings > 1L {
+    lines.push("The ship made \{crossings} crossings.")
+  }
+  lines
 }
 
 ///|
@@ -82,8 +300,77 @@ pub fn since(before : Ledger, now : Ledger) -> Array[String] {
 /// hour, with the ship's ask and an open demand's doubling named; progress
 /// toward the next work for an artist; hours of regard to the next rank.
 pub fn earning_sentences(s : @core.State, you~ : String) -> Array[String] {
-  ignore((s, you))
-  ...
+  guard s.crossing() is Some(c) else { return [] }
+  guard c.hands.get(you) is Some(h) else { return [] }
+  let tally = c.tallies.get(you).unwrap_or(zero_tally())
+  let record = s.ship.records.get(you).unwrap_or(zero_record())
+  let lines : Array[String] = []
+  if tally.regard > 0L {
+    lines.push(
+      "You have earned \{about(tally.regard * 3600L / @core.REGARD_HOUR)} of regard this crossing.",
+    )
+  } else {
+    lines.push("No regard yet this crossing.")
+  }
+  let rate = c.trend(you).regard
+  if rate > 0L {
+    lines.push("Your regard grows about \{regard_rate_words(rate)}.")
+  } else {
+    lines.push("This post earns no regard now.")
+  }
+  if c.ask == Some(h.post) {
+    lines.push("×2: the ship asked for \{post_name(h.post)}.")
+  }
+  for d in c.demands {
+    if d.status == Open && d.hazard.post() == h.post {
+      lines.push("×2: \{hazard_title(d.hazard)} needs \{post_name(h.post)}.")
+    }
+  }
+  if h.post == Craft && h.craft == Artist {
+    let units = record.carry + tally.work
+    let crew_hour = @core.HOUR * @core.CRAFT_UNIT
+    let works = units / @core.WORK_SIZE
+    lines.push(
+      "Work \{record.works + works + 1L}: \{tenths_words(units % @core.WORK_SIZE * 10L / crew_hour)} of \{@core.WORK_SIZE / crew_hour} crew-hours.",
+    )
+  }
+  let regard = record.regard + tally.regard
+  let rank = @core.rank_of(regard)
+  if rank.to_int() + 1 >= @core.rank_thresholds.length() {
+    lines.push("You have reached the highest rank.")
+  } else {
+    let next = @core.rank_thresholds[rank.to_int() + 1] * @core.REGARD_HOUR
+    lines.push(
+      "You need \{about((next - regard) * 3600L / @core.REGARD_HOUR)} of regard for rank \{rank + 1L}.",
+    )
+  }
+  lines
+}
+
+///|
+/// The tick at which `phase` ends, if the crossing reaches it in the
+/// projection.
+fn phase_end(c : @core.Crossing, phase : @core.Phase) -> Int64? {
+  if phase < c.phase {
+    return None
+  }
+  let mut cur = c
+  for _ in 0..<4096 {
+    if cur.phase == phase && cur.arrived_at is Some(at) {
+      return Some(at)
+    }
+    if cur.phase > phase {
+      return Some(cur.t)
+    }
+    let step = cur.next_boundary()
+    guard step > 0L else { return None }
+    let next = cur.apply(@core.Elapsed(ticks=step)) catch { _ => return None }
+    if cur.phase == phase && next.phase != phase {
+      return Some(cur.t + step)
+    }
+    cur = next
+  }
+  None
 }
 
 ///|
@@ -91,8 +378,86 @@ pub fn earning_sentences(s : @core.State, you~ : String) -> Array[String] {
 /// "Breach will be met with about 40 minutes to spare." or "Breach will be
 /// missed by about 2 crew-hours."
 pub fn outlook_sentences(c : @core.Crossing) -> Array[String] {
-  ignore(c)
-  ...
+  guard c.outcomes() is Some(outcomes) else { return [] }
+  let lines : Array[String] = []
+  for i, o in outcomes {
+    guard c.demands.get(i) is Some(d) else { continue }
+    guard d.status is (Waiting | Open) else { continue }
+    match o.status {
+      Met => {
+        let line = match phase_end(c, d.phase) {
+          Some(end) if end >= o.at =>
+            "\{hazard_title(d.hazard)} will be met with \{coarse_span(end - o.at)} to spare."
+          _ => "\{hazard_title(d.hazard)} will be met."
+        }
+        lines.push(line)
+      }
+      Missed => {
+        let hours = (o.short + 7200L) / 14400L
+        let by = if hours <= 0L {
+          "under a crew-hour"
+        } else if hours == 1L {
+          "about a crew-hour"
+        } else {
+          "about \{hours} crew-hours"
+        }
+        lines.push("\{hazard_title(d.hazard)} will be missed by \{by}.")
+      }
+      Waiting | Open => ()
+    }
+  }
+  lines
+}
+
+///|
+/// Each refit's level and what it does, for the levels already built.
+fn refit_level_sentences(fit : @core.Fit) -> Array[String] {
+  let lines : Array[String] = []
+  for refit in @core.refits {
+    let level = fit.level(refit)
+    if level > 0L {
+      lines.push(
+        "\{refit_label(refit)} at level \{level}: \{refit_effect(refit, level)}.",
+      )
+    }
+  }
+  lines
+}
+
+///|
+/// The refit under way, its progress, and how long it has left at `rate`.
+fn refit_under_way(fit : @core.Fit, rate : Int64) -> Array[String] {
+  match fit.refit {
+    None => []
+    Some(refit) => {
+      let level = fit.level(refit) + 1L
+      let cost = fit.cost(refit)
+      let done = pct(fit.progress, cost)
+      if rate > 0L {
+        let left = (cost - fit.progress).max(0L)
+        [
+          "Building \{refit_name(refit)}, level \{level}: \{done}% done, \{about(left * 3600L / rate)} to go at this rate.",
+        ]
+      } else {
+        [
+          "Building \{refit_name(refit)}, level \{level}: \{done}% done, but nobody is building it.",
+        ]
+      }
+    }
+  }
+}
+
+///|
+/// Who the ship has recruited, and how near the next one is.
+fn recruit_sentences(ship : @core.Ship) -> Array[String] {
+  if ship.recruits >= @core.MAX_RECRUITS {
+    ["Recruits: \{ship.recruits}, the most a ship carries."]
+  } else {
+    [
+      "Recruits: \{ship.recruits} of \{@core.MAX_RECRUITS}.",
+      "\{ship.toward_recruit} of \{@core.WORKS_PER_RECRUIT} works toward the next recruit.",
+    ]
+  }
 }
 
 ///|
@@ -100,14 +465,83 @@ pub fn outlook_sentences(c : @core.Crossing) -> Array[String] {
 /// the refit under way with its progress and rate, recruits, and works
 /// toward the next recruit.
 pub fn ship_sentences(s : @core.State) -> Array[String] {
-  ignore(s)
-  ...
+  let lines : Array[String] = []
+  match s.crossing() {
+    Some(c) => {
+      let trend = c.trend("")
+      let rate = trend.hull * 1000L / @core.HULL_FULL
+      let hull = pct(c.hull, @core.HULL_FULL)
+      if rate < 0L {
+        lines.push(
+          "Hull at \{hull}%, wearing about \{tenths_words(-rate)}% an hour.",
+        )
+      } else if rate > 0L {
+        lines.push(
+          "Hull at \{hull}%, mending about \{tenths_words(rate)}% an hour.",
+        )
+      } else {
+        lines.push("Hull at \{hull}%.")
+      }
+      for line in refit_level_sentences(c.fit) {
+        lines.push(line)
+      }
+      for line in refit_under_way(c.fit, trend.refit) {
+        lines.push(line)
+      }
+      for line in recruit_sentences(s.ship) {
+        lines.push(line)
+      }
+    }
+    None => {
+      lines.push("Hull at \{pct(s.ship.hull, @core.HULL_FULL)}%.")
+      for line in refit_level_sentences(s.ship.fit) {
+        lines.push(line)
+      }
+      for line in refit_under_way(s.ship.fit, 0L) {
+        lines.push(line)
+      }
+      for line in recruit_sentences(s.ship) {
+        lines.push(line)
+      }
+    }
+  }
+  lines
+}
+
+///|
+fn int_pow(base : Int64, level : Int64) -> Int64 {
+  let mut n = 1L
+  for _ in 0..<level.to_int() {
+    n = n * base
+  }
+  n
 }
 
 ///|
 /// What `level` of `refit` does, for the ship page and a landed refit:
-/// "hull wears 44% less than unfitted".
+/// "hull wears 44% less".
 pub fn refit_effect(refit : @core.Refit, level : Int64) -> String {
-  ignore((refit, level))
-  ...
+  if level <= 0L {
+    return "not fitted"
+  }
+  match refit {
+    Baffles => {
+      let den = int_pow(4L, level)
+      let kept = (100L * int_pow(3L, level) + den / 2L) / den
+      "hull wears \{100L - kept}% less"
+    }
+    Plating => {
+      let den = int_pow(4L, level)
+      let got = (100L * int_pow(5L, level) + den / 2L) / den
+      "hull hands mend \{got - 100L}% more"
+    }
+    Injectors =>
+      "\{level} fewer \{if level == 1L { "drive hand" } else { "drive hands" }} for full burn"
+    Coils => {
+      let den = int_pow(5L, level)
+      let got = (100L * int_pow(6L, level) + den / 2L) / den
+      let higher = if got - 100L == 20L { "a fifth" } else { "\{got - 100L}%" }
+      "the γ cap \{higher} higher, from the next departure"
+    }
+  }
 }

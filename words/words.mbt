@@ -290,7 +290,7 @@ pub fn told(h : @core.Happening, you~ : String, ship~ : String) -> String {
     Met(hazard~) => "\{hazard_name(hazard)} was met."
     Missed(hazard~) => "\{hazard_name(hazard)} was missed."
     Landed(refit~, level~) =>
-      "A refit landed: \{refit_name(refit)} to level \{level}."
+      "A refit landed: \{refit_name(refit)} to level \{level}, \{refit_effect(refit, level)}."
     Asked(post=Some(post)) => "The ship asks for hands on \{post_name(post)}."
     Asked(post=None) => "The ship stopped asking for hands."
     Took(crew~, post=Craft) => "\{who(crew)} went to crafts."

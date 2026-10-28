@@ -131,7 +131,7 @@ test "happenings in sentences, from where the player stands" {
       #|  "The ship docked, and 2 recruits joined.",
       #|  "A breach opened on the hull.",
       #|  "A flare was missed.",
-      #|  "A refit landed: baffles to level 2.",
+      #|  "A refit landed: baffles to level 2, hull wears 44% less.",
       #|  "The ship stopped asking for hands.",
       #|  "You took the hull.",
       #|  "A hand went to crafts.",
