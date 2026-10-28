@@ -9,7 +9,7 @@ async fn main {
     @path.Path(@env.args()[0]).resolve().dirname().to_string(),
   )
   let db = @env.get_env_var("BROTHERSHIP_DB").unwrap_or("brothership.sqlite")
-  let store = @store.Store::open(db)
+  let store = @store.Store::open(db, ship=@ships.profiles()[SHIP], seed=SEED)
   defer store.close()
   let assets = warren_assets()
   let dev = @env.get_env_var("WARREN_MODE") == Some("DEV")
@@ -54,5 +54,33 @@ async fn main {
   defer app.close()
   let listener = @moonback.listen(host~, port=port.to_uint16(), reuse_addr=true)
   println("Server is running on http://\{host}:\{port} (db: \{db})")
-  app.serve(listener)
+  @async.with_task_group(group => {
+    group.spawn_bg(() => ship_clock(store))
+    app.serve(listener)
+  })
+}
+
+///|
+/// The ship this server flies: an index into `@ships.profiles()`. A
+/// database must always be opened with the same ship and seed.
+const SHIP : Int32 = 1
+
+///|
+const SEED : Int64 = 1L
+
+///|
+/// Longest the ship clock sleeps, in seconds, so a changed clock or a missed
+/// instant is caught within a minute.
+const MAX_SLEEP : Int64 = 60L
+
+///|
+/// Moves game time on its own: sleeps until the ship next has something to
+/// do, or a minute, then appends the tick and whatever the ship does then.
+async fn ship_clock(store : @store.Store) -> Unit {
+  while true {
+    let now = @api.unix_now()
+    store.advance(now~)
+    let wait = (store.wake() - now).clamp(min=1L, max=MAX_SLEEP)
+    @async.sleep((wait * 1000L).to_int())
+  }
 }

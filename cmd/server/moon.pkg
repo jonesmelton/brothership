@@ -1,5 +1,6 @@
 import {
   "local/brothership/api",
+  "local/brothership/ships",
   "local/brothership/store",
   "moonbitlang/async",
   "moonbitlang/async/fs",

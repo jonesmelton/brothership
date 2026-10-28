@@ -1,22 +1,89 @@
 ///|
+/// What a crew member asks to do. Clients send these and nothing else, so a
+/// client cannot express a server event such as a tick.
+pub(all) enum Intent {
+  /// Takes a post, joining the crew if not aboard.
+  Posted(post~ : Post)
+  Left
+  Crafted(craft~ : Craft)
+  /// Stands a watch on the current post for `ticks`.
+  Watched(ticks~ : Int64)
+  /// Takes a post when a phase begins, or cancels the standing order.
+  Ordered(order~ : Order?)
+  /// What the engineers build next.
+  Refitting(refit~ : Refit?)
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// One row of the log: a crew member's intent, or something only the server
+/// writes.
 pub(all) enum Event {
-  Elapsed(ticks~ : Int64)
+  Crew(crew~ : String, intent~ : Intent)
+  /// The wall clock reached `at`, in Unix seconds. One tick is one second.
+  Tick(at~ : Int64)
+  /// The ship leaves port on `plan`, worked out by the server.
+  Departed(plan~ : Plan)
+  /// The ship docks at the end of an arrived crossing.
+  Docked
+  /// The ship asks for hands on a post, or stops asking.
+  Asked(post~ : Post?)
+  /// The ship chooses what its engineers build next.
+  Refitting(refit~ : Refit?)
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
 pub(all) suberror Rejected {
-  NonPositiveTicks(ticks~ : Int64)
-  ClockOverflow(clock~ : Int64, ticks~ : Int64)
+  /// Crew and ship events need the ship underway.
+  NotUnderway(event~ : Event)
+  /// The ship departs only from port.
+  NotInPort(event~ : Event)
+  /// The ship docks only once the crossing has arrived.
+  NotArrived(event~ : Event)
+  Crossing(reason~ : CrossingRejected)
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
+pub(all) enum Leg {
+  /// In port since `since`, in Unix seconds.
+  InPort(since~ : Int64)
+  /// Underway; `spoke` is the moment at which the ship last reconsidered
+  /// its ask, if it has this crossing.
+  Underway(crossing~ : Crossing, spoke~ : Moment?)
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// One ship's voyage. Legs flown so far are `ship.crossings`.
 pub(all) struct State {
-  clock : Int64
+  /// Unix seconds of the last tick; 0 before the first.
+  at : Int64
+  /// The ship as it last left port.
+  ship : Ship
+  leg : Leg
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
-pub fn State::initial() -> State {
-  { clock: 0, }
+/// A voyage that has not begun: `ship` in port, before any tick.
+pub fn State::initial(ship : Ship) -> State {
+  { at: 0, ship, leg: InPort(since=0), }
+}
+
+///|
+/// The crossing under way, if any.
+pub fn State::crossing(self : State) -> Crossing? {
+  match self.leg {
+    Underway(crossing~, ..) => Some(crossing)
+    InPort(_) => None
+  }
+}
+
+///|
+/// Advance `c` by `ticks`, which may exceed what one `Elapsed` takes.
+fn elapse(c : Crossing, ticks : Int64) -> Crossing {
+  for c = c, left = ticks {
+    guard left > 0L else { break c }
+    let step = left.min(@math.MAX_TICKS)
+    continue c.apply(Elapsed(ticks=step)) catch { _ => panic() }, left - step
+  }
 }
 
 ///|
@@ -24,20 +91,63 @@ pub fn State::initial() -> State {
 /// the client calls it to predict. Both must agree, so it stays pure and
 /// target-independent.
 pub fn State::apply(self : State, event : Event) -> State raise Rejected {
-  match event {
-    Elapsed(ticks~) => {
-      guard ticks > 0 else { raise NonPositiveTicks(ticks~) }
-      guard @math.try_advance(self.clock, ticks) is Some(clock) else {
-        raise ClockOverflow(clock=self.clock, ticks~)
-      }
-      { clock, }
+  // Applies `e` to the crossing under way. `speaks` records this instant as
+  // the moment the ship last reconsidered.
+  let forward = (e : CrossingEvent, speaks : Bool) => {
+    guard self.leg is Underway(crossing~, spoke~) else {
+      raise NotUnderway(event~)
     }
+    let crossing = crossing.apply(e) catch { reason => raise Crossing(reason~) }
+    let spoke = if speaks { Some(crossing.moment()) } else { spoke }
+    { ..self, leg: Underway(crossing~, spoke~), }
+  }
+  match event {
+    Tick(at~) if at <= self.at => self
+    Tick(at~) =>
+      match self.leg {
+        // The voyage begins at its first tick.
+        InPort(_) if self.at == 0L => { ..self, at, leg: InPort(since=at), }
+        InPort(_) => { ..self, at, }
+        Underway(crossing~, spoke~) =>
+          {
+            ..self,
+            at,
+            leg: Underway(crossing=elapse(crossing, at - self.at), spoke~),
+          }
+      }
+    Departed(plan~) => {
+      guard self.leg is InPort(_) else { raise NotInPort(event~) }
+      {
+        ..self,
+        leg: Underway(crossing=Crossing::new(plan, self.ship), spoke=None),
+      }
+    }
+    Docked => {
+      guard self.leg is Underway(crossing~, ..) && crossing.dock() is Some(ship) else {
+        raise NotArrived(event~)
+      }
+      { ..self, ship, leg: InPort(since=self.at), }
+    }
+    Asked(post~) => forward(Asked(post~), true)
+    Refitting(refit~) => forward(Refitting(refit~), false)
+    Crew(crew~, intent~) =>
+      forward(
+        match intent {
+          Posted(post~) => Posted(crew~, post~)
+          Left => Left(crew~)
+          Crafted(craft~) => Crafted(crew~, craft~)
+          Watched(ticks~) => Watched(crew~, ticks~)
+          Ordered(order~) => Ordered(crew~, order~)
+          Refitting(refit~) => Refitting(refit~)
+        },
+        false,
+      )
   }
 }
 
 ///|
-pub fn replay(events : Iter[Event]) -> State raise Rejected {
-  let mut state = State::initial()
+pub fn replay(ship : Ship, events : Iter[Event]) -> State raise Rejected {
+  let mut state = State::initial(ship)
   for event in events {
     state = state.apply(event)
   }

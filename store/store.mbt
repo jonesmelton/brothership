@@ -2,16 +2,27 @@
 /// The authoritative event log. Every accepted event is a row in `event`;
 /// the current snapshot is the log replayed through `@core.State::apply` and
 /// is kept in memory after `open`.
+///
+/// Only the store moves game time: it appends a tick at the wall clock it is
+/// given before anything else it writes.
 pub struct Store {
   priv conn : @sqlite3.Connection
   priv write : @async.Mutex
+  priv ship : @ships.Profile
   priv mut snapshot : @core.Snapshot
 }
 
 ///|
 /// Open (creating if needed) the database at `path`, migrate it, and replay
 /// the log. Use `":memory:"` for a throwaway store.
-pub async fn Store::open(path : String) -> Store {
+///
+/// The log starts from `ship`'s profile with `seed`, so a database must
+/// always be opened with the same ones.
+pub async fn Store::open(
+  path : String,
+  ship~ : @ships.Profile,
+  seed~ : Int64,
+) -> Store {
   let conn = @sqlite3.Connection::open_async(path)
   exec(conn, "pragma journal_mode = wal")
   // Litestream checkpoints the WAL on its own schedule and briefly holds a
@@ -20,11 +31,15 @@ pub async fn Store::open(path : String) -> Store {
   exec(conn, "pragma synchronous = normal")
   exec(conn, "pragma foreign_keys = on")
   migrate(conn)
-  { conn, write: @async.Mutex(), snapshot: load(conn), }
+  let initial = @core.Snapshot::initial(ship.ship(seed~))
+  { conn, write: @async.Mutex(), ship, snapshot: load(conn, initial), }
 }
 
 ///|
-async fn load(conn : @sqlite3.Connection) -> @core.Snapshot {
+async fn load(
+  conn : @sqlite3.Connection,
+  initial : @core.Snapshot,
+) -> @core.Snapshot {
   let stmt = conn.prepare_async(
     (
       #|select seq, body
@@ -33,7 +48,7 @@ async fn load(conn : @sqlite3.Connection) -> @core.Snapshot {
     ),
   )
   defer stmt.finalize()
-  let mut snapshot = @core.Snapshot::initial()
+  let mut snapshot = initial
   while stmt.step_async() is Row {
     let seq : Int64 = stmt.column(index=0)
     let body : String = stmt.column(index=1)
@@ -49,19 +64,16 @@ pub fn Store::snapshot(self : Store) -> @core.Snapshot {
 }
 
 ///|
-/// Validate the proposed event against the current state and, if it applies,
-/// append it. Refusals are part of the protocol and come back as a receipt;
-/// only storage failures raise. Proposals are serialized so validation always
-/// sees the state the event will follow.
-pub async fn Store::propose(
+/// Append `events`, which must apply in order to the current state, in one
+/// transaction: all of them or none.
+async fn Store::commit(
   self : Store,
-  proposal : @core.Proposal,
-) -> @core.Receipt {
-  self.write.acquire()
-  defer self.write.release()
-  let state = self.snapshot.state.apply(proposal.event) catch {
-    reason => return Refused(id=proposal.id, reason~, snapshot=self.snapshot)
-  }
+  events : Array[@core.Event],
+  state : @core.State,
+) -> Unit {
+  guard !events.is_empty() else { return }
+  exec(self.conn, "begin immediate")
+  errdefer exec(self.conn, "rollback")
   let stmt = self.conn.prepare_async(
     (
       #|insert into event (body)
@@ -70,15 +82,61 @@ pub async fn Store::propose(
     ),
   )
   defer stmt.finalize()
-  stmt.bind(index=1, proposal.event.to_json().stringify())
-  guard stmt.step_async() is Row else { fail("insert returned no seq") }
-  let seq : Int64 = stmt.column(index=0)
-  // Drain so the insert completes before the in-memory snapshot moves.
-  while stmt.step_async() is Row {
+  let mut seq = self.snapshot.seq
+  for event in events {
+    stmt.reset()
+    stmt.bind(index=1, event.to_json().stringify())
+    guard stmt.step_async() is Row else { fail("insert returned no seq") }
+    seq = stmt.column(index=0)
+    // Drain so the insert completes before the next.
+    while stmt.step_async() is Row {
 
+    }
   }
+  exec(self.conn, "commit")
   self.snapshot = { seq, state, }
+}
+
+///|
+/// Validate the proposal against the state at `now`, in Unix seconds, and,
+/// if it applies, append it. The ship's own events at `now` go first and are
+/// appended either way; its response to the proposal follows it. Refusals
+/// are part of the protocol and come back as a receipt; only storage
+/// failures raise. Proposals are serialized so validation always sees the
+/// state the event will follow.
+pub async fn Store::propose(
+  self : Store,
+  proposal : @core.Proposal,
+  now~ : Int64,
+) -> @core.Receipt {
+  self.write.acquire()
+  defer self.write.release()
+  let (due, state) = self.ship.due(self.snapshot.state, now)
+  let accepted = state.apply(proposal.event()) catch {
+    reason => {
+      self.commit(due, state)
+      return Refused(id=proposal.id, reason~, snapshot=self.snapshot)
+    }
+  }
+  let (response, state) = self.ship.respond(accepted)
+  self.commit([..due, proposal.event(), ..response], state)
   Accepted(id=proposal.id, snapshot=self.snapshot)
+}
+
+///|
+/// Append what the ship does at `now`, in Unix seconds: the tick, docking,
+/// departure and its turn.
+pub async fn Store::advance(self : Store, now~ : Int64) -> Unit {
+  self.write.acquire()
+  defer self.write.release()
+  let (due, state) = self.ship.due(self.snapshot.state, now)
+  self.commit(due, state)
+}
+
+///|
+/// The next instant, in Unix seconds, at which the ship has something to do.
+pub fn Store::wake(self : Store) -> Int64 {
+  self.ship.wake(self.snapshot.state)
 }
 
 ///|

@@ -55,7 +55,7 @@ pub let rank_thresholds : Array[Int64]
 
 pub let refits : Array[Refit]
 
-pub fn replay(Iter[Event]) -> State raise Rejected
+pub fn replay(Ship, Iter[Event]) -> State raise Rejected
 
 // Errors
 pub(all) suberror CrossingRejected {
@@ -68,8 +68,10 @@ pub(all) suberror CrossingRejected {
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) suberror Rejected {
-  NonPositiveTicks(ticks~ : Int64)
-  ClockOverflow(clock~ : Int64, ticks~ : Int64)
+  NotUnderway(event~ : Event)
+  NotInPort(event~ : Event)
+  NotArrived(event~ : Event)
+  Crossing(reason~ : CrossingRejected)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Types and methods
@@ -128,7 +130,12 @@ pub(all) struct Demand {
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum Event {
-  Elapsed(ticks~ : Int64)
+  Crew(crew~ : String, intent~ : Intent)
+  Tick(at~ : Int64)
+  Departed(plan~ : Plan)
+  Docked
+  Asked(post~ : Post?)
+  Refitting(refit~ : Refit?)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Fit {
@@ -163,6 +170,20 @@ pub(all) enum Hazard {
 } derive(Compare, Eq, Hash, ToJson, @debug.Debug, @json.FromJson)
 pub fn Hazard::post(Self) -> Post
 
+pub(all) enum Intent {
+  Posted(post~ : Post)
+  Left
+  Crafted(craft~ : Craft)
+  Watched(ticks~ : Int64)
+  Ordered(order~ : Order?)
+  Refitting(refit~ : Refit?)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum Leg {
+  InPort(since~ : Int64)
+  Underway(crossing~ : Crossing, spoke~ : Moment?)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct Moment {
   phase : Phase
   demands : Array[Status]
@@ -178,7 +199,7 @@ pub fn Optimistic::confirmed(Self) -> Snapshot
 pub fn Optimistic::in_flight(Self) -> Proposal?
 pub fn Optimistic::new(Snapshot) -> Self
 pub fn Optimistic::predicted(Self) -> State
-pub fn Optimistic::propose(Self, Event) -> (Self, Proposal) raise Rejected
+pub fn Optimistic::propose(Self, String, Intent) -> (Self, Proposal) raise Rejected
 pub fn Optimistic::resync(Self, Snapshot) -> Self
 pub fn Optimistic::settle(Self, Receipt) -> Self
 
@@ -211,8 +232,10 @@ pub(all) enum Post {
 
 pub(all) struct Proposal {
   id : Int64
-  event : Event
+  crew : String
+  intent : Intent
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Proposal::event(Self) -> Event
 
 pub(all) enum Receipt {
   Accepted(id~ : Int64, snapshot~ : Snapshot)
@@ -251,13 +274,16 @@ pub(all) struct Snapshot {
   seq : Int64
   state : State
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-pub fn Snapshot::initial() -> Self
+pub fn Snapshot::initial(Ship) -> Self
 
 pub(all) struct State {
-  clock : Int64
+  at : Int64
+  ship : Ship
+  leg : Leg
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn State::apply(Self, Event) -> Self raise Rejected
-pub fn State::initial() -> Self
+pub fn State::crossing(Self) -> Crossing?
+pub fn State::initial(Ship) -> Self
 
 pub(all) enum Status {
   Waiting

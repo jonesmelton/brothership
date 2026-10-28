@@ -4,7 +4,7 @@ fn serve(
   server : @core.Snapshot,
   proposal : @core.Proposal,
 ) -> (@core.Snapshot, @core.Receipt) {
-  try server.state.apply(proposal.event) catch {
+  try server.state.apply(proposal.event()) catch {
     reason => (server, Refused(id=proposal.id, reason~, snapshot=server))
   } noraise {
     state => {
@@ -15,13 +15,44 @@ fn serve(
 }
 
 ///|
-/// Another writer appends directly, bypassing this client.
-fn interfere(server : @core.Snapshot, ticks : Int64) -> @core.Snapshot {
-  try server.state.apply(Elapsed(ticks~)) catch {
+/// The server's clock appends a tick, bypassing this client.
+fn interfere(server : @core.Snapshot, arg : Int64) -> @core.Snapshot {
+  let at = server.state.at + fold64(arg, 7200L) + 1L
+  try server.state.apply(Tick(at~)) catch {
     _ => server
   } noraise {
     state => { seq: server.seq + 1, state, }
   }
+}
+
+///|
+/// An intent for this client's crew member, chosen by `arg`.
+fn intent_of(arg : Int64) -> @core.Intent {
+  match fold64(arg, 6L) {
+    0L => Posted(post=Drive)
+    1L => Posted(post=Hull)
+    2L => Posted(post=Craft)
+    3L => Watched(ticks=@core.HOUR)
+    4L => Crafted(craft=Engineer)
+    _ => Left
+  }
+}
+
+///|
+fn propose_all(
+  client : @core.Optimistic,
+  args : Array[Int64],
+) -> @core.Optimistic {
+  args.fold(init=client, (client, arg) => {
+    (client.propose("me", intent_of(arg)) catch {
+      _ => (client, { id: 0, crew: "me", intent: Left, })
+    }).0
+  })
+}
+
+///|
+fn departed() -> @core.Snapshot {
+  { seq: 2, state: underway(plan20(), ship()), }
 }
 
 ///|
@@ -41,22 +72,10 @@ fn drain(
 }
 
 ///|
-fn propose_all(
-  client : @core.Optimistic,
-  ticks : Array[Int64],
-) -> @core.Optimistic {
-  ticks.fold(init=client, (client, ticks) => {
-    (client.propose(Elapsed(ticks~)) catch {
-      _ => (client, { id: 0, event: Elapsed(ticks~), })
-    }).0
-  })
-}
-
-///|
 test "uncontended: the prediction is what the server settles to" {
-  @qc.quick_check_fn(ticks => {
-    let server = @core.Snapshot::initial()
-    let client = propose_all(@core.Optimistic::new(server), ticks)
+  @qc.quick_check_fn(args => {
+    let server = departed()
+    let client = propose_all(@core.Optimistic::new(server), args)
     let predicted = client.predicted()
     let (client, server) = drain(client, server)
     predicted == server.state &&
@@ -67,16 +86,16 @@ test "uncontended: the prediction is what the server settles to" {
 
 ///|
 test "contended: the client converges to the server after draining" {
-  // Each element is (whether another writer acts first, ticks).
+  // Each element is (whether the clock ticks first, argument).
   @qc.quick_check_fn((steps : Array[(Bool, Int64)]) => {
-    let mut server = @core.Snapshot::initial()
+    let mut server = departed()
     let mut client = @core.Optimistic::new(server)
     for step in steps {
-      let (other_writer, ticks) = step
-      if other_writer {
-        server = interfere(server, ticks)
+      let (ticks, arg) = step
+      if ticks {
+        server = interfere(server, arg)
       } else {
-        client = propose_all(client, [ticks])
+        client = propose_all(client, [arg])
         if client.in_flight() is Some(proposal) {
           let (next, receipt) = serve(server, proposal)
           server = next
@@ -92,9 +111,10 @@ test "contended: the client converges to the server after draining" {
 
 ///|
 test "resync is ignored while a proposal is in flight" {
-  let (client, _) = @core.Optimistic::new(@core.Snapshot::initial()).propose(
-    Elapsed(ticks=1),
+  let (client, _) = @core.Optimistic::new(departed()).propose(
+    "me",
+    Posted(post=Hull),
   )
-  let stale = client.resync({ seq: 7, state: { clock: 7, }, })
-  debug_inspect(stale.confirmed(), content="{ seq: 0, state: { clock: 0 } }")
+  let stale = client.resync(interfere(departed(), 60))
+  inspect(stale.confirmed() == departed(), content="true")
 }

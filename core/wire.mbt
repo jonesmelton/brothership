@@ -7,17 +7,26 @@ pub(all) struct Snapshot {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
-pub fn Snapshot::initial() -> Snapshot {
-  { seq: 0, state: State::initial(), }
+pub fn Snapshot::initial(ship : Ship) -> Snapshot {
+  { seq: 0, state: State::initial(ship), }
 }
 
 ///|
-/// A client's request to append `event`. `id` is assigned by the client and
-/// only identifies the proposal within that client's session.
+/// A client's request for `crew` to do `intent`. `id` is assigned by the
+/// client and only identifies the proposal within that client's session.
+/// Nothing checks `crew`: until there are accounts, any client can act as
+/// any crew member.
 pub(all) struct Proposal {
   id : Int64
-  event : Event
+  crew : String
+  intent : Intent
 } derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// The event the proposal asks the server to append.
+pub fn Proposal::event(self : Proposal) -> Event {
+  Crew(crew=self.crew, intent=self.intent)
+}
 
 ///|
 /// The server's answer to one `Proposal`. Both cases carry the server's

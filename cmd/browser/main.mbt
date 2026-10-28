@@ -10,7 +10,7 @@ enum Model {
 ///|
 enum Msg {
   Loaded(Result[@core.Snapshot, Error])
-  Propose(@core.Event)
+  Propose(@core.Intent)
   Settled(Result[@core.Receipt, Error])
 }
 
@@ -52,8 +52,8 @@ fn update(
     (_, Loaded(Ok(snapshot))) =>
       (Ready(@core.Optimistic::new(snapshot)), @rabbita.none)
     (_, Loaded(Err(err))) => (Offline(reason=err.to_string()), @rabbita.none)
-    (Ready(sync), Propose(event)) =>
-      try sync.propose(event) catch {
+    (Ready(sync), Propose(intent)) =>
+      try sync.propose("player", intent) catch {
         // Refused locally: the server would refuse it too.
         _ => (model, @rabbita.none)
       } noraise {
@@ -79,11 +79,11 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
       Offline(reason~) => [@html.p("Offline: \{reason}")]
       Ready(sync) =>
         [
-          @html.output("\{sync.predicted().clock}"),
           @html.button(
-            on_click=emit(Propose(Elapsed(ticks=1))),
-            "Elapse one tick",
+            on_click=emit(Propose(Posted(post=Hull))),
+            "Take the hull",
           ),
+          @html.pre(sync.predicted().to_json().stringify(indent=2)),
         ]
     },
   )

@@ -34,20 +34,21 @@ pub fn Optimistic::in_flight(self : Optimistic) -> Proposal? {
 /// refuse them.
 pub fn Optimistic::predicted(self : Optimistic) -> State {
   self.pending.fold(init=self.confirmed.state, (state, proposal) => {
-    state.apply(proposal.event) catch {
+    state.apply(proposal.event()) catch {
       _ => state
     }
   })
 }
 
 ///|
-/// Queue `event` if it applies to the predicted state.
+/// Queue `crew` doing `intent` if it applies to the predicted state.
 pub fn Optimistic::propose(
   self : Optimistic,
-  event : Event,
+  crew : String,
+  intent : Intent,
 ) -> (Optimistic, Proposal) raise Rejected {
-  ignore(self.predicted().apply(event))
-  let proposal = { id: self.next_id, event, }
+  let proposal = { id: self.next_id, crew, intent, }
+  ignore(self.predicted().apply(proposal.event()))
   let next = {
     confirmed: self.confirmed,
     pending: [..self.pending, proposal],

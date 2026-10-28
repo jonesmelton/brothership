@@ -7,7 +7,9 @@ import {
 }
 
 // Values
-pub fn routes(@store.Store) -> @moonback.Module
+pub fn routes(@store.Store, clock? : () -> Int64) -> @moonback.Module
+
+pub fn unix_now() -> Int64
 
 // Errors
 

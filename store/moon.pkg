@@ -1,11 +1,14 @@
 import {
   "local/brothership/core",
+  "local/brothership/ships",
   "moonbit-community/sqlite3",
   "moonbitlang/async",
   "moonbitlang/core/json",
 }
 
 import {
+  "local/brothership/core",
+  "local/brothership/ships",
   "moonbitlang/async/fs",
 } for "test"
 
