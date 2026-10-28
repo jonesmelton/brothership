@@ -94,6 +94,9 @@ expect it to take longer.
 
 ## api
 
+- `GET /healthz` returns `{"ok": true}`. It is the path `fly.toml` checks.
+  The listener binds only after the store opens, so a response proves boot got
+  that far; keep it independent of the game routes.
 - `GET /api/ships` returns `Array[@core.Listing]`, in order of commission.
 - `GET /api/ships/:id/snapshot` returns `@core.Snapshot`.
 - `POST /api/ships/:id/proposals` takes `@core.Proposal` and returns

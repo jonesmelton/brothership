@@ -2,6 +2,7 @@
 /// JSON API over the store. Wire types are the ones in `@core`, so the
 /// browser decodes exactly what the server encodes.
 ///
+/// - `GET /healthz` -> `{"ok": true}`, the path `fly.toml` checks
 /// - `GET /api/ships` -> `Array[@core.Listing]`, in order of commission
 /// - `GET /api/ships/:id/snapshot` -> `@core.Snapshot`
 /// - `POST /api/ships/:id/proposals` with `@core.Proposal` -> `@core.Receipt`
@@ -13,6 +14,11 @@ pub fn routes(
   clock~ : () -> Int64 = unix_now,
 ) -> @moonback.Module {
   ctx => {
+    // The listener binds only after the store opens and commissions its
+    // ships, so answering at all proves boot got that far. Keep this free of
+    // the game API's routes: Fly takes the whole machine out of rotation when
+    // its check fails.
+    ctx.get("/healthz", (_req, res) => res.send_json({ "ok": true }))
     ctx.get("/api/ships", (_req, res) => {
       let listings : Array[@core.Listing] = store
         .ships()

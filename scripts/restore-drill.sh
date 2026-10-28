@@ -6,6 +6,9 @@
 #   scripts/restore-drill.sh full    print the volume-destroying drill (this one
 #                                    changes live state, so you run it yourself)
 #
+# The live `seq` comes from the first ship `GET /api/ships` lists; set SHIP to
+# check another one.
+#
 # Run `local` after any schema migration; run `full` before submission and after
 # infrastructure changes.
 set -eu
@@ -14,9 +17,28 @@ APP=${APP:-brothership}
 BUCKET=${BUCKET:-brothership-data}
 ENDPOINT=${ENDPOINT:-fly.storage.tigris.dev}
 LITESTREAM=${LITESTREAM:-litestream}
+SHIP=${SHIP:-}
 DB=/data/brothership.sqlite
 REPLICA="s3://${BUCKET}/brothership.sqlite?endpoint=${ENDPOINT}&region=auto"
-SNAPSHOT="https://${APP}.fly.dev/api/snapshot"
+SNAPSHOT=
+
+# /api/ships lists ids in commission order; the first is the drill's ship.
+resolve_ship() {
+  if [ -z "$SHIP" ]; then
+    SHIP=$(curl -fsS "https://${APP}.fly.dev/api/ships" \
+      | tr '[],' '\n' \
+      | sed -n 's/^{"id":"\([^"]*\)".*/\1/p' \
+      | head -n 1)
+    if [ -z "$SHIP" ]; then
+      echo "restore-drill: no ship id in https://${APP}.fly.dev/api/ships." >&2
+      echo "Set SHIP to one of the ids it lists." >&2
+      exit 1
+    fi
+  fi
+  SNAPSHOT="https://${APP}.fly.dev/api/ships/${SHIP}/snapshot"
+  echo "== ship =="
+  echo "  $SHIP"
+}
 
 wait() {
   printf '\n  press enter when done (ctrl-c to stop) '
@@ -34,6 +56,7 @@ paste() {
 }
 
 local_drill() {
+  resolve_ship
   # There is no Homebrew formula; the release tarball is the install path.
   if ! command -v "$LITESTREAM" > /dev/null 2>&1; then
     echo "restore-drill: $LITESTREAM is not on PATH. Download the 0.5 release" >&2
@@ -107,6 +130,7 @@ local_drill() {
 }
 
 full_drill() {
+  resolve_ship
   echo "This destroys the data volume to prove the boot-time restore. Allow a"
   echo "minute or two of downtime, and run it once the local drill passes."
   wait

@@ -69,6 +69,18 @@ async test "api round trip over http" {
 }
 
 ///|
+/// The path `fly.toml` checks. It must not depend on the game API's shape.
+async test "health check answers 200" {
+  let store = fleet_store()
+  defer store.close()
+  with_server(store, 1_800_000_000, base => {
+    let (res, body) = @http.get("\{base}/healthz")
+    inspect(res.code, content="200")
+    json_inspect(body.json(), content={ "ok": true })
+  })
+}
+
+///|
 async test "a proposal naming a server event is refused with 400" {
   let store = fleet_store()
   defer store.close()

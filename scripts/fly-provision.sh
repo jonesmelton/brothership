@@ -15,7 +15,7 @@ APP=${APP:-brothership}
 REGION=${REGION:-ord}
 VOLUME=${VOLUME:-brothership_data}
 BUCKET=${BUCKET:-brothership-data}
-URL="https://${APP}.fly.dev/api/snapshot"
+URL="https://${APP}.fly.dev/healthz"
 
 wait() {
   printf '\n  press enter when done (ctrl-c to stop) '
@@ -107,9 +107,9 @@ paste "Build on Fly's remote builder and deploy" \
   "The first build is slow: it downloads the MoonBit toolchain and every" \
   "mooncakes dependency. Later builds reuse that layer."
 run "Health check (allow the 60 s grace period after deploy)" \
-  "curl -fsS -o /dev/null -w 'snapshot: %{http_code}\\n' ${URL}" \
-  "Expect 200. The check reads the in-memory snapshot, so it also proves the" \
-  "store opened on the mounted volume."
+  "curl -fsS -o /dev/null -w 'healthz: %{http_code}\\n' ${URL}" \
+  "Expect 200. The server binds only after the store opens and commissions" \
+  "its ships on the mounted volume, so a response proves boot got that far."
 
 # --- 7. restore drill ----------------------------------------------------------
 section "7. Restore drill"
