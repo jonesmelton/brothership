@@ -242,7 +242,10 @@ async fn Mind::muster(
         "mustered by its temperament",
       )
   }
-  let promoted = store.muster(self.ship, picks, now=clock())
+  guard store.muster(self.ship, picks, now=clock()) is Some(promoted) else {
+    self.report("docked by script before the muster landed")
+    return
+  }
   let line = if promoted.is_empty() {
     "You promoted nobody at arrival."
   } else {

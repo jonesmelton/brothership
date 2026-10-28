@@ -50,9 +50,9 @@ async test "muster appends the mind's promotions that are allowed, then docks" {
   }
   inspect(snap(store, "tigress").state.leg is Underway(..), content="true")
   let promoted = store.muster("tigress", ["bo", "ghost"], now=now + 5)
-  debug_inspect(promoted, content="[(\"bo\", 1)]")
+  debug_inspect(promoted, content="Some([(\"bo\", 1)])")
   let s = snap(store, "tigress").state
   inspect(s.leg is InPort(..), content="true")
   debug_inspect(s.ship.records.get("bo").unwrap().rank, content="Some(1)")
-  debug_inspect(store.muster("tigress", ["ann"], now=now + 6), content="[]")
+  debug_inspect(store.muster("tigress", ["ann"], now=now + 6), content="None")
 }

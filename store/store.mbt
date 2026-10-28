@@ -312,17 +312,17 @@ pub async fn Store::decide(
 ///|
 /// Append the promotions `ship`'s mind chose from `picks`, in order, that
 /// `@ships.allowed` lets stand, then dock, after the ship's own events at
-/// `now`. Nothing if the ship is not arrived and waiting to dock. Returns
-/// the promotions appended, as (crew, new rank).
+/// `now`. Returns the promotions appended, as (crew, new rank), or `None`
+/// if the ship is not arrived and waiting to dock.
 pub async fn Store::muster(
   self : Store,
   ship : String,
   picks : Array[String],
   now~ : Int64,
-) -> Array[(String, Int64)] {
+) -> Array[(String, Int64)]? {
   self.write.acquire()
   defer self.write.release()
-  guard self.voyages.get(ship) is Some(v) else { return [] }
+  guard self.voyages.get(ship) is Some(v) else { return None }
   let (due, state) = v.profile.due(
     v.snapshot.state,
     now,
@@ -331,7 +331,7 @@ pub async fn Store::muster(
   )
   guard state.crossing() is Some(c) && c.arrived_at is Some(_) else {
     self.commit(ship, v, due, state)
-    return []
+    return None
   }
   let promoted = @ships.allowed(c, picks, officer=_ => true)
   let events = [..due]
@@ -349,7 +349,7 @@ pub async fn Store::muster(
   }
   events.push(Docked)
   self.commit(ship, v, events, s)
-  promoted
+  Some(promoted)
 }
 
 ///|
