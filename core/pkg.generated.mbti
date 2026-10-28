@@ -342,6 +342,7 @@ pub fn State::apply(Self, Event) -> Self raise Rejected
 pub fn State::commission(Event) -> Self raise Rejected
 pub fn State::crossing(Self) -> Crossing?
 pub fn State::initial(Ship, profile~ : String) -> Self
+pub fn State::rank(Self, String) -> Int64
 
 pub(all) enum Status {
   Waiting

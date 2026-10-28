@@ -39,10 +39,15 @@
   engineers, works for artists. Changeable at any time.
 - **regard**: the ship's record of what each crew member did, computed in
   core and weighted by the ship's authored values.
-- **rank**: a crew member's public standing aboard, set by regard. Grants no
-  authority yet.
-- **watch**: a promise to hold the current post for a stated time, up to
-  what the crew member's rank allows. Counts a quarter more hand; breaking it
+- **rank**: a crew member's public standing aboard, one of five: ensign,
+  lieutenant junior grade, lieutenant, lieutenant commander or commander.
+  Held per ship in `Record.rank`, not derived from regard at each lookup.
+  `rank_floor` gives the rank regard makes someone eligible for; a
+  `Promoted` event moves the held rank one step at arrival, before docking,
+  under the caps in `rank_caps`. Grants nothing yet, not even a longer watch.
+- **watch**: a promise to hold the current post for a stated time, at least
+  an hour, with no upper limit in the rules. The interface offers up to 12
+  hours, and rank does not limit it. Counts a quarter more hand; breaking it
   costs regard.
 - **standing order**: a post to take when a later phase begins. Fires at the
   phase boundary, so no one has to be present.

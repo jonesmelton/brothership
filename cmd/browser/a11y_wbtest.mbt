@@ -44,3 +44,33 @@ test "the page title names the ship, or the game" {
   assert_eq(page_title({ ..aboard(), ship: None, }), "brothership")
   assert_eq(page_title({ ..aboard(), ships: [], }), "brothership")
 }
+
+///|
+test "a compact rank reads as the full rank, never the abbreviation" {
+  assert_eq(reading(rank_compact_parts(3L)), "Lieutenant commander")
+  assert_eq(reading(rank_compact_parts(0L)), "Ensign")
+  assert_eq(reading(rank_compact_parts(4L)), "Commander")
+}
+
+///|
+test "a compact rank hides its abbreviation and insignia" {
+  let hidden = rank_compact_parts(3L).filter(p => p.hidden).map(p => p.text)
+  assert_eq(hidden, ["LCDR", "\u{25cf}\u{25cf}\u{25cf}"])
+}
+
+///|
+test "the rank line reads as the full title and hides the insignia" {
+  assert_eq(reading(rank_line_parts(1L)), "Lieutenant junior grade")
+  assert_eq(reading(rank_line_parts(4L)), "Commander")
+  let hidden = rank_line_parts(4L).filter(p => p.hidden).map(p => p.text)
+  assert_eq(hidden, ["\u{2605}"])
+}
+
+///|
+test "an officer never aboard holds the rank of an ensign" {
+  let s = @core.State::initial(
+    @ships.fleet()[0].profile.ship(seed=1L),
+    profile="tigress",
+  )
+  assert_eq(s.rank("stranger"), 0L)
+}

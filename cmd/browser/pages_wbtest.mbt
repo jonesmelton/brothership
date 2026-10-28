@@ -91,22 +91,22 @@ test "an effect is kept and spoken, unless the player wants silence" {
 }
 
 ///|
-test "a stood watch offers the same length again, capped by rank" {
+test "a stood watch offers the same length again, capped at the longest offered" {
   let stood = [
     entry(1, Departed),
     entry(2, Took(crew="ann", post=Hull)),
     entry(3, Stood(crew="ann")),
   ]
-  assert_eq(reup(stood, "ann", 4L, 12L), Some(4L))
-  assert_eq(reup(stood, "ann", 12L, 4L), Some(4L))
-  assert_eq(reup(stood, "ann", 0L, 4L), None)
+  assert_eq(reup(stood, "ann", 4L), Some(4L))
+  assert_eq(reup(stood, "ann", 24L), Some(12L))
+  assert_eq(reup(stood, "ann", 0L), None)
 }
 
 ///|
 test "a watch is not offered again unless it was stood" {
   // Someone else's watch.
   assert_eq(
-    reup([entry(1, Departed), entry(3, Stood(crew="bo"))], "ann", 4L, 12L),
+    reup([entry(1, Departed), entry(3, Stood(crew="bo"))], "ann", 4L),
     None,
   )
   // A post change since.
@@ -119,7 +119,6 @@ test "a watch is not offered again unless it was stood" {
       ],
       "ann",
       4L,
-      12L,
     ),
     None,
   )
@@ -132,7 +131,6 @@ test "a watch is not offered again unless it was stood" {
       ],
       "ann",
       4L,
-      12L,
     ),
     None,
   )
@@ -142,13 +140,12 @@ test "a watch is not offered again unless it was stood" {
       [entry(1, Departed), entry(3, Stood(crew="ann")), entry(9, Departed)],
       "ann",
       4L,
-      12L,
     ),
     None,
   )
   // Nothing stood yet: a watch still running, or never started.
-  assert_eq(reup([entry(1, Departed)], "ann", 4L, 12L), None)
-  assert_eq(reup([], "ann", 4L, 12L), None)
+  assert_eq(reup([entry(1, Departed)], "ann", 4L), None)
+  assert_eq(reup([], "ann", 4L), None)
 }
 
 ///|
@@ -169,7 +166,13 @@ test "a bar fills in thousandths, clamped" {
 
 ///|
 test "the ledger is read back, and a bad one is dropped" {
-  let l : @words.Ledger = { at: 9L, regard: 2L, works: 1L, crossings: 3L, }
+  let l : @words.Ledger = {
+    at: 9L,
+    regard: 2L,
+    works: 1L,
+    crossings: 3L,
+    rank: Some(1L),
+  }
   assert_eq(parse_ledger(l.to_json().stringify()), Some(l))
   assert_eq(parse_ledger(""), None)
   assert_eq(parse_ledger("{\"at\":"), None)

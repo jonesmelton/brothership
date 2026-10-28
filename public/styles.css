@@ -302,6 +302,21 @@ body {
   letter-spacing: 0.06em;
   color: var(--quiet);
 }
+/* Rank: the full title as text, the insignia a mark beside it. The glyphs
+   ship only in the CJK subset. */
+.rank {
+  margin-block: 0 1rem;
+  font-weight: 600;
+}
+.insignia {
+  font-family: var(--font-han);
+  font-variant-emoji: text;
+  color: var(--quiet);
+  font-weight: 400;
+}
+.rank-compact {
+  white-space: nowrap;
+}
 .effect {
   font-weight: 500;
 }

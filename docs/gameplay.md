@@ -50,7 +50,7 @@ works finished. Then they have up to five choices, each on its own timescale:
 | choice | event | lasts | reaches |
 |---|---|---|---|
 | post | `Posted` | until changed | arrival and hull, for everyone |
-| watch | `Watched` | 1 hour up to the rank's limit | a quarter more from this hand; regard |
+| watch | `Watched` | 1 hour or more; the interface offers up to 12 | a quarter more from this hand; regard |
 | standing order | `Ordered` | until the next phase begins | the post taken at the phase change |
 | craft | `Crafted` | until changed | the ship's refit, or one's own works |
 | refit, for engineers | `Refitting` | until it lands | the ship, for good |
@@ -152,12 +152,12 @@ and no time.
 
 ## watches
 
-A watch is a promise to hold the current post for a stated time, from 1 hour
-up to the longest the player's rank allows: 2, 4, 8 or 12 hours for ranks 0
-to 3. A hand on watch counts as 5 quarters instead of 4, on any post. A
-watch stood to its end earns an hour of regard for each hour stood. A post
-change before the end breaks it and costs two hours of regard for each hour
-already stood, never taking regard below zero.
+A watch is a promise to hold the current post for a stated time, at least
+1 hour. The rules set no upper limit; the interface offers 1, 2, 4, 8 or 12
+hours, and rank does not limit a watch. A hand on watch counts as 5 quarters
+instead of 4, on any post. A watch stood to its end earns an hour of regard
+for each hour stood. A post change before the end breaks it and costs two
+hours of regard for each hour already stood, never taking regard below zero.
 
 What the watch trades away is flexibility. A long watch on the drive that
 runs past turnover keeps a hand on a post the coast does not need, unless a
@@ -186,15 +186,25 @@ The ship is the language model. It:
   crew choose among them.
 - **remembers** who answered. Each crew member's **regard** is computed in
   core from what they did, weighted by values authored per ship from its
-  faces. Regard sets **rank**, which is public and spoken. For now rank grants
-  no authority. Add authority, such as setting the drive within the ship's
-  tolerance, when a good candidate turns up.
+  faces. Regard decides whom the ship may promote. Rank is public and spoken,
+  and is held per ship in `Record.rank`, one of five: ensign, lieutenant
+  junior grade, lieutenant, lieutenant commander or commander. `rank_floor`
+  gives the highest rank a regard makes someone eligible for, at 0, 40, 120,
+  280 and 500 hours of regard. A crew member new to a ship starts as an
+  ensign. Rank moves only by a `Promoted` event, one step, when a crossing
+  has arrived and before it docks. `@ships.promotions` chooses by total
+  regard, the record's plus the crossing's, under the caps `rank_caps` sets:
+  commander 1, lieutenant commander 2, lieutenant 3, lieutenant junior grade
+  4 and ensign uncapped, counted among the officers aboard. The caps are
+  fixed for now, whatever the officer count. Nobody is demoted, so a ship
+  that loses junior officers can stay topheavy. Rank grants nothing yet: no
+  authority, and no longer any limit on a watch. Add authority, such as
+  setting the drive within the ship's tolerance, when a good candidate turns
+  up.
   Regard accrues for each quarter-hand-tick on a useful post: the drive
   while it fires, the hull while it is short of full or a breach is open,
   and any craft. It is weighted by the ship's values, doubled on the post
-  the ship asks for, and doubled again on a post an open demand needs. Rank
-  begins at 40, 120 and 280 hours of regard, is fixed when a crew member
-  joins a crossing, and sets their longest watch.
+  the ship asks for, and doubled again on a post an open demand needs.
 - **speaks**: arrivals, departures, promotions, and notice of who stood a
   watch.
 
@@ -231,8 +241,8 @@ demands, most on the Scorpion and fewest on the Tigress.
 
 Arrival docks the crossing into the ship that leaves (`Crossing::dock`):
 
-- each crew member's regard and finished works go to their record, and
-  part-finished work carries over;
+- each crew member's regard, finished works and held rank go to their
+  record, and part-finished work carries over;
 - every 3 works delivered across the crew bring a recruit, up to 6.
   Recruits work ship posts only and make no works, so recruits do not breed
   recruits;
@@ -241,8 +251,8 @@ Arrival docks the crossing into the ship that leaves (`Crossing::dock`):
 - the ship proposes destinations and the crew choose. How several players
   choose is still open, and none of it is built.
 
-Not built yet: works raising their makers' standing at a world, gathering
-inputs for the next works, and promotions spoken by the ship.
+Not built yet: works raising their makers' standing at a world, and
+gathering inputs for the next works.
 
 Then the ship departs, and the new world gives everything a new meaning.
 

@@ -522,8 +522,6 @@ fn choices(
     Some(_) =>
       [group("watch", "Watch", [@html.p("On watch. Changing post breaks it.")])]
     None => {
-      let longest = @core.max_watch(h.rank) / @core.HOUR
-      let hours : Array[Int64] = [1, 2, 4, 8, 12]
       let again = match reup {
         Some(n) => [choice(emit, reup_label(n), Watched(ticks=n * @core.HOUR))]
         None => []
@@ -533,9 +531,7 @@ fn choices(
           "watch",
           "Watch",
           again +
-          hours
-          .filter(n => n <= longest)
-          .map(n => {
+          watch_hours.map(n => {
             choice(
               emit,
               @words.plural(n, "hour", "hours"),
@@ -617,13 +613,8 @@ fn refit_choices(
 ///|
 /// How many hours of watch to offer again to `officer`, if any.
 fn Model::reup_hours(self : Model, c : @core.Crossing) -> Int64? {
-  guard c.hands.get(self.officer) is Some(h) && h.watch is None else { None }
-  reup(
-    self.told.entries,
-    self.officer,
-    self.last_watch,
-    @core.max_watch(h.rank) / @core.HOUR,
-  )
+  guard c.hands.get(self.officer) is Some({ watch: None, .. }) else { None }
+  reup(self.told.entries, self.officer, self.last_watch)
 }
 
 ///|
@@ -709,7 +700,8 @@ fn you_page(
           None => []
         },
         ..match regard_span(c, you) {
-          Some((done, of)) => [measure("Regard toward the next rank", done, of)]
+          Some((done, of)) =>
+            [measure("Regard toward the next promotion", done, of)]
           None => []
         },
       ]
@@ -721,6 +713,7 @@ fn you_page(
     [@html.p(class="effect", model.effect.join(" "))]
   }
   [
+    rank_line(s.rank(you)),
     away_section(model, You, "Since you were here", since),
     @html.section(
       [

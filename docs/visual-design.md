@@ -61,7 +61,7 @@ Small caps are always `all-small-caps` from the font (`smcp`, `c2sc`), with `fon
 - One column at every width, `max-width: 36rem`, centered, with `1rem` side padding (`1.5rem` from 40rem wide). Desktop gets the phone layout with more margin, not a second layout.
 - Sections are separated by a `--rule` hairline and `2rem` of space, not boxes.
 - The game has three pages, You, Voyage and Ship, each with its own log, reached from the [bar of pages](#bar-of-pages). The masthead is on all of them. A page opens with its `h2`, which takes focus when the page changes; its sections are `h3`.
-- The vertical order of each page is fixed and never changes with state. You: since you were here, your post, choices, log. Voyage: where the ship is, demands, while you were away, log. Ship: the ship, while you were away, log, read aloud, other ships. A section with nothing to say says so in a sentence rather than disappearing.
+- The vertical order of each page is fixed and never changes with state. You: rank, since you were here, your post, choices, log. Voyage: where the ship is, demands, while you were away, log. Ship: the ship, while you were away, log, read aloud, other ships. A section with nothing to say says so in a sentence rather than disappearing.
 - The bar of pages is the only fixed element, and only on viewports at least 34em tall (see below). Otherwise the page is a plain scroll, and at 400% zoom it is.
 
 ## components
@@ -92,13 +92,19 @@ The bar is `position: fixed` at the bottom edge only under `(min-height: 34em)`,
 
 `<section>` with an `h2` and sentences. Sentences are one per `p`, front-loaded, written in `cmd/browser/words.mbt` before any layout. "While you were away" is a `ul` whose markers are `--quiet`; keep the default markers so Safari keeps the list semantics.
 
+### rank
+
+The You page opens with the officer's rank in full, a `p class="rank"` in Fira Sans 600: `Lieutenant commander ●●●`. The insignia is a mark beside the title, in Noto Serif CJK TC at `--quiet`, and is `aria-hidden`, so a screen reader hears only the rank. Its glyphs ship in the CJK subset: `○`, `●`, `●●`, `●●●` and `★` for ensign through commander. Built by `rank_line` in `cmd/browser/pages.mbt`.
+
+The compact form, for a label beside a crew member, is the abbreviation and insignia for the eye, with the full rank in a visually hidden span, as in `LCDR ●●●` with `Lieutenant commander` hidden. Both the abbreviation and the insignia are `aria-hidden`. Built by `rank_compact` in `cmd/browser/pages.mbt`; no page uses it until a crew roster exists.
+
 ### ship's voice
 
 What the ship itself says, as opposed to telemetry about it: today the ask ("The ship asks for hands on the drive."), later the model's own lines. A `p class="voice"` in EB Garamond with a 2px `--accent` rule at its left. Model text goes here once it has passed the gate; while it is pending, the sentence that prompted it stands alone (see "model latency" in [architecture](architecture.md)).
 
 ### bars
 
-A groove in `--rule` with an `--accent` fill, as in the track, under a small-caps `--quiet` label, for work toward the next work, regard toward the next rank, each open demand and a refit under way. `aria-hidden`, shown beside the sentence it repeats, and given no numbers of its own. It updates in place with each tick; nothing animates. Built by `bar` and `measure` in `cmd/browser/bars.mbt`.
+A groove in `--rule` with an `--accent` fill, as in the track, under a small-caps `--quiet` label, for work toward the next work, regard toward the next promotion, each open demand and a refit under way. `aria-hidden`, shown beside the sentence it repeats, and given no numbers of its own. It updates in place with each tick; nothing animates. Built by `bar` and `measure` in `cmd/browser/bars.mbt`.
 
 ### the voyage track
 

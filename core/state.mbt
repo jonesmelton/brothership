@@ -98,6 +98,17 @@ pub fn State::crossing(self : State) -> Crossing? {
 }
 
 ///|
+/// The rank `crew` holds: the hand's while aboard, which a promotion at
+/// arrival raises before docking, else the ship's record. An ensign's for
+/// someone the ship has never carried.
+pub fn State::rank(self : State, crew : String) -> Int64 {
+  match self.crossing().bind(c => c.hands.get(crew)) {
+    Some(h) => h.rank
+    None => self.ship.rank(crew)
+  }
+}
+
+///|
 /// Advance `c` by `ticks`, which may exceed what one `Elapsed` takes.
 fn elapse(c : Crossing, ticks : Int64) -> Crossing {
   for c = c, left = ticks {

@@ -158,26 +158,94 @@ fn Model::with_effect(self : Model, lines : Array[String]) -> Model {
 }
 
 ///|
+/// The watch lengths offered, in hours. Twelve is an interface maximum; no
+/// rank limits a watch.
+let watch_hours : Array[Int64] = [1, 2, 4, 8, 12]
+
+///|
 /// The watch to offer again, in hours: the last length chosen, capped at
-/// the rank's longest, when `you`'s latest change this crossing was a watch
+/// the longest offered, when `you`'s latest change this crossing was a watch
 /// stood to its end. Nothing once a post was taken or left since.
-fn reup(
-  entries : Array[@core.Entry],
-  you : String,
-  last : Int64,
-  longest : Int64,
-) -> Int64? {
+fn reup(entries : Array[@core.Entry], you : String, last : Int64) -> Int64? {
   guard last > 0L else { None }
-  let n = last.min(longest)
+  let n = last.min(watch_hours[watch_hours.length() - 1])
   for i = entries.length() - 1; i >= 0; i = i - 1 {
     match entries[i].happening {
-      Stood(crew~) if crew == you => return if n > 0L { Some(n) } else { None }
+      Stood(crew~) if crew == you => return Some(n)
       Took(crew~, ..) | Left(crew~) if crew == you => return None
       Departed => return None
       _ => ()
     }
   }
   None
+}
+
+///|
+/// A piece of a rank's markup: bare text when `class` is empty, else a span.
+/// Kept as data so tests can read what a screen reader would.
+struct Part {
+  text : String
+  class : String
+  hidden : Bool
+}
+
+///|
+/// What a screen reader reads from `parts`: the parts not `aria-hidden`.
+pub fn reading(parts : Array[Part]) -> String {
+  parts.filter(p => !p.hidden).map(p => p.text).join("").trim().to_owned()
+}
+
+///|
+fn parts_html(parts : Array[Part]) -> Array[@rabbita.Html] {
+  parts.map(p => {
+    if p.class == "" {
+      @html.text(p.text)
+    } else if p.hidden {
+      @html.span(
+        class=p.class,
+        attrs=@html.Attrs::build().aria_hidden("true"),
+        p.text,
+      )
+    } else {
+      @html.span(class=p.class, p.text)
+    }
+  })
+}
+
+///|
+fn rank_compact_parts(rank : Int64) -> Array[Part] {
+  [
+    {
+      text: @words.rank_abbreviation(rank),
+      class: "abbreviation",
+      hidden: true,
+    },
+    { text: " ", class: "", hidden: false, },
+    { text: @words.rank_insignia(rank), class: "insignia", hidden: true, },
+    { text: @words.rank_title(rank), class: "visually-hidden", hidden: false, },
+  ]
+}
+
+///|
+fn rank_line_parts(rank : Int64) -> Array[Part] {
+  [
+    { text: @words.rank_title(rank), class: "", hidden: false, },
+    { text: " ", class: "", hidden: false, },
+    { text: @words.rank_insignia(rank), class: "insignia", hidden: true, },
+  ]
+}
+
+///|
+/// A rank for a label beside a crew member: the abbreviation and insignia
+/// for the eye, the full rank for a screen reader.
+pub fn rank_compact(rank : Int64) -> @rabbita.Html {
+  @html.span(class="rank-compact", parts_html(rank_compact_parts(rank)))
+}
+
+///|
+/// The officer's rank in full, with its insignia as a mark.
+fn rank_line(rank : Int64) -> @rabbita.Html {
+  @html.p(class="rank", parts_html(rank_line_parts(rank)))
 }
 
 ///|

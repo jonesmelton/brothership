@@ -235,7 +235,7 @@ async test "a promotion row replays and joins the story" {
     fail("expected docking right after the promotion")
   }
   let snapshot = snap(live, "tigress")
-  inspect(snapshot.state.ship.records["ann"].rank, content="Some(1)")
+  assert_eq(snapshot.state.ship.records["ann"].rank, Some(1L))
   live.close()
   let reopened = @store.Store::open(path)
   defer reopened.close()

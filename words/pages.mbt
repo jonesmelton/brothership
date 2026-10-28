@@ -268,19 +268,6 @@ pub(all) struct Ledger {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
-/// The rank `crew` holds: the hand's aboard, else the ship's record.
-fn held_rank(s : @core.State, crew : String) -> Int64 {
-  match s.crossing() {
-    Some(c) =>
-      match c.hands.get(crew) {
-        Some(h) => h.rank
-        None => s.ship.rank(crew)
-      }
-    None => s.ship.rank(crew)
-  }
-}
-
-///|
 pub fn Ledger::of(s : @core.State, you~ : String) -> Ledger {
   let record = s.ship.records.get(you).unwrap_or(zero_record())
   let tally = match s.crossing() {
@@ -293,7 +280,7 @@ pub fn Ledger::of(s : @core.State, you~ : String) -> Ledger {
     works: record.works + (record.carry + tally.work) / @core.WORK_SIZE,
     crossings: s.ship.crossings +
     (if s.crossing() is Some(_) { 1L } else { 0L }),
-    rank: Some(held_rank(s, you)),
+    rank: Some(s.rank(you)),
   }
 }
 
