@@ -131,26 +131,26 @@ pub(all) struct Crossing {
   band : Int64
   /// The ship's fit as of now; refits land here as they finish.
   fit : Fit
-  hands : Map[Int32, Hand]
-  tallies : Map[Int32, Tally]
+  hands : Map[String, Hand]
+  tallies : Map[String, Tally]
   demands : Array[Demand]
   /// The post the ship is asking for, if any.
   ask : Post?
   arrived_at : Int64?
-} derive(Debug, Eq)
+} derive(Debug, Eq, ToJson, FromJson)
 
 ///|
 pub(all) enum CrossingEvent {
   Elapsed(ticks~ : Int64)
   /// Takes a post, joining the crew if not aboard. Breaks a watch on another
   /// post.
-  Posted(crew~ : Int32, post~ : Post)
-  Left(crew~ : Int32)
-  Crafted(crew~ : Int32, craft~ : Craft)
+  Posted(crew~ : String, post~ : Post)
+  Left(crew~ : String)
+  Crafted(crew~ : String, craft~ : Craft)
   /// Stands a watch on the current post for `ticks`.
-  Watched(crew~ : Int32, ticks~ : Int64)
+  Watched(crew~ : String, ticks~ : Int64)
   /// Takes `post` when `phase` begins, or cancels the standing order.
-  Ordered(crew~ : Int32, order~ : Order?)
+  Ordered(crew~ : String, order~ : Order?)
   /// What the engineers build next.
   Refitting(refit~ : Refit?)
   /// The ship asks for hands on a post, or stops asking.
@@ -160,9 +160,9 @@ pub(all) enum CrossingEvent {
 ///|
 pub(all) suberror CrossingRejected {
   BadTicks(ticks~ : Int64)
-  NotAboard(crew~ : Int32)
+  NotAboard(crew~ : String)
   BadWatch(ticks~ : Int64, longest~ : Int64)
-  OnWatch(crew~ : Int32)
+  OnWatch(crew~ : String)
   Unbuildable(refit~ : Refit)
   /// Orders are for a phase still to come.
   BadOrder(phase~ : Phase)
@@ -564,14 +564,17 @@ fn Crossing::advance(self : Crossing, ticks : Int64) -> Crossing {
 }
 
 ///|
-fn Crossing::hand(self : Crossing, crew : Int32) -> Hand raise CrossingRejected {
+fn Crossing::hand(
+  self : Crossing,
+  crew : String,
+) -> Hand raise CrossingRejected {
   guard self.hands.get(crew) is Some(h) else { raise NotAboard(crew~) }
   h
 }
 
 ///|
 /// Ends `crew`'s watch early: the ship remembers.
-fn Crossing::break_watch(self : Crossing, crew : Int32, h : Hand) -> Crossing {
+fn Crossing::break_watch(self : Crossing, crew : String, h : Hand) -> Crossing {
   guard h.watch is Some(w) else { self }
   let tallies = self.tallies.copy()
   let t = tallies.get(crew).unwrap_or(no_tally)
@@ -585,7 +588,7 @@ fn Crossing::break_watch(self : Crossing, crew : Int32, h : Hand) -> Crossing {
 }
 
 ///|
-fn Crossing::with_hand(self : Crossing, crew : Int32, h : Hand) -> Crossing {
+fn Crossing::with_hand(self : Crossing, crew : String, h : Hand) -> Crossing {
   let hands = self.hands.copy()
   hands[crew] = h
   let tallies = if self.tallies.contains(crew) {

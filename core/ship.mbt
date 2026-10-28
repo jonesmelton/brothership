@@ -215,14 +215,14 @@ pub(all) struct Ship {
   values : Values
   fit : Fit
   hull : Int64
-  records : Map[Int32, Record]
+  records : Map[String, Record]
   recruits : Int64
   /// Works delivered toward the next recruit.
   toward_recruit : Int64
   /// Crossings flown. With `seed`, picks each crossing's demands.
   crossings : Int64
   seed : Int64
-} derive(Debug, Eq)
+} derive(Debug, Eq, ToJson, FromJson)
 
 ///|
 pub fn Ship::new(values : Values, fit : Fit, seed~ : Int64) -> Ship {
@@ -239,6 +239,6 @@ pub fn Ship::new(values : Values, fit : Fit, seed~ : Int64) -> Ship {
 }
 
 ///|
-pub fn Ship::rank(self : Ship, crew : Int32) -> Int64 {
+pub fn Ship::rank(self : Ship, crew : String) -> Int64 {
   rank_of(self.records.get(crew).map(r => r.regard).unwrap_or(0L))
 }

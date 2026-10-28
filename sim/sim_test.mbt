@@ -129,7 +129,7 @@ test "a voyage carries refits, recruits, records and hull from leg to leg" {
           assert_true(now.works >= was.works && now.regard >= was.regard)
         }
         for crew, t in r.last.tallies {
-          if crew >= 1000 {
+          if crew.has_prefix("recruit ") {
             assert_eq(t.craft, 0L)
           }
         }

@@ -60,9 +60,9 @@ pub fn replay(Iter[Event]) -> State raise Rejected
 // Errors
 pub(all) suberror CrossingRejected {
   BadTicks(ticks~ : Int64)
-  NotAboard(crew~ : Int32)
+  NotAboard(crew~ : String)
   BadWatch(ticks~ : Int64, longest~ : Int64)
-  OnWatch(crew~ : Int32)
+  OnWatch(crew~ : String)
   Unbuildable(refit~ : Refit)
   BadOrder(phase~ : Phase)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
@@ -87,12 +87,12 @@ pub(all) struct Crossing {
   hull : Int64
   band : Int64
   fit : Fit
-  hands : Map[Int32, Hand]
-  tallies : Map[Int32, Tally]
+  hands : Map[String, Hand]
+  tallies : Map[String, Tally]
   demands : Array[Demand]
   ask : Post?
   arrived_at : Int64?
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn Crossing::apply(Self, CrossingEvent) -> Self raise CrossingRejected
 pub fn Crossing::cap(Self) -> Int64
 pub fn Crossing::count(Self, Post) -> Int64
@@ -108,11 +108,11 @@ pub fn Crossing::setting(Self) -> Int64
 
 pub(all) enum CrossingEvent {
   Elapsed(ticks~ : Int64)
-  Posted(crew~ : Int32, post~ : Post)
-  Left(crew~ : Int32)
-  Crafted(crew~ : Int32, craft~ : Craft)
-  Watched(crew~ : Int32, ticks~ : Int64)
-  Ordered(crew~ : Int32, order~ : Order?)
+  Posted(crew~ : String, post~ : Post)
+  Left(crew~ : String)
+  Crafted(crew~ : String, craft~ : Craft)
+  Watched(crew~ : String, ticks~ : Int64)
+  Ordered(crew~ : String, order~ : Order?)
   Refitting(refit~ : Refit?)
   Asked(post~ : Post?)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
@@ -231,14 +231,14 @@ pub(all) struct Ship {
   values : Values
   fit : Fit
   hull : Int64
-  records : Map[Int32, Record]
+  records : Map[String, Record]
   recruits : Int64
   toward_recruit : Int64
   crossings : Int64
   seed : Int64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn Ship::new(Values, Fit, seed~ : Int64) -> Self
-pub fn Ship::rank(Self, Int32) -> Int64
+pub fn Ship::rank(Self, String) -> Int64
 
 pub(all) struct Snapshot {
   seq : Int64

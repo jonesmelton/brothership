@@ -67,7 +67,7 @@ pub(all) struct Sample {
 /// One check-in, whether or not it changed anything.
 pub(all) struct Decision {
   t : Int64
-  actor : Int32
+  actor : String
   from : @core.Post?
   to : @core.Post
   watch : Int64
@@ -128,7 +128,7 @@ fn sample(c : @core.Crossing) -> Sample {
 /// What a returning crew member would be told about: phase changes,
 /// demands opening or closing, refits landing, their own watches stood and
 /// works finished.
-fn news(a : @core.Crossing, b : @core.Crossing, crew : Int32) -> Int32 {
+fn news(a : @core.Crossing, b : @core.Crossing, crew : String) -> Int32 {
   let mut n = 0
   if a.phase != b.phase {
     n += 1
@@ -157,8 +157,21 @@ fn news(a : @core.Crossing, b : @core.Crossing, crew : Int32) -> Int32 {
 }
 
 ///|
-/// Crew ids: actors by index, then recruits from 1000.
-const RECRUIT_BASE : Int32 = 1000
+/// The crew id of the actor at `i`, counting from zero.
+pub fn actor_id(i : Int32) -> String {
+  "crew \{i + 1}"
+}
+
+///|
+/// The scenario's actor with crew id `crew`, if it is not a recruit.
+pub fn Scenario::actor_of(self : Scenario, crew : String) -> Actor? {
+  for i, a in self.actors {
+    if actor_id(i) == crew {
+      return Some(a)
+    }
+  }
+  None
+}
 
 ///|
 /// The scenario's actors, with the ship's recruits added as steady NPCs.
@@ -174,11 +187,11 @@ pub fn Scenario::crew(self : Scenario, ship : @core.Ship) -> Array[Actor] {
 }
 
 ///|
-fn id_of(i : Int32, actors : Int32) -> Int32 {
+fn id_of(i : Int32, actors : Int32) -> String {
   if i < actors {
-    i
+    actor_id(i)
   } else {
-    RECRUIT_BASE + i - actors
+    "recruit \{i - actors + 1}"
   }
 }
 

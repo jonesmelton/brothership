@@ -34,7 +34,7 @@ fn ship(hull~ : Int64 = @core.HULL_FULL, seed~ : Int64 = 1L) -> @core.Ship {
 fn crew(posts : Array[@core.Post]) -> @core.Crossing {
   let mut c = @core.Crossing::new(plan20(), ship())
   for i, post in posts {
-    c = c.apply(Posted(crew=i, post~)) catch { _ => panic() }
+    c = c.apply(Posted(crew=i.to_string(), post~)) catch { _ => panic() }
   }
   c
 }
@@ -59,7 +59,7 @@ fn post_of(n : Int32) -> @core.Post {
 ///|
 /// Any event but `Elapsed`, chosen by `kind`, for crew slot `slot`.
 fn event_of(kind : Int32, slot : Int32, arg : Int64) -> @core.CrossingEvent {
-  let crew = fold(slot, 12)
+  let crew = fold(slot, 12).to_string()
   match fold(kind, 11) {
     0 | 1 | 2 | 3 => Posted(crew~, post=post_of(arg.to_int()))
     10 => {
@@ -189,21 +189,21 @@ test "rejections" {
     reject(Elapsed(ticks=@math.MAX_TICKS + 1)),
     content="BadTicks(ticks=1000000001)",
   )
-  debug_inspect(reject(Left(crew=3)), content="NotAboard(crew=3)")
+  debug_inspect(reject(Left(crew="3")), content="NotAboard(crew=\"3\")")
   debug_inspect(
-    reject(Watched(crew=0, ticks=3L * @core.HOUR)),
+    reject(Watched(crew="0", ticks=3L * @core.HOUR)),
     content="BadWatch(ticks=10800, longest=7200)",
   )
-  let watching = c.apply(Watched(crew=0, ticks=@core.HOUR)) catch {
+  let watching = c.apply(Watched(crew="0", ticks=@core.HOUR)) catch {
     _ => panic()
   }
   debug_inspect(
-    try watching.apply(Watched(crew=0, ticks=@core.HOUR)) catch {
+    try watching.apply(Watched(crew="0", ticks=@core.HOUR)) catch {
       err => err
     } noraise {
       _ => fail("expected a rejection")
     },
-    content="OnWatch(crew=0)",
+    content="OnWatch(crew=\"0\")",
   )
   let maxed = { ..c, fit: { ..c.fit, needed: 2, injectors: 2, }, }
   debug_inspect(
@@ -244,43 +244,45 @@ test "demands are fixed by seed and crossing, whatever the crew do" {
 
 ///|
 test "a watch stood to its end pays; one broken costs" {
-  let c = crew([Hull]).apply(Watched(crew=0, ticks=@core.HOUR)) catch {
+  let c = crew([Hull]).apply(Watched(crew="0", ticks=@core.HOUR)) catch {
     _ => panic()
   }
   let stood = c.apply(Elapsed(ticks=@core.HOUR)) catch { _ => panic() }
-  let t = stood.tallies.get(0).unwrap()
+  let t = stood.tallies.get("0").unwrap()
   debug_inspect(
-    (t.watches_stood, stood.hands.get(0).unwrap().watch),
+    (t.watches_stood, stood.hands.get("0").unwrap().watch),
     content="(1, None)",
   )
   let broken = (c.apply(Elapsed(ticks=@core.HOUR / 2L)) catch { _ => panic() }).apply(
-    Posted(crew=0, post=Drive),
+    Posted(crew="0", post=Drive),
   ) catch {
     _ => panic()
   }
-  inspect(broken.tallies.get(0).unwrap().watches_broken, content="1")
+  inspect(broken.tallies.get("0").unwrap().watches_broken, content="1")
 }
 
 ///|
 test "a standing order takes its post when the phase begins" {
   let c = crew([Craft, Craft]).apply(
-    Ordered(crew=0, order=Some({ phase: Approach, post: Drive, })),
+    Ordered(crew="0", order=Some({ phase: Approach, post: Drive, })),
   ) catch {
     _ => panic()
   }
-  let c = c.apply(Watched(crew=0, ticks=2L * @core.HOUR)) catch { _ => panic() }
+  let c = c.apply(Watched(crew="0", ticks=2L * @core.HOUR)) catch {
+    _ => panic()
+  }
   let mut c = c
   while c.phase != Approach {
-    let before = c.hands.get(0).unwrap()
+    let before = c.hands.get("0").unwrap()
     inspect(before.post == Craft && before.order is Some(_), content="true")
     c = c.apply(Elapsed(ticks=c.next_boundary())) catch { _ => panic() }
   }
-  let h = c.hands.get(0).unwrap()
+  let h = c.hands.get("0").unwrap()
   debug_inspect((h.post, h.order), content="(Drive, None)")
-  inspect(c.tallies.get(0).unwrap().watches_broken, content="0")
+  inspect(c.tallies.get("0").unwrap().watches_broken, content="0")
   debug_inspect(
     try
-      c.apply(Ordered(crew=1, order=Some({ phase: Coast, post: Hull, })))
+      c.apply(Ordered(crew="1", order=Some({ phase: Coast, post: Hull, })))
     catch {
       err => err
     } noraise {
@@ -290,20 +292,22 @@ test "a standing order takes its post when the phase begins" {
   )
   // On a hop with no coast, an order for the coast lapses at turnover.
   let short = @core.Crossing::new(plan_short(), ship())
-  let short = (short.apply(Posted(crew=0, post=Hull)) catch { _ => panic() }).apply(
-    Ordered(crew=0, order=Some({ phase: Coast, post: Craft, })),
+  let short = (short.apply(Posted(crew="0", post=Hull)) catch { _ => panic() }).apply(
+    Ordered(crew="0", order=Some({ phase: Coast, post: Craft, })),
   ) catch {
     _ => panic()
   }
   let landed = short.project().unwrap()
-  debug_inspect(landed.hands.get(0).unwrap().post, content="Hull")
+  debug_inspect(landed.hands.get("0").unwrap().post, content="Hull")
 }
 
 ///|
 test "a refit lands mid-crossing and stays for the next" {
   let mut c = crew([Craft, Craft, Craft])
   for i in 0..<3 {
-    c = c.apply(Crafted(crew=i, craft=Engineer)) catch { _ => panic() }
+    c = c.apply(Crafted(crew=i.to_string(), craft=Engineer)) catch {
+      _ => panic()
+    }
   }
   c = c.apply(Refitting(refit=Some(Injectors))) catch { _ => panic() }
   let landed = c.project().unwrap()
@@ -435,7 +439,7 @@ test "a ship mending at a band edge does not chatter" {
   let mut c = @core.Crossing::new(plan20(), s)
   let posts : Array[@core.Post] = [Drive, Drive, Hull]
   for i, post in posts {
-    c = c.apply(Posted(crew=i, post~)) catch { _ => panic() }
+    c = c.apply(Posted(crew=i.to_string(), post~)) catch { _ => panic() }
   }
   let mut n = 0
   while c.arrived_at is None {
@@ -481,6 +485,18 @@ test "law: stocks stay in bounds and tallies never shrink" {
         .all(p => p.0.status >= p.1.status)
     }
     ok
+  })
+}
+
+///|
+test "law: a crossing survives a JSON round trip" {
+  @qc.quick_check_fn((input : (Array[(Int32, Int32, Int64)], Int32)) => {
+    let (steps, hull) = input
+    let c = drive_schedule(plan20(), ship(hull=hull_of(hull)), steps)
+    let back : @core.Crossing = @json.from_json(c.to_json()) catch {
+      _ => panic()
+    }
+    back == c && back.forecast() == c.forecast()
   })
 }
 
@@ -533,7 +549,9 @@ test "law: another hand on the drive never delays arrival" {
     let c = drive_schedule(plan20(), ship(), steps)
     guard c.phase != Arrived else { true }
     let slot = 100 + fold(slot, 8)
-    let more = c.apply(Posted(crew=slot, post=Drive)) catch { _ => panic() }
+    let more = c.apply(Posted(crew=slot.to_string(), post=Drive)) catch {
+      _ => panic()
+    }
     // A hand taken from the hull may cost a band later; compare like with
     // like by adding a new hand rather than moving one.
     checked += 1

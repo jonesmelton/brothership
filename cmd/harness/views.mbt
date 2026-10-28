@@ -442,9 +442,9 @@ fn run_view(
   let shown = if changes_only { changes } else { run.decisions }
   let capped = shown.length() > 400
   let rows = (if capped { shown[:400].to_owned() } else { shown }).map(d => {
-    let (name, policy) = match scenario.actors.get(d.actor) {
+    let (name, policy) = match scenario.actor_of(d.actor) {
       Some(a) => (a.name, a.policy.name())
-      None => ("recruit \{d.actor - 999}", "steady")
+      None => (d.actor, "steady")
     }
     [
       clock(d.t),

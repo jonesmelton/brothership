@@ -104,7 +104,7 @@ fn summarize(s : @sim.Scenario, runs : Int32) -> Summary {
     levels += f.baffles + f.plating + f.injectors
     for crew, t in r.last.tallies {
       works += t.work
-      if crew < s.actors.length() && s.actors[crew].is_player() {
+      if s.actor_of(crew) is Some(a) && a.is_player() {
         regard += t.regard
         watches += t.watches_stood
         broken += t.watches_broken
@@ -227,7 +227,9 @@ fn policies(runs : Int32) -> Unit {
       let m = summarize(s, runs)
       let mut own = 0L
       for i in 0..<runs {
-        own += s.run(i.to_int64() + 1L).last.tallies.get(0).unwrap().work
+        own += s.run(i.to_int64() + 1L).last.tallies
+          .get(@sim.actor_id(0))
+          .unwrap().work
       }
       summary_row(
         "\{policy.name()} (own works \{own * 10L / runs.to_int64() / @core.WORK_SIZE})",
@@ -286,7 +288,7 @@ fn voyages() -> Unit {
         ("\{f.needed}/\{f.wear}/\{f.repair}", 22),
         (delivered.to_string(), 6),
         (leg.docked.recruits.to_string(), 9),
-        (leg.docked.rank(0).to_string(), 5),
+        (leg.docked.rank(@sim.actor_id(0)).to_string(), 5),
         (pct(r.live_checkins.to_int64(), r.checkins.to_int64()), 5),
       ])
     }
@@ -361,13 +363,16 @@ fn careers(runs : Int32) -> Unit {
             total += leg.run.arrived_at
             low = low.min(leg.run.min_hull)
           }
-          works += end.records.get(0).map(r => r.works).unwrap_or(0L)
+          works += end.records
+            .get(@sim.actor_id(0))
+            .map(r => r.works)
+            .unwrap_or(0L)
           recruits += end.recruits
           refits += end.fit.baffles +
             end.fit.plating +
             end.fit.injectors +
             end.fit.coils
-          rank += end.rank(0)
+          rank += end.rank(@sim.actor_id(0))
         }
         let n = runs.to_int64()
         let tenths = (x : Int64) => "\{x * 10L / n / 10L}.\{x * 10L / n % 10L}"
@@ -426,7 +431,7 @@ fn story() -> Unit {
         "== story: thoughtful player on \{p.name}, \{distance.to_int()} ly, arrived \{hours(r.arrived_at)} h of \{hours(r.plan.fastest())}–\{hours(r.plan.slowest())}",
       )
       for d in r.decisions {
-        guard d.actor == 0 else { continue }
+        guard d.actor == @sim.actor_id(0) else { continue }
         let at = r.samples.search_by(x => x.t >= d.t).map(i => r.samples[i])
         let phase = at.map(x => phase_name(x.phase)).unwrap_or("?")
         let hull = at.map(x => pct(x.hull, @core.HULL_FULL)).unwrap_or("?")
@@ -437,7 +442,7 @@ fn story() -> Unit {
           "; arrival \{hours(d.before)} -> \{hours(d.after)} (spread \{d.leverage / 60L} min, \{d.undominated} undominated)",
         )
       }
-      let t = r.last.tallies.get(0).unwrap()
+      let t = r.last.tallies.get(@sim.actor_id(0)).unwrap()
       println(
         "  ends: works \{t.work * 10L / @core.WORK_SIZE} tenths, regard \{t.regard / @core.REGARD_HOUR} h, watches \{t.watches_stood}/\{t.watches_broken}; demands " +
         r.last.demands

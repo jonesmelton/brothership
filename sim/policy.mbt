@@ -68,7 +68,7 @@ pub let posts : Array[@core.Post] = [Drive, Hull, Craft]
 /// when that is positive and allowed.
 fn try_option(
   c : @core.Crossing,
-  crew : Int32,
+  crew : String,
   post : @core.Post,
   watch : Int64,
   order~ : @core.Order? = None,
@@ -114,7 +114,7 @@ fn refit_units(f : @core.Fit) -> Int64 {
 }
 
 ///|
-pub fn prospect(c : @core.Crossing, crew : Int32) -> Prospect {
+pub fn prospect(c : @core.Crossing, crew : String) -> Prospect {
   let end = c.project().unwrap_or(c)
   let t = end.tallies.get(crew)
   {
@@ -180,7 +180,7 @@ pub(all) struct Choice {
 /// Whether `crew` should be on the hull: below `low`, or already mending
 /// and short of three quarters. The gap keeps a crew member from changing
 /// post at every band edge.
-fn mending(c : @core.Crossing, crew : Int32, low : Int64) -> Bool {
+fn mending(c : @core.Crossing, crew : String, low : Int64) -> Bool {
   let on_hull = c.hands.get(crew).map(h => h.post == Hull).unwrap_or(false)
   c.hull < low || (on_hull && c.hull < @core.HULL_FULL * 3L / 4L)
 }
@@ -189,7 +189,7 @@ fn mending(c : @core.Crossing, crew : Int32, low : Int64) -> Bool {
 fn Policy::decide(
   self : Policy,
   c : @core.Crossing,
-  crew : Int32,
+  crew : String,
   watch : Int64,
   roll : UInt64,
 ) -> Choice {

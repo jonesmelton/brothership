@@ -10,6 +10,8 @@ import {
 // Values
 pub const DEAD_LEVERAGE : Int64 = 300
 
+pub fn actor_id(Int32) -> String
+
 pub fn gamma(Int64) -> Double
 
 pub fn handover(@core.Crossing) -> @core.Order?
@@ -24,7 +26,7 @@ pub let posts : Array[@core.Post]
 
 pub fn profiles() -> Array[Profile]
 
-pub fn prospect(@core.Crossing, Int32) -> Prospect
+pub fn prospect(@core.Crossing, String) -> Prospect
 
 pub fn scenarios() -> Array[Scenario]
 
@@ -55,7 +57,7 @@ pub(all) struct Choice {
 
 pub(all) struct Decision {
   t : Int64
-  actor : Int32
+  actor : String
   from : @core.Post?
   to : @core.Post
   watch : Int64
@@ -174,6 +176,7 @@ pub(all) struct Scenario {
   hull : Int64
   actors : Array[Actor]
 } derive(Eq, @debug.Debug)
+pub fn Scenario::actor_of(Self, String) -> Actor?
 pub fn Scenario::batch(Self, first_seed? : Int64, runs~ : Int32) -> Array[Outcome]
 pub fn Scenario::crew(Self, @core.Ship) -> Array[Actor]
 pub fn Scenario::departing(Self, Int64) -> @core.Ship
