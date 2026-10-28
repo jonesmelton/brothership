@@ -63,6 +63,7 @@ test "going to a page marks it read and drops the last effect" {
       entries: [entry(4, Departed), entry(6, Began(phase=Coast))],
       arrived: Some(6L),
       speaking: false,
+      thinking: false,
     },
     effect: ["The ship will arrive sooner."],
   }

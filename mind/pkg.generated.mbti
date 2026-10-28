@@ -39,9 +39,9 @@ pub struct Prompts {
   // private fields
 }
 pub async fn Prompts::load(content~ : String) -> Self
-pub fn Prompts::muster(Self, @speech.Voice, model~ : String, @core.State, Array[@core.Entry], thoughts~ : Array[String]) -> @llm.Call raise
+pub fn Prompts::muster(Self, @speech.Voice, values~ : @core.Values, model~ : String, @core.State, Array[@core.Entry], thoughts~ : Array[String]) -> @llm.Call raise
 pub fn Prompts::new(system~ : String, turn~ : String, muster~ : String, setting~ : String) -> Self
-pub fn Prompts::turn(Self, @speech.Voice, model~ : String, @core.State, Array[@core.Entry], thoughts~ : Array[String]) -> @llm.Call raise
+pub fn Prompts::turn(Self, @speech.Voice, values~ : @core.Values, model~ : String, @core.State, Array[@core.Entry], thoughts~ : Array[String]) -> @llm.Call raise
 
 // Type aliases
 

@@ -5,7 +5,7 @@ fn entry(seq : Int64, h : @core.Happening) -> @core.Entry {
 
 ///|
 fn story(entries : Array[@core.Entry]) -> @core.Story {
-  { entries, speaking: false, }
+  { entries, speaking: false, thinking: false, }
 }
 
 ///|

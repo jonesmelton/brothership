@@ -42,6 +42,7 @@ COPY ships/moon.pkg ships/
 COPY sim/moon.pkg sim/
 COPY speech/moon.pkg speech/
 COPY mind/moon.pkg mind/
+COPY cmd/audition/moon.pkg cmd/audition/
 COPY store/moon.pkg store/
 COPY words/moon.pkg words/
 RUN moon update \

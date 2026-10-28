@@ -11,7 +11,7 @@
 ///
 /// An unknown ship is a 404. `clock` gives the wall clock in Unix seconds;
 /// proposals are applied at it. `speaking` says whether a ship is writing a
-/// line now. A proposal acts as the officer in its session cookie: no
+/// line now, and `thinking` whether its mind is weighing a choice. A proposal acts as the officer in its session cookie: no
 /// session is a 401, and a proposal naming another officer is a 403.
 /// `secure` marks the session cookie `Secure`; keep it false only for
 /// plain-http development.
@@ -19,6 +19,7 @@ pub fn routes(
   store : @store.Store,
   clock~ : () -> Int64 = unix_now,
   speaking~ : (String) -> Bool = _ => false,
+  thinking~ : (String) -> Bool = _ => false,
   secure~ : Bool = true,
 ) -> @moonback.Module {
   ctx => {
@@ -50,7 +51,11 @@ pub fn routes(
       }
       match store.story(ship, after~) {
         Some(entries) => {
-          let story : @core.Story = { entries, speaking: speaking(ship), }
+          let story : @core.Story = {
+            entries,
+            speaking: speaking(ship),
+            thinking: thinking(ship),
+          }
           res.send_json(story.to_json())
         }
         None => res.send_json({ "error": "no such ship" }, status=404)

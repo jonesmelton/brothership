@@ -8,6 +8,7 @@ import {
   "local/brothership/llm/prompt",
   "local/brothership/ships",
   "local/brothership/store",
+  "moonbitlang/core/debug",
 }
 
 // Values
@@ -34,6 +35,13 @@ pub fn tidy(String) -> String?
 pub fn worth(Array[@core.Entry], quiet_until~ : Int64) -> @core.Entry?
 
 // Errors
+pub(all) suberror Silent {
+  Passed
+  Unusable(String)
+  Repeated(String)
+  Blocked(String, evidence~ : String)
+} derive(@debug.Debug)
+pub impl Show for Silent
 
 // Types and methods
 pub struct Speaker {
@@ -47,6 +55,7 @@ pub struct Speech {
   // private fields
 }
 pub fn Speech::call(Self, Voice, @core.State, Array[@core.Entry], @core.Entry, thoughts? : Array[String]) -> @llm.Call raise @prompt.PromptError
+pub async fn Speech::line(Self, @llm.Backend, Voice, @core.State, Array[@core.Entry], @core.Entry, thoughts? : Array[String]) -> @gate.Cleared
 pub async fn Speech::load(content~ : String, model~ : String, gate_model~ : String) -> Self
 pub fn Speech::new(system~ : String, user~ : String, setting~ : String, model~ : String, gate~ : @gate.Gate) -> Self
 

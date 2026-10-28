@@ -18,10 +18,11 @@ All models are Meta's. Curated writing (the cast pipeline) uses Muse Wonder
 (`meta:muse-wonder-1.0`) on Meta Model API (`https://api.meta.ai/v1`), keyed
 by `MODEL_API_KEY`. Ship lines and the content gate (`llm/gate`) use Muse Spark
 1.3 on the same API (the server runs both on `meta:muse-spark-1.3-contributor`); see
-[content/gate](../content/gate/README.md). Runtime decisions are not built:
-scripted policies make them. When they land they will use a Muse Spark model,
-or Meta open weights (Muse Spark Open, Llama) served through an
-OpenAI-compatible endpoint.
+[content/gate](../content/gate/README.md). A ship's choices (asks,
+refits, promotions) are made by its mind (`mind`) on Muse Spark 1.3 as well,
+with the scripted temperament as the fallback. `MIND_MODEL`, `WRITER_MODEL`
+and `GATE_MODEL` override each model on the server; a demo can set
+`WRITER_MODEL=meta:muse-wonder-1.0` for the lines players read.
 Every model call takes seconds; see "model latency" in
 [architecture.md](architecture.md). Non-Meta models are for tests and spikes
 only (the survey below is one), not for anything that ships.

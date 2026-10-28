@@ -70,8 +70,11 @@ pub(all) struct Entry {
 
 ///|
 /// `GET /api/ships/:id/story`: the entries after the asked-for `seq`, oldest
-/// first, and whether the ship is writing a line now.
+/// first, whether the ship is writing a line now, and whether it is
+/// weighing a choice.
 pub(all) struct Story {
   entries : Array[Entry]
   speaking : Bool
+  /// The ship's mind is weighing a choice now.
+  thinking : Bool
 } derive(Debug, Eq, ToJson, FromJson)

@@ -253,7 +253,8 @@ fn update(
     (_, Tock) => {
       let ticked = { ..model, now: unix_now(), }
       let ask = match model.ship {
-        Some(ship) if model.told.speaking => tell(emit, ship, model.told.last())
+        Some(ship) if model.told.speaking || model.told.thinking =>
+          tell(emit, ship, model.told.last())
         _ => @rabbita.none
       }
       (ticked, @rabbita.batch([ask, keep_ledger(ticked)]))
@@ -882,10 +883,12 @@ fn log_section(model : Model, page : @words.Page) -> @rabbita.Html {
         [@html.text(line), @html.text(" "), @html.span(class="when", when)],
       )
     })
-  let speaking = if page == Ship && model.told.speaking {
-    [@html.p(class="pending", "\{ship} is finding words.")]
-  } else {
-    []
+  let speaking = match (page, model.told) {
+    (Ship, { speaking: true, .. }) =>
+      [@html.p(class="pending", "\{ship} is finding words.")]
+    (Ship, { thinking: true, .. }) =>
+      [@html.p(class="pending", "\{ship} is weighing a choice.")]
+    _ => []
   }
   let log = if items.is_empty() {
     [@html.p("Nothing yet.")]

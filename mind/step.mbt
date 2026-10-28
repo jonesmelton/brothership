@@ -153,6 +153,7 @@ async fn Mind::turn(
   let choice = try {
     let call = self.prompts.turn(
       self.voice,
+      values=self.profile.values,
       model=self.model,
       state,
       story,
@@ -213,6 +214,7 @@ async fn Mind::muster(
   let chosen = try {
     let call = self.prompts.muster(
       self.voice,
+      values=self.profile.values,
       model=self.model,
       state,
       story,

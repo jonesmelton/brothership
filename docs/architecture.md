@@ -13,8 +13,10 @@
 | `cmd/server`  | native    | Server entry: opens the store, serves the API and static assets.      |
 | `words`       | js native | Every sentence a player reads or hears, and each happening's priority. |
 | `speech`      | native    | The ship speaks: which happening earns a line, its prompt, the speaker. |
+| `mind`        | native    | The ship decides: its asks, refits and promotions, by model, with the temperament as fallback. |
 | `cmd/browser` | js        | Rabbita (TEA) client.                                                 |
 | `cmd/speak`   | native    | Flies one ship through a crossing in memory and prints its lines.     |
+| `cmd/audition`| native    | Puts every ship's character in the same moments; prints choices and lines. |
 | `llm`         | js native | Model calls: `Call`, `Backend` and its wrappers (route, limit, retry). |
 | `llm/prompt`  | js native | Minijinja templates, strict undefined, set up for markdown.           |
 | `llm/cache`   | native    | Content-addressed reply cache, one json file per call.                |
@@ -175,13 +177,45 @@ is told is not a row. `@core.happenings(before, event, after)` derives it,
 the store keeps each ship's story, and the client reads it from `/story`
 for the log, "while you were away" and announcements.
 
-`cmd/server` runs one speaker per ship whose `captain.md` and `voice.md` are
-approved, when a `MODEL_API_KEY` is set. Every 3 s it weighs the
-happenings it has not seen (`@speech.worth`), and for one that earns a
-line it renders `content/speech/` with the ship's faces and the same
-sentences a player reads, writes the line with `meta:muse-spark-1.3-contributor`, gates it on the same
-model, and appends
-`Spoke(line, about)` through `Store::speak`. A failed or blocked line
-leaves nothing. After a line the ship keeps quiet for 15 minutes except
-for departures, arrivals, promotions and new demands. The runtime image copies
-`content/` for this.
+`cmd/server` runs one speaker and one mind per ship whose `captain.md`
+and `voice.md` are approved, when a `MODEL_API_KEY` is set. Every 3 s the
+speaker weighs the happenings it has not seen (`@speech.worth`), and for
+one that earns a line it renders `content/speech/` with the ship's faces,
+the sentences a player reads, the crew by handle (`@speech.roster`), and
+what the mind chose and why. It writes the line with `WRITER_MODEL`, gates
+it with `GATE_MODEL`, and appends `Spoke(line, about)` through
+`Store::speak`, which takes only `@llm_gate.Cleared` text: the gate's
+`Gate::clear` is the only way to make one. The model may reply `PASS`, and
+a line that opens like, or reuses most of the words of, one of the ship's
+last five is dropped (`@speech.repeats`). A failed, blocked, passed or
+repeated line leaves nothing. After a line the ship keeps quiet for 15
+minutes except for departures, arrivals, promotions and new demands. The
+speaker waits while the mind is deciding, so a line can speak to the
+choice. The runtime image copies `content/` for this.
+
+## the ship's mind
+
+A minded ship (`Store::mind`) makes its choices by model. The clock and
+`Store::propose` leave its turn out (`Profile::due(minded=true)`), and the
+mind, polling every 3 s, takes a turn whenever the ship's moment has
+changed since it last asked, or a refit landed with nothing queued. It
+renders `content/mind/turn.md` with the readout, the crew by handle, the
+crossing's happenings and its own last thoughts, asks `MIND_MODEL` for
+`{"ask", "refit", "thought"}`, and appends the acts through
+`Store::decide`, which drops the turn if the moment passed while the model
+thought. At arrival it renders `content/mind/muster.md` and appends the
+promotions the model names, as far as `@ships.allowed` lets them stand,
+then docks, through `Store::muster`. The thought is never shown to
+players; the speaker hears it.
+
+A failed, unreadable or late reply (2 minutes for a turn, 3 for a muster)
+falls back to the temperament and `@ships.promotions`. If the mind never
+musters, the clock promotes by script and docks `MIND_WAIT` (5 minutes)
+after arrival. Until a turn lands the ship asks for nothing, and the Log
+says it is weighing a choice (`Story.thinking`). Replay reads only the
+log, so it never calls the model.
+
+`cmd/audition` flies the Tigress with four scripted officers to a
+departure, a demand, the coast and an arrival, and gives each moment to
+every ship's character and values, sampled, on the models it is given.
+Replies are cached in `.cache/llm`.

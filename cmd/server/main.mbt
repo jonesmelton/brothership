@@ -59,6 +59,9 @@ async fn main {
         speaking=ship => {
           ships.iter().any(sp => sp.id == ship && sp.speaker.speaking())
         },
+        thinking=ship => {
+          ships.iter().any(sp => sp.id == ship && sp.mind.thinking())
+        },
         secure=!dev,
       ),
     )

@@ -354,6 +354,7 @@ pub(all) enum Status {
 pub(all) struct Story {
   entries : Array[Entry]
   speaking : Bool
+  thinking : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Tally {

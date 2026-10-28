@@ -11,11 +11,13 @@ struct Told {
   arrived : Int64?
   /// The ship is writing a line.
   speaking : Bool
+  /// The ship's mind is weighing a choice.
+  thinking : Bool
 } derive(Eq)
 
 ///|
 fn Told::new() -> Told {
-  { entries: [], arrived: None, speaking: false, }
+  { entries: [], arrived: None, speaking: false, thinking: false, }
 }
 
 ///|
@@ -95,6 +97,7 @@ fn Told::merge(
       self.arrived.unwrap_or(entries.last().map(e => e.seq).unwrap_or(0L)),
     ),
     speaking: incoming.speaking,
+    thinking: incoming.thinking,
   }
   guard self.arrived is Some(_) && hear != Nothing else { (next, "", "") }
   let polite = []

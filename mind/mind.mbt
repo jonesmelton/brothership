@@ -49,11 +49,20 @@ const RECOUNTED : Int32 = 16
 const RECALLED : Int32 = 4
 
 ///|
-fn Prompts::system(self : Prompts, voice : @speech.Voice) -> String raise {
+fn Prompts::system(
+  self : Prompts,
+  voice : @speech.Voice,
+  values : @core.Values,
+) -> String raise {
   self.prompts.render("system", {
     "epithet": Json(voice.epithet),
     "setting": Json(self.setting),
     "captain": Json(voice.captain),
+    "values": {
+      "drive": Json::number(values.drive.to_double()),
+      "hull": Json::number(values.hull.to_double()),
+      "craft": Json::number(values.craft.to_double()),
+    },
   })
 }
 
@@ -96,6 +105,7 @@ fn ask_word(post : @core.Post?) -> String {
 pub fn Prompts::turn(
   self : Prompts,
   voice : @speech.Voice,
+  values~ : @core.Values,
   model~ : String,
   state : @core.State,
   story : Array[@core.Entry],
@@ -125,7 +135,7 @@ pub fn Prompts::turn(
   })
   @llm.Call::new(
     model~,
-    system=[self.system(voice)],
+    system=[self.system(voice, values)],
     user~,
     max_tokens=3000,
     reasoning_effort="low",
@@ -137,6 +147,7 @@ pub fn Prompts::turn(
 pub fn Prompts::muster(
   self : Prompts,
   voice : @speech.Voice,
+  values~ : @core.Values,
   model~ : String,
   state : @core.State,
   story : Array[@core.Entry],
@@ -166,7 +177,7 @@ pub fn Prompts::muster(
   })
   @llm.Call::new(
     model~,
-    system=[self.system(voice)],
+    system=[self.system(voice, values)],
     user~,
     max_tokens=3000,
     reasoning_effort="low",

@@ -1,0 +1,17 @@
+import {
+  "local/brothership/core",
+  "local/brothership/llm",
+  "local/brothership/llm/cache",
+  "local/brothership/mind",
+  "local/brothership/ships",
+  "local/brothership/speech",
+  "local/brothership/store",
+  "local/brothership/words",
+  "moonbitlang/async",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+}
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")

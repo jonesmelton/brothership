@@ -29,7 +29,9 @@
   Not an account: clearing the cookie starts a new officer.
 - **handle**: the server-issued identifier a ship's model uses for one
   officer, so it can attribute actions and single that officer out. Never
-  player-written, and not a display name.
+  player-written, and not a display name. Today a letter per crossing, in
+  the order hands joined (`@speech.handles`); the model is told never to
+  say it aloud.
 - **display name**: an officer's name shown to other players. Interface
   text only; a ship's model never sees it, and there is no interface to
   change one yet.
@@ -62,5 +64,9 @@
 - **docking**: settling an arrived crossing into the ship that leaves port
   (`Crossing::dock`).
 - **temperament**: the scripted stand-in for a ship's model choices: what it
-  asks for and which refit it proposes. Bold, careful, social or sly.
+  asks for and which refit it proposes. Bold, careful, social or sly. The
+  fallback when the mind's call fails, and the whole policy in the
+  simulator.
+- **mind**: the model that makes a ship's choices on the server: its asks,
+  refits and promotions (`@mind.Mind`). A ship with a mind is *minded*.
 - **band**: one of four hull ranges that set the drive's highest setting.

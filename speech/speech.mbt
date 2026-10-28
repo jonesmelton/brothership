@@ -207,8 +207,8 @@ pub fn Speech::call(
     .map(e => recount(e.happening, names, ship~))
     .collect()
   let ask = match state.crossing() {
-    Some(c) => c.ask.map(@words.post_name)
-    None => None
+    Some(c) if c.phase != Arrived => c.ask.map(@words.post_name)
+    _ => None
   }
   let system = self.prompts.render("system", {
     "epithet": Json(ship),
@@ -281,6 +281,53 @@ pub fn repeats(line : String, earlier : Array[String]) -> Bool {
     let shared = long.filter(w => those.contains(w)).length()
     opens || (long.length() >= 4 && shared * 5 >= long.length() * 3)
   })
+}
+
+///|
+/// Why a ship said nothing.
+pub(all) suberror Silent {
+  /// The model replied PASS.
+  Passed
+  /// The reply was empty, too long or formatted.
+  Unusable(String)
+  /// The line opens like, or reuses most of, one of the ship's last lines.
+  Repeated(String)
+  Blocked(String, evidence~ : String)
+} derive(Debug)
+
+///|
+pub impl Show for Silent with fn output(self, logger) {
+  logger.write_string(
+    match self {
+      Passed => "kept quiet"
+      Unusable(reply) => "unusable reply: \{reply}"
+      Repeated(line) => "repeats itself: \{line}"
+      Blocked(line, evidence~) => "blocked (\{evidence}): \{line}"
+    },
+  )
+}
+
+///|
+/// `voice`'s line about `about`, written and passed by the gate. Raises
+/// `Silent` if there is no line to say, or the backend's error.
+pub async fn Speech::line(
+  self : Speech,
+  backend : @llm.Backend,
+  voice : Voice,
+  state : @core.State,
+  story : Array[@core.Entry],
+  about : @core.Entry,
+  thoughts~ : Array[String] = [],
+) -> @llm_gate.Cleared {
+  let call = self.call(voice, state, story, about, thoughts~)
+  let reply = backend.call(call)
+  guard reply.text.trim() != "PASS" else { raise Passed }
+  guard tidy(reply.text) is Some(line) else { raise Unusable(reply.text) }
+  guard !repeats(line, said(story)) else { raise Repeated(line) }
+  self.gate.clear(backend, line) catch {
+    @llm_gate.Blocked(evidence) => raise Blocked(line, evidence~)
+    err => raise err
+  }
 }
 
 ///|
@@ -363,45 +410,20 @@ pub async fn Speaker::step(
     println("speech \{self.ship} @\{about.seq}: \{what}")
   }
   let started = @async.now()
-  let line = try {
-    let call = self.speech.call(
-      self.voice,
-      snapshot.state,
-      story,
-      about,
-      thoughts=(self.thoughts)(),
-    )
-    let reply = self.backend.call(call)
-    if reply.text.trim() == "PASS" {
-      report("kept quiet")
-      return
-    }
-    guard tidy(reply.text) is Some(line) else {
-      report("unusable reply: \{reply.text}")
-      return
-    }
-    if repeats(line, said(story)) {
-      report("repeats itself: \{line}")
-      return
-    }
-    let written = @async.now()
-    let cleared = self.speech.gate.clear(self.backend, line) catch {
-      @llm_gate.Blocked(_) as err => {
-        report("\{err}: \{line}")
-        return
-      }
-      err => raise err
-    }
-    report(
-      "written in \{written - started} ms, gated in \{@async.now() - written} ms",
-    )
-    cleared
-  } catch {
+  let line = self.speech.line(
+    self.backend,
+    self.voice,
+    snapshot.state,
+    story,
+    about,
+    thoughts=(self.thoughts)(),
+  ) catch {
     err => {
-      report("failed: \{err}")
+      report("\{err}")
       return
     }
   }
+  report("written in \{@async.now() - started} ms")
   let now = clock()
   store.speak(self.ship, line~, about=about.seq, now~)
   self.quiet_until = now + QUIET
