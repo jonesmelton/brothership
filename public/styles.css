@@ -78,3 +78,65 @@ body {
   font-size: 0.875rem;
   cursor: pointer;
 }
+
+/* The check-in. One column at any size; type from docs/typography.md. */
+:root {
+  --font-display: "EB Garamond", Georgia, serif;
+  --font-ui: "Fira Sans", system-ui, sans-serif;
+}
+.checkin {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 1rem;
+  font-family: var(--font-ui);
+  font-synthesis: none;
+}
+.checkin h1,
+.checkin h2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1.2;
+}
+.checkin h1 {
+  font-size: 1.75rem;
+}
+.checkin h2 {
+  font-size: 1.25rem;
+  margin-block: 1.5rem 0.5rem;
+}
+.checkin p,
+.checkin ul {
+  margin-block: 0 0.5rem;
+}
+.checkin fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.checkin legend {
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.04em;
+  padding: 0;
+  margin-block-end: 0.25rem;
+}
+.checkin button {
+  font: inherit;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid currentColor;
+  border-radius: 0.25rem;
+  background: Canvas;
+  color: CanvasText;
+}
+.checkin button[aria-pressed="true"] {
+  background: CanvasText;
+  color: Canvas;
+  font-weight: 600;
+}
+.checkin button:focus-visible {
+  outline: 3px solid Highlight;
+  outline-offset: 2px;
+}

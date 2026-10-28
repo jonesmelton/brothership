@@ -307,8 +307,10 @@ written to the log as events. Replay never calls a model. Each model-driven
 choice has a scripted policy, used by the harness and as the fallback when a
 call fails.
 
-The idle core's "no background process" is given up. A scheduler on the server
-fires phase changes, deadlines and ship asks.
+The idle core's "no background process" is given up, but not for the
+rules: phase changes and deadlines need no scheduler, because any event,
+including a tick, steps through them. The scheduler on the server exists so
+the ship can speak, dock and depart at the right instant.
 
 ## left behind from the research
 

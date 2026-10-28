@@ -9,7 +9,11 @@ async fn main {
     @path.Path(@env.args()[0]).resolve().dirname().to_string(),
   )
   let db = @env.get_env_var("BROTHERSHIP_DB").unwrap_or("brothership.sqlite")
-  let store = @store.Store::open(db, ship=@ships.profiles()[SHIP], seed=SEED)
+  let store = @store.Store::open(
+    db,
+    ship=@ships.flagship(),
+    seed=@ships.FLAGSHIP_SEED,
+  )
   defer store.close()
   let assets = warren_assets()
   let dev = @env.get_env_var("WARREN_MODE") == Some("DEV")
@@ -59,14 +63,6 @@ async fn main {
     app.serve(listener)
   })
 }
-
-///|
-/// The ship this server flies: an index into `@ships.profiles()`. A
-/// database must always be opened with the same ship and seed.
-const SHIP : Int32 = 1
-
-///|
-const SEED : Int64 = 1L
 
 ///|
 /// Longest the ship clock sleeps, in seconds, so a changed clock or a missed

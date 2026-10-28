@@ -43,6 +43,21 @@ On a transport error the client drops its pending proposals and reloads the
 snapshot, so queued input is lost. Fixing that needs idempotent proposals on
 the server.
 
+Only the server moves game time. Clients propose an `Intent`; the log holds
+`Event`, which adds the server's `Tick(at)` in Unix seconds, `Departed`,
+`Docked`, and the ship's `Asked` and `Refitting`. Before anything it writes,
+the store appends a tick at the wall clock, so a receipt's snapshot may
+include a tick and the ship's response to the proposal as well as the
+proposal itself; `seq` counts them all. Between receipts the client applies
+a local `Tick(at=now)` to its prediction for display and never proposes one.
+It also polls the snapshot, since the ship acts on its own.
+
+The ship clock in `cmd/server` sleeps until the ship next has something to
+do (`Profile::wake`: a rate boundary, arrival, or the end of the port stay),
+at most a minute, then calls `Store::advance`. What the ship does at an
+instant is the pure function `Profile::due` in `ships`, tested without
+sleeping.
+
 ## model latency
 
 Model text reaches a player seconds after whatever prompted it, and
@@ -77,10 +92,18 @@ expect it to take longer.
 
 - `GET /api/snapshot` returns `@core.Snapshot`.
 - `POST /api/proposals` takes `@core.Proposal` and returns `@core.Receipt`.
+  A proposal is a crew id and an `Intent`. Nothing checks the id: until
+  there are accounts, any client can act as any crew member. A body naming
+  a server event fails to decode and gets a 400.
 
 ## store
 
-Every accepted event is a row in `event` with a json body. The in-memory
+Every accepted event is a row in `event` with a json body: crew intents,
+ticks, departures and dockings, and the ship's asks and refits. A tick is
+written at least once a minute while the server runs. The events one call
+appends go in one transaction. The log starts from the ship profile and
+seed the store is opened with (`@ships.flagship()`), which are not in the
+log, so a database must always be opened with the same ones. The in-memory
 snapshot is the log replayed through `State::apply` and is rebuilt on open.
 Migrations live in `store/schema.mbt`, are forward-only and are tracked with
 `pragma user_version`; append new ones, never edit a shipped one. Writes are

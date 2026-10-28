@@ -76,3 +76,13 @@ pub fn Profile::wake(_self : Profile, state : @core.State) -> Int64 {
       }
   }
 }
+
+///|
+/// The ship the server flies. A database must always be opened with the
+/// same ship and seed.
+pub fn flagship() -> Profile {
+  profiles()[1]
+}
+
+///|
+pub const FLAGSHIP_SEED : Int64 = 1L

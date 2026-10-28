@@ -8,7 +8,11 @@ import {
 }
 
 // Values
+pub const FLAGSHIP_SEED : Int64 = 1
+
 pub const PORT_STAY : Int64 = 600
+
+pub fn flagship() -> Profile
 
 pub fn gamma(Int64) -> Double
 
