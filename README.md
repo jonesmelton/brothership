@@ -18,8 +18,10 @@ make check  # fmt, type check, tests, proofs
 ```
 
 The server stores its data in `brothership.sqlite` in the working directory.
-Set `BROTHERSHIP_DB` to use another path, and `WARREN_HOST` / `WARREN_PORT`
-to change the address.
+`make dev` overrides that to `_build/brothership.sqlite`: warren watches the
+project root and ignores `_build`, so a sqlite file beside the source would
+rebuild and reload the client on every event. Set `BROTHERSHIP_DB` to use
+another path, and `WARREN_HOST` / `WARREN_PORT` to change the address.
 
 ## Deploy
 

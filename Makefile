@@ -1,7 +1,13 @@
 .PHONY: dev build deploy test check sim
 
+# The dev log lives in _build: warren's watcher ignores that directory, but a
+# sqlite file in the project root makes every committed event rebuild and
+# reload the client.
+BROTHERSHIP_DB ?= _build/brothership.sqlite
+
 dev:
-	warren dev --server-target native
+	@mkdir -p _build
+	ulimit -n 4096; BROTHERSHIP_DB=$(BROTHERSHIP_DB) warren dev --server-target native
 
 build:
 	warren build --server-target native
