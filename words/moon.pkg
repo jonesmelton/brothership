@@ -1,0 +1,9 @@
+import {
+  "local/brothership/core",
+  "local/brothership/core/math",
+  "local/brothership/ships",
+}
+
+supported_targets = "js + native"
+
+warnings = "-79"

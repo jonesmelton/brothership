@@ -5,7 +5,7 @@
 /// A span in words that coarsen with length and do not tick: under an
 /// hour, about an hour, whole hours to 6, the nearest 3 hours to 36, then
 /// whole days. See research/liveship-travel-math.md, section 11.
-fn about(seconds : Int64) -> String {
+pub fn about(seconds : Int64) -> String {
   if seconds < 3600L {
     "under an hour"
   } else if seconds < 5400L {
@@ -21,7 +21,7 @@ fn about(seconds : Int64) -> String {
 
 ///|
 /// When something `seconds` away happens, in the words of `about`.
-fn in_words(seconds : Int64) -> String {
+pub fn in_words(seconds : Int64) -> String {
   if seconds < 3600L {
     "within the hour"
   } else {
@@ -44,7 +44,7 @@ fn soon_words(seconds : Int64) -> String {
 }
 
 ///|
-fn post_name(post : @core.Post) -> String {
+pub fn post_name(post : @core.Post) -> String {
   match post {
     Drive => "the drive"
     Hull => "the hull"
@@ -53,7 +53,7 @@ fn post_name(post : @core.Post) -> String {
 }
 
 ///|
-fn craft_name(craft : @core.Craft) -> String {
+pub fn craft_name(craft : @core.Craft) -> String {
   match craft {
     Engineer => "engineering"
     Artist => "art"
@@ -61,7 +61,7 @@ fn craft_name(craft : @core.Craft) -> String {
 }
 
 ///|
-fn refit_name(refit : @core.Refit) -> String {
+pub fn refit_name(refit : @core.Refit) -> String {
   match refit {
     Baffles => "baffles"
     Plating => "plating"
@@ -71,7 +71,7 @@ fn refit_name(refit : @core.Refit) -> String {
 }
 
 ///|
-fn phase_name(phase : @core.Phase) -> String {
+pub fn phase_name(phase : @core.Phase) -> String {
   match phase {
     Burn => "burn"
     Coast => "coast"
@@ -81,7 +81,7 @@ fn phase_name(phase : @core.Phase) -> String {
 }
 
 ///|
-fn hazard_name(h : @core.Hazard) -> String {
+pub fn hazard_name(h : @core.Hazard) -> String {
   match h {
     Breach => "A breach"
     Flare => "A flare"
@@ -95,7 +95,7 @@ fn pct(n : Int64, of : Int64) -> Int64 {
 }
 
 ///|
-fn plural(n : Int64, one : String, many : String) -> String {
+pub fn plural(n : Int64, one : String, many : String) -> String {
   if n == 1L {
     "1 \{one}"
   } else {
@@ -105,7 +105,7 @@ fn plural(n : Int64, one : String, many : String) -> String {
 
 ///|
 /// Where the ship is: the first thing the check-in says.
-fn where_sentences(s : @core.State) -> Array[String] {
+pub fn where_sentences(s : @core.State) -> Array[String] {
   match s.leg {
     InPort(since~) => {
       let next = @ships.itinerary[(s.ship.crossings %
@@ -158,7 +158,7 @@ fn where_sentences(s : @core.State) -> Array[String] {
 }
 
 ///|
-fn ask_sentence(c : @core.Crossing) -> Array[String] {
+pub fn ask_sentence(c : @core.Crossing) -> Array[String] {
   match c.ask {
     Some(post) => ["The ship asks for hands on \{post_name(post)}."]
     None => []
@@ -179,7 +179,7 @@ fn demand_sentence(d : @core.Demand) -> String {
 
 ///|
 /// Where `crew` stands, in the second person.
-fn you_sentences(s : @core.State, crew : String) -> Array[String] {
+pub fn you_sentences(s : @core.State, crew : String) -> Array[String] {
   guard s.crossing() is Some(c) else {
     ["You join the crew when the ship departs."]
   }
@@ -210,52 +210,82 @@ fn you_sentences(s : @core.State, crew : String) -> Array[String] {
 }
 
 ///|
-/// What changed between `was`, the state at the player's last visit, and
-/// `now`: crossings flown, phases, demands, refits, and the player's own
-/// watches and works.
-fn news(was : @core.State, now : @core.State, crew : String) -> Array[String] {
-  let out = []
-  let flown = now.ship.crossings - was.ship.crossings
-  if flown > 0L {
-    out.push("The ship reached port \{plural(flown, "time", "times")}.")
+/// How a happening reaches a player as it happens. See docs/accessibility.md.
+pub(all) enum Priority {
+  /// Needs attention now. Rare.
+  Interrupt
+  /// Spoken when the screen reader is idle.
+  Announce
+  /// Kept in the log, not spoken.
+  Quiet
+} derive(Debug, Eq, Compare)
+
+///|
+/// `e`'s priority for the player `you`. A ship's line takes the priority of
+/// the happening it answers, found in `story`.
+pub fn priority(
+  e : @core.Entry,
+  you~ : String,
+  story~ : Array[@core.Entry],
+) -> Priority {
+  match e.happening {
+    Opened(_) => Interrupt
+    Departed | Began(_) | Docked(_) | Met(_) | Missed(_) | Landed(..) =>
+      Announce
+    Stood(crew~) | Finished(crew~) => if crew == you { Announce } else { Quiet }
+    Asked(_) | Took(..) | Left(_) => Quiet
+    Spoke(about~, ..) =>
+      match story.iter().find_first(x => x.seq == about) {
+        Some(x) if x.happening is Opened(_) => Interrupt
+        _ => Announce
+      }
   }
-  match (was.crossing(), now.crossing()) {
-    (Some(a), Some(b)) if flown == 0L => {
-      if a.phase != b.phase {
-        out.push("The \{phase_name(b.phase)} began.")
+}
+
+///|
+/// A happening as a sentence for the player `you`, aboard the ship called
+/// `ship` in English.
+pub fn told(h : @core.Happening, you~ : String, ship~ : String) -> String {
+  let who = (crew : String) => if crew == you { "You" } else { "A hand" }
+  match h {
+    Departed => "The ship left port."
+    Began(phase=Arrived) => "The ship arrived."
+    Began(phase~) => "The \{phase_name(phase)} began."
+    Docked(recruits=0) => "The ship docked."
+    Docked(recruits~) =>
+      "The ship docked, and \{plural(recruits, "recruit", "recruits")} joined."
+    Opened(hazard~) =>
+      "\{hazard_name(hazard)} opened on \{post_name(hazard.post())}."
+    Met(hazard~) => "\{hazard_name(hazard)} was met."
+    Missed(hazard~) => "\{hazard_name(hazard)} was missed."
+    Landed(refit~, level~) =>
+      "A refit landed: \{refit_name(refit)} to level \{level}."
+    Asked(post=Some(post)) => "The ship asks for hands on \{post_name(post)}."
+    Asked(post=None) => "The ship stopped asking for hands."
+    Took(crew~, post=Craft) => "\{who(crew)} went to crafts."
+    Took(crew~, post~) => "\{who(crew)} took \{post_name(post)}."
+    Left(crew~) => "\{who(crew)} left the crew."
+    Stood(crew~) =>
+      if crew == you {
+        "You stood your watch to its end."
+      } else {
+        "A hand stood a watch to its end."
       }
-      for i, d in b.demands {
-        let before = a.demands.get(i).map(x => x.status)
-        guard before != Some(d.status) else { continue }
-        let what = hazard_name(d.hazard)
-        match d.status {
-          Open => out.push("\{what} opened on \{post_name(d.hazard.post())}.")
-          Met => out.push("\{what} was met.")
-          Missed => out.push("\{what} was missed.")
-          Waiting => ()
-        }
-      }
-      for r in @core.refits {
-        if b.fit.level(r) > a.fit.level(r) {
-          out.push(
-            "A refit landed: \{refit_name(r)} to level \{b.fit.level(r)}.",
-          )
-        }
-      }
-      match (a.tallies.get(crew), b.tallies.get(crew)) {
-        (Some(x), Some(y)) => {
-          if y.watches_stood > x.watches_stood {
-            out.push("You stood your watch to its end.")
-          }
-          if y.work / @core.WORK_SIZE > x.work / @core.WORK_SIZE {
-            out.push("You finished a work.")
-          }
-        }
-        _ => ()
-      }
-    }
-    (_, Some(_)) => out.push("The ship left port.")
-    _ => ()
+    Finished(crew~) => "\{who(crew)} finished a work."
+    Spoke(line~, ..) => "\{ship}: \{line}"
   }
-  out
+}
+
+///|
+/// How long ago something `seconds` back happened: minutes to the nearest
+/// 5 under an hour, then in the words of `about`.
+pub fn ago(seconds : Int64) -> String {
+  if seconds < 60L {
+    "just now"
+  } else if seconds < 3600L {
+    let fives = ((seconds + 150L) / 300L * 5L).max(1L)
+    "\{plural(fives, "minute", "minutes")} ago"
+  } else {
+    "\{about(seconds)} ago"
+  }
 }

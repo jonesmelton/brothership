@@ -21,13 +21,22 @@ extern "js" fn crew_id() -> String =
   #|}
 
 ///|
-/// The state this browser last showed of `ship`, as JSON, or "" if none.
+/// The newest story `seq` this browser has shown of `ship`, or "" if none.
 extern "js" fn load_seen(ship : String) -> String =
-  #|(ship) => localStorage.getItem("brothership.seen." + ship) ?? ""
+  #|(ship) => localStorage.getItem("brothership.seen-seq." + ship) ?? ""
 
 ///|
-extern "js" fn store_seen(ship : String, json : String) -> Unit =
-  #|(ship, json) => localStorage.setItem("brothership.seen." + ship, json)
+extern "js" fn store_seen(ship : String, seq : String) -> Unit =
+  #|(ship, seq) => localStorage.setItem("brothership.seen-seq." + ship, seq)
+
+///|
+/// What the player wants read aloud, as `Hear::name` gives it, or "".
+extern "js" fn stored_hear() -> String =
+  #|() => localStorage.getItem("brothership.hear") ?? ""
+
+///|
+extern "js" fn store_hear(hear : String) -> Unit =
+  #|(hear) => localStorage.setItem("brothership.hear", hear)
 
 ///|
 /// The ship this browser last boarded, or "".

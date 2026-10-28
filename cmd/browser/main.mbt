@@ -10,8 +10,12 @@ struct Model {
   ships : Array[@core.Listing]
   /// The ship this player is aboard, kept in `localStorage`.
   ship : String?
-  /// The ship's state at the player's last visit, for "while you were away".
-  since : @core.State?
+  /// The newest `seq` of the ship's story this browser had seen before this
+  /// visit, for "while you were away"; `None` on a first visit.
+  seen : Int64?
+  told : Told
+  hear : Hear
+  said : Said
   sync : Sync
 } derive(Eq)
 
@@ -31,6 +35,8 @@ enum Msg {
   Loaded(String, Result[@core.Snapshot, Error])
   Propose(@core.Intent)
   Settled(String, Result[@core.Receipt, Error])
+  Storied(String, Result[@core.Story, Error])
+  Hear(Hear)
   /// The local clock moved.
   Tock
   Poll
@@ -52,6 +58,18 @@ fn list(emit : @rabbita.Emit[Msg]) -> @rabbita.Cmd {
 fn load(emit : @rabbita.Emit[Msg], ship : String) -> @rabbita.Cmd {
   @http.get("/api/ships/\{ship}/snapshot").expect_json(
     emit.map(r => Loaded(ship, r)),
+  )
+}
+
+///|
+/// The ship's story after `after`.
+fn tell(
+  emit : @rabbita.Emit[Msg],
+  ship : String,
+  after : Int64,
+) -> @rabbita.Cmd {
+  @http.get("/api/ships/\{ship}/story?after=\{after}").expect_json(
+    emit.map(r => Storied(ship, r)),
   )
 }
 
@@ -82,31 +100,45 @@ fn send_next(
 }
 
 ///|
-/// Remember what the player has now seen of `ship`, for their next visit.
-fn remember(ship : String, sync : @core.Optimistic) -> @rabbita.Cmd {
-  let state = sync.confirmed().state
-  @rabbita.effect(() => store_seen(ship, state.to_json().stringify()))
-}
-
-///|
-/// The state this browser last showed of `ship`, if any.
-fn seen(ship : String) -> @core.State? {
-  Some(@json.from_json(@json.parse(load_seen(ship)))) catch {
-    _ => None
-  }
-}
-
-///|
 /// Board `ship`: forget the last ship's proposals and load this one.
 fn board(
   model : Model,
   ship : String,
   emit : @rabbita.Emit[Msg],
 ) -> (Model, @rabbita.Cmd) {
+  let seen = @string.parse_int64(load_seen(ship)) catch { _ => -1L }
   (
-    { ..model, ship: Some(ship), since: seen(ship), sync: Loading, },
-    @rabbita.batch([load(emit, ship), @rabbita.effect(() => store_ship(ship))]),
+    {
+      ..model,
+      ship: Some(ship),
+      seen: if seen < 0L {
+        None
+      } else {
+        Some(seen)
+      },
+      told: Told::new(),
+      sync: Loading,
+    },
+    @rabbita.batch([
+      load(emit, ship),
+      tell(emit, ship, 0),
+      @rabbita.effect(() => store_ship(ship)),
+    ]),
   )
+}
+
+///|
+/// The ship's name in English: its epithet, or the profile's name.
+fn epithet(model : Model) -> String {
+  let name = model.ships
+    .iter()
+    .find_first(l => model.ship == Some(l.id))
+    .map(l => l.name)
+    .unwrap_or("The ship")
+  @ships.profile_named(name)
+  .bind(p => p.title)
+  .map(t => t.epithet)
+  .unwrap_or(name)
 }
 
 ///|
@@ -115,20 +147,55 @@ fn update(
   msg : Msg,
   emit : @rabbita.Emit[Msg],
 ) -> (Model, @rabbita.Cmd) {
-  let ready = (ship : String, sync : @core.Optimistic, cmd : @rabbita.Cmd) => {
-    (
-      { ..model, sync: Ready(sync), },
-      @rabbita.batch([cmd, remember(ship, sync)]),
-    )
+  let ready = (_ship : String, sync : @core.Optimistic, cmd : @rabbita.Cmd) => {
+    ({ ..model, sync: Ready(sync), }, cmd)
   }
   let current = (ship : String) => model.ship == Some(ship)
   match (model.sync, msg) {
-    (_, Tock) => ({ ..model, now: unix_now(), }, @rabbita.none)
+    // A line is on its way: look for it sooner than the poll would.
+    (_, Tock) =>
+      (
+        { ..model, now: unix_now(), },
+        match model.ship {
+          Some(ship) if model.told.speaking =>
+            tell(emit, ship, model.told.last())
+          _ => @rabbita.none
+        },
+      )
     (_, Poll) =>
       match model.ship {
-        Some(ship) => (model, load(emit, ship))
+        Some(ship) =>
+          (
+            model,
+            @rabbita.batch([
+              load(emit, ship),
+              tell(emit, ship, model.told.last()),
+            ]),
+          )
         None => (model, list(emit))
       }
+    (_, Hear(hear)) =>
+      ({ ..model, hear, }, @rabbita.effect(() => store_hear(hear.name())))
+    (_, Storied(ship, _)) if !current(ship) => (model, @rabbita.none)
+    (_, Storied(_, Err(_))) => (model, @rabbita.none)
+    (_, Storied(ship, Ok(story))) => {
+      let (told, polite, assertive) = model.told.merge(
+        story,
+        you=model.crew,
+        hear=model.hear,
+        ship=epithet(model),
+      )
+      let said = if polite == "" && assertive == "" {
+        model.said
+      } else {
+        { polite, assertive, count: model.said.count + 1, }
+      }
+      let last = told.last()
+      (
+        { ..model, told, said, },
+        @rabbita.effect(() => store_seen(ship, last.to_string())),
+      )
+    }
     (_, Listed(Ok(ships))) => {
       let model = { ..model, ships, }
       match model.ship {
@@ -170,7 +237,14 @@ fn update(
       }
     (Ready(sync), Settled(ship, Ok(receipt))) => {
       let next = sync.settle(receipt)
-      ready(ship, next, send_next(emit, ship, sync, next))
+      ready(
+        ship,
+        next,
+        @rabbita.batch([
+          send_next(emit, ship, sync, next),
+          tell(emit, ship, model.told.last()),
+        ]),
+      )
     }
     // The in-flight proposal's fate is unknown; drop local guesses and settle
     // to whatever the server has.
@@ -224,9 +298,9 @@ fn title(name : String) -> Array[@rabbita.Html] {
 /// Where the ship is, with the voyage track after the phase sentence and
 /// the ship's ask in its own voice.
 fn where_section(s : @core.State) -> @rabbita.Html {
-  let lines = where_sentences(s)
+  let lines = @words.where_sentences(s)
   let ask = match s.crossing() {
-    Some(c) => ask_sentence(c)
+    Some(c) => @words.ask_sentence(c)
     None => []
   }
   let body = []
@@ -314,7 +388,7 @@ fn choices(
           .map(n => {
             choice(
               emit,
-              plural(n, "hour", "hours"),
+              @words.plural(n, "hour", "hours"),
               Watched(ticks=n * @core.HOUR),
             )
           }),
@@ -342,7 +416,7 @@ fn choices(
         [choice(emit, "Cancel the order", Ordered(order=None))]
       _ => []
     }
-    group("When the \{phase_name(phase)} begins", buttons + cancel)
+    group("When the \{@words.phase_name(phase)} begins", buttons + cancel)
   })
   let crafts : Array[@core.Craft] = [Artist, Engineer]
   let craft = group(
@@ -364,7 +438,7 @@ fn choices(
         .map(r => {
           choice(
             emit,
-            capitalized(refit_name(r)),
+            capitalized(@words.refit_name(r)),
             Refitting(refit=Some(r)),
             pressed=c.fit.refit == Some(r),
           )
@@ -403,7 +477,7 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
       _ if model.ships.is_empty() => [@html.p("Reaching the fleet.")]
       _ => [ship_choices(model, emit)]
     }
-    @html.main_(class="checkin", [masthead("Choose a ship"), ..body])
+    return page(model, [masthead("Choose a ship"), ..body])
   }
   let name = model.ships
     .iter()
@@ -415,20 +489,14 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
     Offline(reason~) => [@html.p("Out of contact with the ship: \{reason}")]
     Ready(sync) => {
       let s = shown(model, sync)
-      let away = match model.since {
-        Some(was) => news(was, s, model.crew)
-        None => ["This is your first visit to this ship."]
-      }
-      let away = if away.is_empty() {
-        [@html.li("Nothing new since your last visit.")]
-      } else {
-        away.map(line => @html.li(line))
-      }
+      let away = model.told
+        .away(model.seen, you=model.crew, ship=epithet(model))
+        .map(line => @html.li(line))
       [
         where_section(s),
         @html.section([@html.h2("While you were away"), @html.ul(away)]),
         @html.section(
-          [@html.h2("You"), ..sentences(you_sentences(s, model.crew))],
+          [@html.h2("You"), ..sentences(@words.you_sentences(s, model.crew))],
         ),
         @html.section(
           [
@@ -439,11 +507,86 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
             },
           ],
         ),
+        log_section(model, emit),
       ]
     }
   }
   let other = @html.section([@html.h2("Other ships"), ship_choices(model, emit)])
-  @html.main_(class="checkin", [masthead(title(name)), ..body, other])
+  page(model, [masthead(title(name)), ..body, other])
+}
+
+///|
+/// How many entries the log shows, newest first.
+const LOG_LENGTH : Int32 = 20
+
+///|
+/// The ship's log, newest first, and the choice of what is read aloud.
+fn log_section(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
+  let ship = epithet(model)
+  let entries = model.told.entries
+  let start = (entries.length() - LOG_LENGTH).max(0)
+  let items = entries[start:]
+    .to_owned()
+    .rev()
+    .map(e => {
+      let line = @words.told(e.happening, you=model.crew, ship~)
+      let when = @words.ago((model.now - e.at).max(0L))
+      @html.li(class=if e.happening is Spoke(_) { "voice" } else { "" }, [
+        @html.text(line),
+        @html.text(" "),
+        @html.span(class="when", when),
+      ])
+    })
+  let speaking = if model.told.speaking {
+    [@html.p(class="pending", "\{ship} is finding words.")]
+  } else {
+    []
+  }
+  let log = if items.is_empty() {
+    [@html.p("Nothing yet.")]
+  } else {
+    [
+      // Without markers Safari drops list semantics unless asked.
+      @html.ul(class="log", attrs=@html.Attrs::build().role("list"), items),
+    ]
+  }
+  let hears : Array[(Hear, String)] = [
+    (Everything, "Everything"),
+    (Urgent, "Urgent only"),
+    (Nothing, "Nothing"),
+  ]
+  let hear = group(
+    "Read aloud as it happens",
+    hears.map(h => {
+      @html.button(
+        type_="button",
+        on_click=emit(Hear(h.0)),
+        attrs=@html.Attrs::build().aria_pressed((model.hear == h.0).to_string()),
+        h.1,
+      )
+    }),
+  )
+  @html.section([@html.h2("Log"), ..speaking, ..log, hear])
+}
+
+///|
+/// The page: `content` and the two live regions, which are always present
+/// so that screen readers are watching them before anything is said.
+fn page(model : Model, content : Array[@rabbita.Html]) -> @rabbita.Html {
+  // A trailing space on alternate updates makes repeated words new text.
+  let pad = if model.said.count % 2 == 1 { "\u{a0}" } else { "" }
+  let region = (politeness : String, text : String) => {
+    @html.div(
+      class="visually-hidden",
+      attrs=@html.Attrs::build().aria_live(politeness).aria_atomic("true"),
+      text + pad,
+    )
+  }
+  @html.div([
+    @html.main_(class="checkin", content),
+    region("polite", model.said.polite),
+    region("assertive", model.said.assertive),
+  ])
 }
 
 ///|
@@ -466,7 +609,10 @@ fn main {
           } else {
             Some(ship)
           },
-          since: None,
+          seen: None,
+          told: Told::new(),
+          hear: Hear::parse(stored_hear()),
+          said: { polite: "", assertive: "", count: 0, },
           sync: Loading,
         }
         (model, list(emit))

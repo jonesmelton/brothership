@@ -62,7 +62,7 @@ fn track(c : @core.Crossing) -> @rabbita.Html {
             "",
           ),
         ]),
-        @html.span(class="label", phase_name(s.phase)),
+        @html.span(class="label", @words.phase_name(s.phase)),
       ])
     }),
   )

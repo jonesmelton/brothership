@@ -102,17 +102,79 @@ test "a voyage from port to its first moments, in sentences" {
       #|["You are on the drive.", "Your craft is art."]
     ),
   )
+}
+
+///|
+test "happenings in sentences, from where the player stands" {
+  let hs : Array[@core.Happening] = [
+    Departed,
+    Began(phase=Coast),
+    Began(phase=Arrived),
+    Docked(recruits=2),
+    Opened(hazard=Breach),
+    Missed(hazard=Flare),
+    Landed(refit=Baffles, level=2),
+    Asked(post=None),
+    Took(crew="ann", post=Hull),
+    Took(crew="bo", post=Craft),
+    Stood(crew="bo"),
+    Finished(crew="ann"),
+    Spoke(line="Who will sit with me?", about=4),
+  ]
   debug_inspect(
-    news(s, sea, "ann"),
+    hs.map(h => told(h, you="ann", ship="The Tigress")),
     content=(
-      #|["The ship left port."]
+      #|[
+      #|  "The ship left port.",
+      #|  "The coast began.",
+      #|  "The ship arrived.",
+      #|  "The ship docked, and 2 recruits joined.",
+      #|  "A breach opened on the hull.",
+      #|  "A flare was missed.",
+      #|  "A refit landed: baffles to level 2.",
+      #|  "The ship stopped asking for hands.",
+      #|  "You took the hull.",
+      #|  "A hand went to crafts.",
+      #|  "A hand stood a watch to its end.",
+      #|  "You finished a work.",
+      #|  "The Tigress: Who will sit with me?",
+      #|]
     ),
   )
-  let (_, later) = p.due(sea, 1_800_000_600 + 6 * 3600)
+}
+
+///|
+test "a demand interrupts, crew moves are quiet, and a line takes its cause's priority" {
+  let story : Array[@core.Entry] = [
+    { seq: 4, at: 0, happening: Opened(hazard=Breach), },
+    { seq: 5, at: 0, happening: Took(crew="bo", post=Hull), },
+    { seq: 6, at: 0, happening: Finished(crew="ann"), },
+    { seq: 7, at: 0, happening: Spoke(line="Hands to the hull!", about=4), },
+    { seq: 8, at: 0, happening: Spoke(line="Welcome.", about=5), },
+  ]
   debug_inspect(
-    news(sea, later, "ann"),
+    story.map(e => priority(e, you="ann", story~)),
     content=(
-      #|["The coast began.", "A flare was missed.", "A breach was missed."]
+      #|[Interrupt, Quiet, Announce, Interrupt, Announce]
+    ),
+  )
+}
+
+///|
+test "how long ago, coarsely" {
+  let at : Array[Int64] = [0, 59, 60, 7 * 60, 50 * 60, 3 * 3600, 3 * 86400]
+  debug_inspect(
+    at.map(ago),
+    content=(
+      #|[
+      #|  "just now",
+      #|  "just now",
+      #|  "1 minute ago",
+      #|  "5 minutes ago",
+      #|  "50 minutes ago",
+      #|  "about 3 hours ago",
+      #|  "about 3 days ago",
+      #|]
     ),
   )
 }

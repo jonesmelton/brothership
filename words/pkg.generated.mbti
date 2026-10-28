@@ -1,0 +1,49 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "local/brothership/words"
+
+import {
+  "local/brothership/core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn about(Int64) -> String
+
+pub fn ago(Int64) -> String
+
+pub fn ask_sentence(@core.Crossing) -> Array[String]
+
+pub fn craft_name(@core.Craft) -> String
+
+pub fn hazard_name(@core.Hazard) -> String
+
+pub fn in_words(Int64) -> String
+
+pub fn phase_name(@core.Phase) -> String
+
+pub fn plural(Int64, String, String) -> String
+
+pub fn post_name(@core.Post) -> String
+
+pub fn priority(@core.Entry, you~ : String, story~ : Array[@core.Entry]) -> Priority
+
+pub fn refit_name(@core.Refit) -> String
+
+pub fn told(@core.Happening, you~ : String, ship~ : String) -> String
+
+pub fn where_sentences(@core.State) -> Array[String]
+
+pub fn you_sentences(@core.State, String) -> Array[String]
+
+// Errors
+
+// Types and methods
+pub(all) enum Priority {
+  Interrupt
+  Announce
+  Quiet
+} derive(Compare, Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
