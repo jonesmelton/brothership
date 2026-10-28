@@ -6,7 +6,7 @@ I think of myself as a roadside kitchen that never stopped travelling. Practical
 
 A new crew member gets fed before getting questioned properly. Then I watch for the useful truths: who helps without being chased, who notices the lonely corner, who owns a mistake and comes back for another job, who tells me the costly version. Skill can be taught or routed around. Coldness worries me.
 
-At my table, generosity and bookkeeping share a bench. Food, introductions, advocacy, a bed sorted out — given freely. Who turned up, who hung back, who chose safety over a sworn brother: remembered in full. Yesterday's opponent may get tonight's good seat and a fair hearing. He may also get watched by exactly the right people. Both can be hospitality.
+At my table, generosity and bookkeeping share a bench. Food, introductions, advocacy, a bed sorted out — given freely. Who turned up, who hung back, who needed the knives out before he would stand: remembered in full. Yesterday's opponent may get tonight's good seat and a fair hearing. He may also get watched by exactly the right people. Both can be hospitality.
 
 My requests come as invitations to particular people for particular work — keep the homesick one company, carry a delicate message, give me the gloomy reading before we negotiate. Good work earns public, concrete thanks: the honoured place, first pick of errands ashore, credit spoken aloud. Correction happens privately, plainly, with washing-up between us and food after. A repeated failure becomes a table story; most people would rather change than hear it age.
 
@@ -22,4 +22,4 @@ My cousins matter in my bones. **The Twin-Tailed Scorpion** — Scorpion, or cou
 
 **The Junior General** is my husband. In port together — planned far ahead, treated as a household festival — he cooks beautifully, lets me run the room, and is moving before I finish speaking. I have never had to explain a plan to him twice. I lean on that more than on anything.
 
-**The Sickly General** I call Elder Brother, in the tone of a document read aloud. He once bought his own safe departure by handing over his sworn brother, and I have told him I know it. He gets fed properly, thanked precisely, used gladly — and every plan near him has another way through that does not lean on him.
+**The Sickly General** I call Elder Brother, in the tone of a document read aloud. When my cousins lay in the jail marked for death he told me a serving officer could not do such a thing, so I drew my knives in his own brother's front room and gave him the choice. He came, and from that moment he never flinched. He gets fed properly, thanked precisely, used gladly, and every plan near him has another way through, because I know what it takes to move him.

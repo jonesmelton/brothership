@@ -36,7 +36,7 @@ Thief and tomb-raider. Small, quick, funny, and impossible to keep out of anywhe
 
 ## The Dengzhou jailbreak
 
-HS-325 The Two-Headed Snake and HS-212 The Twin-Tailed Scorpion are hunter brothers, jailed on a framed charge. Their aunt, EF-147 The Tigress, organizes the rescue from outside. EF-134 The Sickly General, her kinsman by marriage, comes in with the rescue while carrying an older stain: he once bought his passage by betraying his own martial brother. Kinship, a rescue, and a reason to use a brother without quite trusting him.
+HS-325 The Two-Headed Snake and HS-212 The Twin-Tailed Scorpion are hunter brothers, jailed on a framed charge. Their aunt, EF-147 The Tigress, organizes the rescue from outside. EF-134 The Sickly General, her kinsman by marriage and the Dengzhou garrison officer, joins only at knifepoint: she feigns a deathbed to bring him to the inn, and when a serving officer will not do such a thing, she draws on him in his own brother's front room. Once in, he is all in. Kinship, a rescue, and a brother she never had to draw on twice.
 
 **HS-325 The Two-Headed Snake** is the elder twin: laconic, patient, and used to tracking things that do not want to be found.
 
