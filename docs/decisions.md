@@ -78,3 +78,35 @@ can absorb because no model call sits between input and feedback.
 Revisit if: checks need to be fast enough to sit between a player's input
 and its feedback, or a held-out sample set shows it missing what gpt-oss
 catches.
+## 2026-10-27 · one Fly machine; Litestream is the backup and the restore path
+One machine and one volume, never autostopped. Litestream replicates the
+sqlite log to Tigris every 30 s, and a boot with no database restores from
+it, so recovery and normal boot share one path.
+Why: `Store` holds the snapshot in memory and sqlite has one writer, so a
+second machine would diverge.
+Revisit if: deploy downtime matters (then LiteFS) or the game needs more
+than one server.
+
+## 2026-10-27 · the hull band rises only 5% above its edge
+`Crossing.band` falls as soon as the hull drops below the band's edge and
+rises again only at the edge plus `BAND_MARGIN`.
+Why: without the gap, a ship mending at an edge drops a band, wears less at
+the lower cap, climbs back over the edge, and repeats every tick, so a
+forecast runs out of boundaries.
+Revisit if: the cap stops depending on the hull, or wear stops depending on
+the setting.
+
+## 2026-10-27 · the ship reconsiders its ask only when something happens
+What the ship asks for changes only at a phase change, a demand opening or
+closing, or the hull changing band, never because crew moved.
+Why: recruits follow asks. A ship asking for the emptiest post whenever a
+hand moved chased its recruits from post to post every tick. Asks are also
+speech, which `docs/accessibility.md` treats as scarce.
+Revisit if: recruits stop following asks.
+
+## 2026-10-27 · recruits work ship posts only
+Recruits run the steady policy: demands, asks, the drive and the hull. They
+never craft, so they make no works.
+Why: recruits who craft deliver works that bring more recruits, and the cap
+was reached by the second port.
+Revisit if: recruiting gains a cost or a limit per port.

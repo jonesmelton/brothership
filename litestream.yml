@@ -1,0 +1,15 @@
+# Litestream replicates the SQLite WAL to object storage and restores on boot.
+# All connection details come from the environment so nothing secret lives here:
+#   LITESTREAM_REPLICA_URL   full s3:// URL of the replica (bucket + path)
+#   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY   injected by `fly storage create`
+#   AWS_ENDPOINT_URL_S3      Tigris S3 endpoint (also injected by Fly)
+# Litestream 0.5 dropped multi-replica support: `replica:` is singular, not the
+# 0.3-era `replicas:` list (which 0.5 rejects).
+dbs:
+  - path: ${BROTHERSHIP_DB}
+    replica:
+      url: ${LITESTREAM_REPLICA_URL}
+      endpoint: ${AWS_ENDPOINT_URL_S3}
+      # A crash loses at most this much log. The volume survives ordinary
+      # restarts and deploys, so only volume loss costs anything.
+      sync-interval: 30s

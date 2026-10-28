@@ -24,9 +24,27 @@
   returns a verdict, clean or violation, with the quote that decided it.
 - **post**: a crew member's current assignment: ship work (drive, hull) or
   their craft. Held while away. See [gameplay](gameplay.md).
-- **craft**: what a crew member's own hours make: works, ship upgrades or
-  charts. Changeable at any time.
+- **craft**: what a crew member's hours on the craft post make: refits for
+  engineers, works for artists. Changeable at any time.
 - **regard**: the ship's record of what each crew member did, computed in
   core and weighted by the ship's authored values.
 - **rank**: a crew member's public standing aboard, set by regard. Grants no
   authority yet.
+- **watch**: a promise to hold the current post for a stated time, up to
+  what the crew member's rank allows. Counts a quarter more hand; breaking it
+  costs regard.
+- **standing order**: a post to take when a later phase begins. Fires at the
+  phase boundary, so no one has to be present.
+- **demand**: a call for crew-hours on one post before its phase ends:
+  breach, flare or salvage. Fixed at departure.
+- **refit**: a permanent change to a ship's fit, built by engineers: baffles,
+  plating, injectors or coils.
+- **work**: what an artist makes, six crew-hours each. Delivered at port,
+  where works bring recruits.
+- **recruit**: an NPC who joins at port for works delivered and works ship
+  posts only.
+- **docking**: settling an arrived crossing into the ship that leaves port
+  (`Crossing::dock`).
+- **temperament**: the scripted stand-in for a ship's model choices: what it
+  asks for and which refit it proposes. Bold, careful, social or sly.
+- **band**: one of four hull ranges that set the drive's highest setting.

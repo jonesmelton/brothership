@@ -1,0 +1,12 @@
+.git
+.cache
+.honkmoon
+.mooncakes
+.repos
+_build
+_harness
+dist
+research
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
