@@ -20,5 +20,92 @@
     },
     "finish": "stop",
     "raw": null
+  },
+  "portrait": {
+    "stage": "portrait",
+    "sample": 2,
+    "key": "84d1000c2204fbc517a22bdb0f0fed96f5adc3e1142e39ecdcdc20da847af117",
+    "model": "meta:muse-wonder-1.0",
+    "max_tokens": 16000,
+    "reasoning_effort": "xhigh",
+    "inputs": {
+      "entry": "3659be64fa481787ce6a2d1f5b4fbe200ccb5879e726849839361cd8b6edafac",
+      "notes": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "text_sha": "56fc6d024bcb836a827862909ddbc2fe57b4525a5e7dea2abd76bf64e15794d7",
+    "problems": [],
+    "usage": {
+      "input": 1980,
+      "output": 5217,
+      "reasoning": 2758,
+      "cost_usd": 0.11226
+    },
+    "finish": "stop",
+    "raw": null
+  },
+  "captain": {
+    "stage": "captain",
+    "sample": 2,
+    "key": "3acb1920b992e620ea57bd2bc2662da9e06af0f35916216c07c549b48180965b",
+    "model": "meta:muse-wonder-1.0",
+    "max_tokens": 12000,
+    "inputs": {
+      "entry": "3659be64fa481787ce6a2d1f5b4fbe200ccb5879e726849839361cd8b6edafac",
+      "portrait": "56fc6d024bcb836a827862909ddbc2fe57b4525a5e7dea2abd76bf64e15794d7"
+    },
+    "text_sha": "edbc0b49999683f3f19d925bef6e1a2f2157f617d6a4d7316a974f1e7d15e866",
+    "problems": [
+      "has 607 words, wants at most 450"
+    ],
+    "usage": {
+      "input": 4312,
+      "output": 5431,
+      "reasoning": 4605,
+      "cost_usd": 0.1098624
+    },
+    "finish": "stop",
+    "raw": null
+  },
+  "voice": {
+    "stage": "voice",
+    "sample": 1,
+    "key": "83d88e50e986cfb7ef9f555dd52ac81255dcc3ea42eacec09530b334f25b336b",
+    "model": "meta:muse-wonder-1.0",
+    "max_tokens": 12000,
+    "inputs": {
+      "entry": "3659be64fa481787ce6a2d1f5b4fbe200ccb5879e726849839361cd8b6edafac",
+      "portrait": "56fc6d024bcb836a827862909ddbc2fe57b4525a5e7dea2abd76bf64e15794d7"
+    },
+    "text_sha": "fedd9b1434203cf8b24b6aa0edb8a2a145eb5f96299e76e4b70a84f94cd189ea",
+    "problems": [],
+    "usage": {
+      "input": 4339,
+      "output": 6076,
+      "reasoning": 5302,
+      "cost_usd": 0.138876
+    },
+    "finish": "stop",
+    "raw": null
+  },
+  "voyage": {
+    "stage": "voyage",
+    "sample": 1,
+    "key": "daed8ec6a34c36943ef23a5673a9d37ee40fe9245db8c7faa42949b2d3d340aa",
+    "model": "meta:muse-wonder-1.0",
+    "max_tokens": 12000,
+    "inputs": {
+      "entry": "3659be64fa481787ce6a2d1f5b4fbe200ccb5879e726849839361cd8b6edafac",
+      "portrait": "56fc6d024bcb836a827862909ddbc2fe57b4525a5e7dea2abd76bf64e15794d7"
+    },
+    "text_sha": "e6113ea0c2a69f552e560016386a5615a5908465eb1d7f2e67e9b6a24beee684",
+    "problems": [],
+    "usage": {
+      "input": 4603,
+      "output": 4155,
+      "reasoning": 3891,
+      "cost_usd": 0.08404719999999999
+    },
+    "finish": "stop",
+    "raw": null
   }
 }
