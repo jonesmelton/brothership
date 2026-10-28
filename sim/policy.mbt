@@ -228,7 +228,7 @@ fn Policy::decide(
     Hastener => by_arrival(false)
     Saboteur => by_arrival(true)
     Dutiful =>
-      match open_post(c) {
+      match @ships.open_post(c) {
         Some(p) => handing(p)
         None =>
           match c.ask {
@@ -238,7 +238,7 @@ fn Policy::decide(
       }
     Steady => {
       let ship_post = (p : @core.Post?) => p.filter(p => p != Craft)
-      match (ship_post(open_post(c)), ship_post(c.ask)) {
+      match (ship_post(@ships.open_post(c)), ship_post(c.ask)) {
         (Some(p), _) | (None, Some(p)) => post(p)
         (None, None) => post(if firing { Drive } else { Hull })
       }

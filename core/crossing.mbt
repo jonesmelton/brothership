@@ -669,6 +669,24 @@ pub fn Crossing::apply(
 }
 
 ///|
+/// What the ship notices happening: the phase, each demand's status and the
+/// hull band. Crew moving is not a moment.
+pub(all) struct Moment {
+  phase : Phase
+  demands : Array[Status]
+  band : Int64
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub fn Crossing::moment(self : Crossing) -> Moment {
+  {
+    phase: self.phase,
+    demands: self.demands.map(d => d.status),
+    band: self.band,
+  }
+}
+
+///|
 /// Where the crossing ends if no one does anything more: the arrived
 /// crossing, or `None` if it would take more than `MAX_BOUNDARIES` steps.
 pub fn Crossing::project(self : Crossing) -> Crossing? {

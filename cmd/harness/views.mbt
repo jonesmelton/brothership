@@ -28,7 +28,7 @@ fn two_places(x : Double) -> String {
 }
 
 ///|
-fn envelope_view(route : @sim.Route) -> @html.Html {
+fn envelope_view(route : @ships.Route) -> @html.Html {
   let plan = route.plan()
   let spread = ratio(plan.slowest(), plan.fastest())
   let rows = sweep.map(d => {
@@ -350,7 +350,7 @@ fn run_view(
     label(
       WIDTH / 2,
       row + 14,
-      "γ peaks at \{grouped(@sim.gamma(plan.burn).round().to_int64())}",
+      "γ peaks at \{grouped(@ships.gamma(plan.burn).round().to_int64())}",
     ),
   )
   let set = track(2 * row, row - 8, "setting", 0.35, 1.0)

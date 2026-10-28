@@ -1,6 +1,6 @@
 ///|
 test "the default route plans to the closed form" {
-  let plan = @sim.Route::default().plan()
+  let plan = @ships.Route::default().plan()
   debug_inspect(
     plan,
     content=(
@@ -29,7 +29,7 @@ fn inside(plan : @core.Plan, at : Int64) -> Bool {
 ///|
 test "every scenario on every ship arrives inside the envelope" {
   let mut checked = 0
-  for p in @sim.profiles() {
+  for p in @ships.profiles() {
     for s in @sim.scenarios() {
       let s = { ..s, ship: p, route: p.route, }
       let plan = s.route.plan()
@@ -54,8 +54,8 @@ test "every policy, checking in every minute, stays inside the envelope" {
     for policy in @sim.policies {
       let s : @sim.Scenario = {
         name: "sweep",
-        ship: @sim.profiles()[2],
-        route: { ..@sim.profiles()[2].route, distance_ly: distance, },
+        ship: @ships.profiles()[2],
+        route: { ..@ships.profiles()[2].route, distance_ly: distance, },
         hull: @core.HULL_FULL / 2L,
         actors: Array::makei(4, i => {
           name: "x\{i}",
@@ -82,7 +82,7 @@ test "every policy, checking in every minute, stays inside the envelope" {
 /// A careful crew member who changed post at every band edge would make a
 /// boundary every few ticks, and a crossing would take thousands of steps.
 test "no scripted crew chatters between posts" {
-  for p in @sim.profiles() {
+  for p in @ships.profiles() {
     for s in @sim.scenarios() {
       let s = { ..s, ship: p, route: p.route, }
       let r = s.run(5)
@@ -105,7 +105,7 @@ test "no scripted crew chatters between posts" {
 test "a voyage carries refits, recruits, records and hull from leg to leg" {
   let legs : Array[Double] = [8.0, 20.0, 12.0, 30.0, 8.0]
   let mut checked = 0
-  for p in @sim.profiles() {
+  for p in @ships.profiles() {
     for craft in [@core.Artist, @core.Engineer] {
       let base = @sim.scenarios()[0]
       let actors = base.actors.copy()
@@ -146,7 +146,7 @@ test "a voyage carries refits, recruits, records and hull from leg to leg" {
 /// coils are fitted, because more of the crossing is burn.
 test "every ship's envelopes meet the design's targets across the map" {
   let mut checked = 0
-  for p in @sim.profiles() {
+  for p in @ships.profiles() {
     for coils in 0L..<=@core.MAX_LEVEL {
       for d in [8.0, 12.0, 20.0, 30.0] {
         let plan = { ..p.route, distance_ly: d, }.plan_with(coils~)
@@ -167,7 +167,7 @@ test "ships differ, and so do players" {
   let median = (s : @sim.Scenario) => {
     @sim.percentile(s.batch(runs=5).map(o => o.arrived_at), 50)
   }
-  let by_ship = @sim.profiles().map(p => {
+  let by_ship = @ships.profiles().map(p => {
     median({ ..base, ship: p, route: p.route, })
   })
   let fastest = by_ship.fold(init=@math.MAX_TICKS, (m, x) => m.min(x))

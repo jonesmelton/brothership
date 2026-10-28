@@ -37,7 +37,7 @@ fn hammer(name : String, policy : Policy) -> Actor {
 ///|
 /// Starting points for the simulation page and the envelope tests.
 pub fn scenarios() -> Array[Scenario] {
-  let ship = Profile::default()
+  let ship = @ships.Profile::default()
   let route = ship.route
   let full = @core.HULL_FULL
   [

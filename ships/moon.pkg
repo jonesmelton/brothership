@@ -1,0 +1,12 @@
+import {
+  "local/brothership/core",
+  "moonbitlang/core/math" @fmath,
+}
+
+supported_targets = "js+native"
+
+warnings = "-79"
+
+import {
+  "local/brothership/core",
+} for "test"

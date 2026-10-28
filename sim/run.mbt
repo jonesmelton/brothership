@@ -42,8 +42,8 @@ fn Actor::watch(self : Actor, rank : Int64) -> Int64 {
 ///|
 pub(all) struct Scenario {
   name : String
-  ship : Profile
-  route : Route
+  ship : @ships.Profile
+  route : @ships.Route
   /// Hull at departure, in `@core.HULL_FULL` units.
   hull : Int64
   actors : Array[Actor]
@@ -231,7 +231,7 @@ pub fn Scenario::fly(self : Scenario, ship : @core.Ship, seed : Int64) -> Run {
   let mut live = 0
   let mut newsy = 0
   let mut first = true
-  let mut spoke_at = (@core.Phase::Arrived, [], -1L)
+  let mut spoke : @core.Moment? = None
   let apply = (c : @core.Crossing, e : @core.CrossingEvent) => {
     c.apply(e) catch {
       _ => c
@@ -340,19 +340,16 @@ pub fn Scenario::fly(self : Scenario, ship : @core.Ship, seed : Int64) -> Run {
         }
       }
     }
-    let refit = temperament.refit(c)
-    if refit != c.fit.refit {
-      c = apply(c, Refitting(refit~))
-    }
-    // The ship speaks when something has happened, not whenever the crew
-    // move: asking on head counts made recruits, who follow asks, and the
-    // ship chase each other from post to post.
-    let moment = (c.phase, c.demands.map(d => d.status), c.band)
-    if moment != spoke_at {
-      spoke_at = moment
-      let ask = temperament.ask(c)
-      if ask != c.ask {
-        c = apply(c, Asked(post=ask))
+    let moment = c.moment()
+    for act in temperament.turn(c, spoke) {
+      match act {
+        Refit(refit) => c = apply(c, Refitting(refit~))
+        Ask(ask) => {
+          spoke = Some(moment)
+          if ask != c.ask {
+            c = apply(c, Asked(post=ask))
+          }
+        }
       }
     }
     samples.push(sample(c))

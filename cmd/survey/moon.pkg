@@ -1,6 +1,7 @@
 import {
   "local/brothership/core",
   "local/brothership/sim",
+  "local/brothership/ships",
   "moonbitlang/core/env",
   "moonbitlang/core/string",
 }

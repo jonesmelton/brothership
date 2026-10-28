@@ -3,6 +3,7 @@ package "local/brothership/sim"
 
 import {
   "local/brothership/core",
+  "local/brothership/ships",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -11,8 +12,6 @@ import {
 pub const DEAD_LEVERAGE : Int64 = 300
 
 pub fn actor_id(Int32) -> String
-
-pub fn gamma(Int64) -> Double
 
 pub fn handover(@core.Crossing) -> @core.Order?
 
@@ -23,8 +22,6 @@ pub fn percentile(Array[Int64], Int32) -> Int64
 pub let policies : Array[Policy]
 
 pub let posts : Array[@core.Post]
-
-pub fn profiles() -> Array[Profile]
 
 pub fn prospect(@core.Crossing, String) -> Prospect
 
@@ -107,15 +104,6 @@ pub(all) enum Policy {
 } derive(Compare, Eq, Hash, ToJson, @debug.Debug, @json.FromJson)
 pub fn Policy::name(Self) -> String
 
-pub(all) struct Profile {
-  name : String
-  route : Route
-  values : @core.Values
-  temperament : Temperament
-} derive(Eq, @debug.Debug)
-pub fn Profile::default() -> Self
-pub fn Profile::ship(Self, seed~ : Int64) -> @core.Ship
-
 pub(all) struct Prospect {
   arrival : Int64
   hull : Int64
@@ -123,19 +111,6 @@ pub(all) struct Prospect {
   regard : Int64
   refit : Int64
 } derive(Eq, @debug.Debug)
-
-pub(all) struct Route {
-  distance_ly : Double
-  accel_g : Double
-  gamma_cap : Double
-  drive_needed : Int64
-  wear : Int64
-  repair : Int64
-} derive(Eq, @debug.Debug)
-pub fn Route::default() -> Self
-pub fn Route::fit(Self) -> @core.Fit
-pub fn Route::plan(Self) -> @core.Plan
-pub fn Route::plan_with(Self, coils~ : Int64) -> @core.Plan
 
 pub(all) struct Run {
   seed : Int64
@@ -171,8 +146,8 @@ pub(all) struct Sample {
 
 pub(all) struct Scenario {
   name : String
-  ship : Profile
-  route : Route
+  ship : @ships.Profile
+  route : @ships.Route
   hull : Int64
   actors : Array[Actor]
 } derive(Eq, @debug.Debug)
@@ -183,16 +158,6 @@ pub fn Scenario::departing(Self, Int64) -> @core.Ship
 pub fn Scenario::fly(Self, @core.Ship, Int64) -> Run
 pub fn Scenario::run(Self, Int64) -> Run
 pub fn Scenario::voyage(Self, Array[Double], Int64) -> Array[Leg]
-
-pub(all) enum Temperament {
-  Bold
-  Careful
-  Social
-  Sly
-} derive(Compare, Eq, Hash, ToJson, @debug.Debug, @json.FromJson)
-pub fn Temperament::ask(Self, @core.Crossing) -> @core.Post?
-pub fn Temperament::name(Self) -> String
-pub fn Temperament::refit(Self, @core.Crossing) -> @core.Refit?
 
 // Type aliases
 

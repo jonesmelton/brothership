@@ -1,7 +1,7 @@
 import {
   "local/brothership/core",
   "local/brothership/core/math",
-  "moonbitlang/core/math" @fmath,
+  "local/brothership/ships",
 }
 
 supported_targets = "js+native"

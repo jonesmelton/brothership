@@ -100,6 +100,7 @@ pub fn Crossing::dock(Self) -> Ship?
 pub fn Crossing::eta(Self) -> Int64
 pub fn Crossing::firing(Self) -> Bool
 pub fn Crossing::forecast(Self) -> Int64?
+pub fn Crossing::moment(Self) -> Moment
 pub fn Crossing::new(Plan, Ship) -> Self
 pub fn Crossing::next_boundary(Self) -> Int64
 pub fn Crossing::project(Self) -> Self?
@@ -161,6 +162,12 @@ pub(all) enum Hazard {
   Salvage
 } derive(Compare, Eq, Hash, ToJson, @debug.Debug, @json.FromJson)
 pub fn Hazard::post(Self) -> Post
+
+pub(all) struct Moment {
+  phase : Phase
+  demands : Array[Status]
+  band : Int64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct Optimistic {
   confirmed : Snapshot

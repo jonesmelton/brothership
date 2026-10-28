@@ -1,0 +1,65 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "local/brothership/ships"
+
+import {
+  "local/brothership/core",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub const PORT_STAY : Int64 = 600
+
+pub fn gamma(Int64) -> Double
+
+pub let itinerary : Array[Double]
+
+pub fn open_post(@core.Crossing) -> @core.Post?
+
+pub fn profiles() -> Array[Profile]
+
+// Errors
+
+// Types and methods
+pub(all) enum Act {
+  Ask(@core.Post?)
+  Refit(@core.Refit?)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Profile {
+  name : String
+  route : Route
+  values : @core.Values
+  temperament : Temperament
+} derive(Eq, @debug.Debug)
+pub fn Profile::default() -> Self
+pub fn Profile::next_plan(Self, legs~ : Int64, coils~ : Int64) -> @core.Plan
+pub fn Profile::ship(Self, seed~ : Int64) -> @core.Ship
+
+pub(all) struct Route {
+  distance_ly : Double
+  accel_g : Double
+  gamma_cap : Double
+  drive_needed : Int64
+  wear : Int64
+  repair : Int64
+} derive(Eq, @debug.Debug)
+pub fn Route::default() -> Self
+pub fn Route::fit(Self) -> @core.Fit
+pub fn Route::plan(Self) -> @core.Plan
+pub fn Route::plan_with(Self, coils~ : Int64) -> @core.Plan
+
+pub(all) enum Temperament {
+  Bold
+  Careful
+  Social
+  Sly
+} derive(Compare, Eq, Hash, ToJson, @debug.Debug, @json.FromJson)
+pub fn Temperament::ask(Self, @core.Crossing) -> @core.Post?
+pub fn Temperament::name(Self) -> String
+pub fn Temperament::refit(Self, @core.Crossing) -> @core.Refit?
+pub fn Temperament::turn(Self, @core.Crossing, @core.Moment?) -> Array[Act]
+
+// Type aliases
+
+// Traits

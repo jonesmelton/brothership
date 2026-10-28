@@ -1,6 +1,7 @@
 import {
   "local/brothership/core",
   "local/brothership/sim",
+  "local/brothership/ships",
   "moonbit-community/rabbita",
   "moonbit-community/rabbita/html",
   "moonbit-community/rabbita/svg",

@@ -1,9 +1,9 @@
 ///|
 struct Model {
   scenario : Int32
-  /// Index into `@sim.profiles()`.
+  /// Index into `@ships.profiles()`.
   ship : Int32
-  route : @sim.Route
+  route : @ships.Route
   hull_pct : Int32
   runs : Int32
   outcomes : Array[@sim.Outcome]
@@ -34,7 +34,7 @@ enum Msg {
 fn Model::scenario(self : Model) -> @sim.Scenario {
   {
     ..@sim.scenarios()[self.scenario],
-    ship: @sim.profiles()[self.ship],
+    ship: @ships.profiles()[self.ship],
     route: self.route,
     hull: self.hull_pct.to_int64() * @core.HULL_FULL / 100L,
   }
@@ -79,14 +79,17 @@ fn whole(text : String, fallback : Int64) -> Int64 {
 ///|
 fn update(model : Model, msg : Msg) -> Model {
   let r = model.route
-  let set = (route : @sim.Route) => { ..model, route, stale: true, }
+  let set = (route : @ships.Route) => { ..model, route, stale: true, }
   match msg {
     Pick(i) => model.pick(whole(i, 0L).to_int())
     Ship(i) => {
       let ship = whole(i, 0L)
-        .clamp(min=0L, max=(@sim.profiles().length() - 1).to_int64())
+        .clamp(min=0L, max=(@ships.profiles().length() - 1).to_int64())
         .to_int()
-      let route = { ..@sim.profiles()[ship].route, distance_ly: r.distance_ly, }
+      let route = {
+        ..@ships.profiles()[ship].route,
+        distance_ly: r.distance_ly,
+      }
       { ..model, ship, route, }.refresh()
     }
     Distance(v) =>
@@ -167,7 +170,7 @@ fn controls(model : Model, emit : @rabbita.Emit[Msg]) -> @html.Html {
       @html.span("Ship"),
       @html.select(
         on_change=emit.map(v => Ship(v)),
-        @sim.profiles().mapi((i, p) => {
+        @ships.profiles().mapi((i, p) => {
           @html.option(value=i.to_string(), selected=i == model.ship, p.name)
         }),
       ),
@@ -251,7 +254,7 @@ fn main {
   let init = {
     scenario: 0,
     ship: 0,
-    route: @sim.Route::default(),
+    route: @ships.Route::default(),
     hull_pct: 100,
     runs: 50,
     outcomes: [],

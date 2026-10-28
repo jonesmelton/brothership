@@ -40,7 +40,7 @@ let distances : Array[Double] = [3.0, 5.0, 8.0, 12.0, 20.0, 30.0, 45.0, 60.0]
 fn envelopes() -> Unit {
   println("== envelopes: fastest–slowest hours, spread")
   row([("ship", 32)] + distances.map(d => ("\{d.to_int()} ly", 15)))
-  for p in @sim.profiles() {
+  for p in @ships.profiles() {
     let cells = distances.map(d => {
       let plan = { ..p.route, distance_ly: d, }.plan()
       let spread = plan.slowest() * 100L / plan.fastest()
@@ -204,7 +204,7 @@ fn ships(runs : Int32) -> Unit {
   for base in [@sim.scenarios()[0], @sim.scenarios()[1]] {
     println("== \{base.name}, on each ship, 20 ly")
     row(header)
-    for p in @sim.profiles() {
+    for p in @ships.profiles() {
       let s = { ..base, ship: p, route: p.route, }
       summary_row(p.name, s, summarize(s, runs))
     }
@@ -245,7 +245,7 @@ fn policies(runs : Int32) -> Unit {
 fn voyages() -> Unit {
   let legs : Array[Double] = [8.0, 20.0, 12.0, 30.0, 20.0, 8.0]
   let crew = @sim.scenarios()[0].actors
-  for p in @sim.profiles() {
+  for p in @ships.profiles() {
     println("== voyage on \{p.name}: solo thoughtful player, two NPCs")
     let actors = crew.copy()
     actors[0] = { ..actors[0], policy: Thoughtful, }
@@ -319,7 +319,7 @@ fn hazard_name(h : @core.Hazard) -> String {
 fn careers(runs : Int32) -> Unit {
   let legs : Array[Double] = [8.0, 20.0, 12.0, 30.0, 20.0, 8.0]
   let crew = @sim.scenarios()[0].actors
-  for p in [@sim.profiles()[0], @sim.profiles()[3]] {
+  for p in [@ships.profiles()[0], @ships.profiles()[3]] {
     println(
       "== six-leg voyage on \{p.name}, solo player with two NPCs, \{runs} seeds",
     )
@@ -416,7 +416,7 @@ fn phase_name(p : @core.Phase) -> String {
 fn story() -> Unit {
   let base = @sim.scenarios()[0]
   for name in ["EF-147 The Tigress", "HS-212 The Twin-Tailed Scorpion"] {
-    let p = @sim.profiles().filter(p => p.name == name)[0]
+    let p = @ships.profiles().filter(p => p.name == name)[0]
     for distance in [8.0, 20.0] {
       let actors = base.actors.copy()
       actors[0] = { ..actors[0], policy: Thoughtful, }

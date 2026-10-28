@@ -6,6 +6,8 @@
 | ------------- | --------- | --------------------------------------------------------------------- |
 | `core/math`   | js native | Verified arithmetic kernels (`moon prove`). Proof-friendly code only. |
 | `core`        | js native | Events, state, the transition function, wire types, optimistic sync.  |
+| `ships`       | js native | Routes and their float plans, ship profiles, itinerary, the ship's scripted turn. |
+| `sim`         | js native | The crossing simulator: scenarios, crew policies, batches, voyages.   |
 | `store`       | native    | sqlite event log; replays through `core` on open.                     |
 | `api`         | native    | Moonback routes over `store`.                                         |
 | `cmd/server`  | native    | Server entry: opens the store, serves the API and static assets.      |
@@ -18,6 +20,7 @@
 | `cmd/cast`    | native    | Cast pipeline CLI over `content/cast`.                                |
 | `cmd/gate`    | native    | Checks messages, or `content/gate/samples`, against the gate policy.  |
 | `cmd/survey`  | native    | Prints the crossing simulator's batches, comparisons and voyages.     |
+| `cmd/harness` | js        | The simulator in a browser page (`make sim`).                         |
 
 Stack: rabbita (frontend), warren (build and dev server), moonback on
 moonbitlang/async (server), moonbit-community/sqlite3 (vendored sqlite,

@@ -119,7 +119,8 @@ pub fn Temperament::refit(
 }
 
 ///|
-fn open_post(c : @core.Crossing) -> @core.Post? {
+/// The post the first open demand needs, if any.
+pub fn open_post(c : @core.Crossing) -> @core.Post? {
   c.demands.iter().find_first(d => d.status == Open).map(d => d.hazard.post())
 }
 
@@ -164,4 +165,59 @@ pub fn Temperament::ask(self : Temperament, c : @core.Crossing) -> @core.Post? {
         _ => Some(Craft)
       }
   }
+}
+
+///|
+/// What the ship does at one instant.
+pub(all) enum Act {
+  /// Asks for hands on a post, or stops asking. Made only at a moment, and
+  /// made even if the ask is unchanged, so the log records when the ship
+  /// last reconsidered.
+  Ask(@core.Post?)
+  /// Builds this refit next. Made only when it differs from the current one.
+  Refit(@core.Refit?)
+} derive(Debug, Eq)
+
+///|
+/// What the ship does now, given the moment at which it last spoke. The
+/// ship speaks when something has happened, not whenever the crew move:
+/// asking on head counts made recruits, who follow asks, and the ship chase
+/// each other from post to post.
+///
+/// This is where a model call replaces the temperament.
+pub fn Temperament::turn(
+  self : Temperament,
+  c : @core.Crossing,
+  spoke : @core.Moment?,
+) -> Array[Act] {
+  let acts = []
+  let refit = self.refit(c)
+  if refit != c.fit.refit {
+    acts.push(Refit(refit))
+  }
+  if spoke != Some(c.moment()) {
+    acts.push(Ask(self.ask(c)))
+  }
+  acts
+}
+
+///|
+/// The hops the ship flies, in light-years, one after another and round
+/// again. All are 8 to 30 ly: see `docs/sim.md` for the floor.
+pub let itinerary : Array[Double] = [12.0, 20.0, 8.0, 26.0, 15.0, 30.0]
+
+///|
+/// How long the ship stays in port between crossings, in seconds.
+pub const PORT_STAY : Int64 = 600L
+
+///|
+/// The plan for the hop after `legs` crossings, for a ship with `coils`.
+pub fn Profile::next_plan(
+  self : Profile,
+  legs~ : Int64,
+  coils~ : Int64,
+) -> @core.Plan {
+  let n = itinerary.length().to_int64()
+  let distance_ly = itinerary[(legs % n).to_int()]
+  { ..self.route, distance_ly, }.plan_with(coils~)
 }
