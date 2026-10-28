@@ -259,6 +259,24 @@ fn choice(
 }
 
 ///|
+/// A post as a control's label.
+fn post_label(post : @core.Post) -> String {
+  match post {
+    Drive => "Drive"
+    Hull => "Hull"
+    Craft => "Craft"
+  }
+}
+
+///|
+fn capitalized(s : String) -> String {
+  match s.get_char(0) {
+    Some(c) => "\{c.to_ascii_uppercase()}\{s.view(start_offset=1)}"
+    None => s
+  }
+}
+
+///|
 fn group(legend : String, buttons : Array[@rabbita.Html]) -> @rabbita.Html {
   @html.fieldset([@html.legend(legend), ..buttons])
 }
@@ -278,12 +296,7 @@ fn choices(
   let post = group(
     "Post",
     posts.map(p => {
-      let label = match p {
-        Drive => "Drive"
-        Hull => "Hull"
-        Craft => "Craft"
-      }
-      choice(emit, label, Posted(post=p), pressed=at == Some(p))
+      choice(emit, post_label(p), Posted(post=p), pressed=at == Some(p))
     }) +
     (if hand is Some(_) { [choice(emit, "Leave the crew", Left)] } else { [] }),
   )
@@ -313,27 +326,24 @@ fn choices(
   let later = phases.filter(p => {
     p > c.phase && (p != Coast || c.plan.coast > 0L)
   })
-  let orders = later.map(phase => {
-    posts.map(p => {
+  // One group per phase, so no group holds more than four buttons.
+  let order = later.map(phase => {
+    let buttons = posts.map(p => {
       let order : @core.Order = { phase, post: p, }
       choice(
         emit,
-        "\{post_name(p)} at the \{phase_name(phase)}",
+        post_label(p),
         Ordered(order=Some(order)),
         pressed=h.order == Some(order),
       )
     })
+    let cancel = match h.order {
+      Some(o) if o.phase == phase =>
+        [choice(emit, "Cancel the order", Ordered(order=None))]
+      _ => []
+    }
+    group("When the \{phase_name(phase)} begins", buttons + cancel)
   })
-  let cancel = if h.order is Some(_) {
-    [choice(emit, "Cancel the order", Ordered(order=None))]
-  } else {
-    []
-  }
-  let order = if later.is_empty() {
-    []
-  } else {
-    [group("Standing order", orders.flatten() + cancel)]
-  }
   let crafts : Array[@core.Craft] = [Artist, Engineer]
   let craft = group(
     "Craft",
@@ -354,7 +364,7 @@ fn choices(
         .map(r => {
           choice(
             emit,
-            refit_name(r),
+            capitalized(refit_name(r)),
             Refitting(refit=Some(r)),
             pressed=c.fit.refit == Some(r),
           )
@@ -407,7 +417,7 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
       let s = shown(model, sync)
       let away = match model.since {
         Some(was) => news(was, s, model.crew)
-        None => []
+        None => ["This is your first visit to this ship."]
       }
       let away = if away.is_empty() {
         [@html.li("Nothing new since your last visit.")]

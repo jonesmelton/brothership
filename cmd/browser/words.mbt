@@ -128,19 +128,28 @@ fn where_sentences(s : @core.State) -> Array[String] {
           ["Arriving \{in_words(at - c.t)}, if the drive stays as set."]
         None => ["Arrival is too far off to forecast."]
       }
+      let on_drive = match c.count(Drive) {
+        0L => "none"
+        n => n.to_string()
+      }
       let drive = if c.firing() {
         [
-          "Drive at \{pct(c.setting(), @math.SETTING_FULL)}% of full burn, with \{c.count(Drive)} of \{c.fit.needed} hands it needs.",
+          "Drive at \{pct(c.setting(), @math.SETTING_FULL)}% of full burn, with \{on_drive} of the \{c.fit.needed} hands it needs.",
         ]
       } else {
         []
+      }
+      let hands = if c.hands.is_empty() {
+        "Nobody is on a post yet."
+      } else {
+        "\{plural(c.count(Drive), "hand", "hands")} on the drive, \{c.count(Hull)} on the hull, \{c.count(Craft)} at crafts."
       }
       [
         phase,
         ..arrival,
         "Hull at \{pct(c.hull, @core.HULL_FULL)}%.",
         ..drive,
-        "\{plural(c.count(Drive), "hand", "hands")} on the drive, \{c.count(Hull)} on the hull, \{c.count(Craft)} at crafts.",
+        hands,
         ..ask_sentence(c),
         ..c.demands.filter(d => d.status == Open).map(demand_sentence),
       ]

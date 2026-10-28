@@ -247,7 +247,7 @@ fn batch_view(
               @html.th(scope=Col, class="num", "Arrival, h"),
               @html.th(scope=Col, class="num", "Lowest hull"),
               @html.th(scope=Col, class="num", "Dead check-ins"),
-              @html.th(scope=Col, ""),
+              @html.th(scope=Col, "Detail"),
             ]),
           ]),
           @html.tbody(

@@ -35,6 +35,29 @@ test "arrival words coarsen with distance" {
 }
 
 ///|
+test "an empty ship says so instead of counting zeroes" {
+  let p = @ships.fleet()[0].profile
+  let (_, s) = p.due(
+    @core.State::initial(p.ship(seed=1), profile=p.name),
+    1_800_000_000,
+  )
+  let (_, sea) = p.due(s, 1_800_000_600)
+  debug_inspect(
+    where_sentences(sea),
+    content=(
+      #|[
+      #|  "Burning toward the next port.",
+      #|  "Arriving in about 18 hours, if the drive stays as set.",
+      #|  "Hull at 100%.",
+      #|  "Drive at 35% of full burn, with none of the 5 hands it needs.",
+      #|  "Nobody is on a post yet.",
+      #|  "The ship asks for hands on the drive.",
+      #|]
+    ),
+  )
+}
+
+///|
 test "a voyage from port to its first moments, in sentences" {
   let p = @ships.fleet()[0].profile
   let (_, s) = p.due(
@@ -67,7 +90,7 @@ test "a voyage from port to its first moments, in sentences" {
       #|  "Burning toward the next port.",
       #|  "Arriving in about 12 hours, if the drive stays as set.",
       #|  "Hull at 100%.",
-      #|  "Drive at 58% of full burn, with 1 of 5 hands it needs.",
+      #|  "Drive at 58% of full burn, with 1 of the 5 hands it needs.",
       #|  "1 hand on the drive, 0 on the hull, 0 at crafts.",
       #|  "The ship asks for hands on the drive.",
       #|]
