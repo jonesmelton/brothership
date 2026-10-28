@@ -27,6 +27,8 @@
 - {{ line }}
 {% endfor %}
 
+That was then. Weigh what has happened since, and do not reuse those words.
+
 {% endif %}
 # what you choose now
 

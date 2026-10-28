@@ -63,6 +63,13 @@ pub fn Mind::thoughts(self : Mind) -> Array[String] {
 }
 
 ///|
+/// The thoughts a turn recalls: fewer, since a ship fed its own reasons
+/// repeats them.
+fn Mind::recalled(self : Mind) -> Array[String] {
+  self.thoughts[(self.thoughts.length() - 2).max(0):].to_owned()
+}
+
+///|
 fn Mind::remember(self : Mind, did : String, why : String) -> Unit {
   let line = if why == "" { did } else { "\{did} You thought: \{why}" }
   self.thoughts.push(line)
@@ -157,7 +164,7 @@ async fn Mind::turn(
       model=self.model,
       state,
       story,
-      thoughts=self.thoughts(),
+      thoughts=self.recalled(),
     )
     match @async.with_timeout_opt(TURN_MS, () => self.backend.call(call)) {
       Some(reply) => Some(decode_turn(reply.text, c))
