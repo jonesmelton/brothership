@@ -14,9 +14,13 @@ pub const SETTING_FLOOR : Int64 = 350
 
 pub const SETTING_FULL : Int64 = 1000
 
+pub const TICKS_PER_HOUR : Int64 = 3600
+
 pub fn advance(Int64, Int64) -> Int64
 
 pub fn deplete(Int64, Int64, Int64) -> Int64
+
+pub fn per_hour(Int64, Int64) -> Int64
 
 pub fn rate(Int64, Int64) -> Int64
 
