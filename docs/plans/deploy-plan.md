@@ -20,6 +20,11 @@ destroyed, a redeploy restored the seeded log from Tigris and served the same
   `0.1.20261020`), so the image is not pinned to a toolchain version.
 - There is no Homebrew formula for Litestream. `scripts/restore-drill.sh`
   takes a binary on `PATH` or in `LITESTREAM` and requires 0.5.
+- Later changes make parts of this plan stale: the health check is
+  `GET /healthz`, the server makes model calls and reads `MODEL_API_KEY`
+  (speakers start only when it is set; `scripts/fly-provision.sh` does not
+  set it), and there is no `GET /api/snapshot`: snapshots are per ship at
+  `/api/ships/:id/snapshot`, which `scripts/restore-drill.sh` uses.
 - A local restore passes the Tigris endpoint as `?endpoint=...&region=auto`
   on the replica URL. The `restore` CLI does not take its endpoint from
   `AWS_ENDPOINT_URL_S3`, so without the query parameter it looks up the

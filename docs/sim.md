@@ -70,7 +70,7 @@ for the next phase: craft when the coast begins, drive at turnover. Careful
 crew take the hull below half and stay until three quarters, so they do not
 change post at every band edge.
 
-The ship is a policy too. Its temperament (`sim/ships.mbt`) picks the next
+The ship is a policy too. Its temperament (`ships/profiles.mbt`) picks the next
 refit when one lands and what to ask for whenever a phase changes, a demand
 opens or closes, or the hull changes band.
 
@@ -81,7 +81,7 @@ envelope is safe to show players.
 ## add a scenario
 
 Add an entry to `scenarios()` in `sim/scenarios.mbt`. A scenario names a ship
-profile from `profiles()` in `sim/ships.mbt`. An `Actor` is a name, a policy,
+profile from `profiles()` in `ships/profiles.mbt`. An `Actor` is a name, a policy,
 a craft, a cadence and a joining time; `Reactive` is an NPC that acts whenever a
 rate changes, `Every` is a player that checks in on an interval with jitter.
 

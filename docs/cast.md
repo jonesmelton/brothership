@@ -135,6 +135,4 @@ of earlier files.
 two-ship run (2 portrait drafts and 2 drafts of each face per ship) used
 49,256 input tokens and 44,832 output tokens, reasoning included. At Muse
 Wonder list rates ($4 input, $20 output per million tokens) that is $1.09
-for two ships, about $0.55 per ship, or $59 for all 108. Drafts made before
-the switch were deleted; regenerate them with `moon run cmd/cast -- run`
-once a `MODEL_API_KEY` is set.
+for two ships, about $0.55 per ship, or $59 for all 108.

@@ -8,7 +8,7 @@ This project is a timeboxed experiment created during and as part of a hackathon
 
 ## rubric
 
-- 30% Impact 30%
+- 30% Impact
 - 25% Use of meta AI tooling
 - 20% Technical depth & execution
 - 25% Demo (3 minutes)
@@ -17,7 +17,7 @@ This project is a timeboxed experiment created during and as part of a hackathon
 
 @docs/decisions.md records decisions that are hard to reverse or non-obvious enough that someone would undo it by accident.
 
-The cocument records why, not what to obey. Read it when changing
+The document records why, not what to obey. Read it when changing
 architecture, content handling, or a11y behavior; otherwise skip it.
 
 If your task conflicts with an entry, say so in one line and proceed with
@@ -44,6 +44,6 @@ Model calls take seconds, and every message a player sees waits on at least
 two of them. Read "model latency" in @docs/architecture.md before building
 anything that shows model text.
 
-Use `git` freely when assigned work within this project, commiting at reasonable task boundaries.
+Use `git` freely when assigned work within this project, committing at reasonable task boundaries.
 
 When beginning a task that will put the repo in an unbuildable or unservable state for more than a handful of minutes, consider using a worktree to isolate it.

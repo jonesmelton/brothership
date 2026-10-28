@@ -90,7 +90,7 @@ The bar is `position: fixed` at the bottom edge only under `(min-height: 34em)`,
 
 ### section
 
-`<section>` with an `h2` and sentences. Sentences are one per `p`, front-loaded, written in `cmd/browser/words.mbt` before any layout. "While you were away" is a `ul` whose markers are `--quiet`; keep the default markers so Safari keeps the list semantics.
+`<section>` with an `h2` and sentences. Sentences are one per `p`, front-loaded, written in `words/words.mbt` before any layout. "While you were away" is a `ul` whose markers are `--quiet`; keep the default markers so Safari keeps the list semantics.
 
 ### rank
 

@@ -14,7 +14,7 @@ A hard scifi idle rpg where players crew on sentient starships.
 make dev    # http://127.0.0.1:4300, live reload
 make build  # dist/server.exe and frontend assets
 make test
-make check  # fmt, type check, tests, proofs
+make check  # Dockerfile package list, fmt, type check, tests, proofs
 ```
 
 The server stores its data in `brothership.sqlite` in the working directory.
@@ -33,7 +33,9 @@ make deploy  # ships HEAD; refuses uncommitted tracked changes
 ```
 
 Provisioning, secrets and the restore drill are in
-[docs/deploy-plan.md](docs/deploy-plan.md).
+[docs/plans/deploy-plan.md](docs/plans/deploy-plan.md). Ships speak only if
+the app has a `MODEL_API_KEY` secret (`fly secrets set MODEL_API_KEY=...`);
+without one the server starts and logs that ships will not speak.
 
 ## Docs
 

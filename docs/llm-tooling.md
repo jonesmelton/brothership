@@ -16,11 +16,12 @@ commit `bca5228` (`spike/eval`, `spike/patches`) and were removed after.
 
 All models are Meta's. Curated writing (the cast pipeline) uses Muse Wonder
 (`meta:muse-wonder-1.0`) on Meta Model API (`https://api.meta.ai/v1`), keyed
-by `MODEL_API_KEY`. Runtime decisions and live ship dialogue are not built
-yet; when they land they will use a Muse Spark model on the same API, or
-Meta open weights (Muse Spark Open, Llama) served through an
-OpenAI-compatible endpoint. The content gate (`llm/gate`) uses Muse Spark
-1.3 (`meta:muse-spark-1.3`); see [content/gate](../content/gate/README.md).
+by `MODEL_API_KEY`. Ship lines and the content gate (`llm/gate`) use Muse Spark
+1.3 on the same API (the server runs both on `meta:muse-spark-1.3-contributor`); see
+[content/gate](../content/gate/README.md). Runtime decisions are not built:
+scripted policies make them. When they land they will use a Muse Spark model,
+or Meta open weights (Muse Spark Open, Llama) served through an
+OpenAI-compatible endpoint.
 Every model call takes seconds; see "model latency" in
 [architecture.md](architecture.md). Non-Meta models are for tests and spikes
 only (the survey below is one), not for anything that ships.
@@ -77,7 +78,8 @@ they are. `llm` and `llm/prompt` also build for js, but a browser must not hold
 provider keys, so in-game calls go through a server route.
 
 The ships' lines are the first in-game calls: `speech` on the server writes
-them with `meta:muse-spark-1.3` and gates them with `llm/gate`, uncached
+them with `meta:muse-spark-1.3-contributor` and gates them with `llm/gate`
+on the same model, uncached
 (see "story and speech" in [architecture](architecture.md)). `cmd/speak`
 runs the same speaker over a simulated crossing, cached in `.cache/llm`, for
 auditioning a ship's voice.
@@ -95,9 +97,7 @@ write (about 50 lines) and is untested against Meta Model API.
 - **The cache key depends on the shape of `Call`.** Adding a field changes
   every key, so the next run calls the model for everything again.
 - **Untested paths.** Streaming, tool calls, the js transport over the network,
-  retries under a real 429, and any live call to Meta Model API: no key has
-  been configured yet, so Muse Wonder output quality on the cast prompts is
-  unverified.
+  and retries under a real 429.
 
 ## Patches
 

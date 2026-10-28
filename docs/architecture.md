@@ -50,7 +50,7 @@ the server.
 
 Only the server moves game time. Clients propose an `Intent`; the log holds
 `Event`, which adds the server's `Tick(at)` in Unix seconds, `Departed`,
-`Docked`, and the ship's `Asked` and `Refitting`. Before anything it writes,
+`Docked`, and the ship's `Asked`, `Refitting`, `Promoted` and `Spoke`. Before anything it writes,
 the store appends a tick at the wall clock, so a receipt's snapshot may
 include a tick and the ship's response to the proposal as well as the
 proposal itself; `seq` counts them all. Between receipts the client applies
@@ -124,8 +124,8 @@ The server's speakers print each line's times.
 ## store
 
 Every accepted event is a row in `event` with the ship's id and a json
-body: crew intents, ticks, departures and dockings, and the ship's asks and
-refits. Each ship's log begins with `Commissioned`, which carries the ship
+body: crew intents, ticks, departures and dockings, and the ship's asks, refits,
+promotions and spoken lines. Each ship's log begins with `Commissioned`, which carries the ship
 and the name of the profile it flies by, so replay needs nothing outside
 the log. The server commissions every berth in `@ships.fleet()` that isn't
 in service yet when it starts. A tick is written for each ship at least once
@@ -179,8 +179,9 @@ for the log, "while you were away" and announcements.
 approved, when a `MODEL_API_KEY` is set. Every 3 s it weighs the
 happenings it has not seen (`@speech.worth`), and for one that earns a
 line it renders `content/speech/` with the ship's faces and the same
-sentences a player reads, writes the line, gates it, and appends
+sentences a player reads, writes the line with `meta:muse-spark-1.3-contributor`, gates it on the same
+model, and appends
 `Spoke(line, about)` through `Store::speak`. A failed or blocked line
 leaves nothing. After a line the ship keeps quiet for 15 minutes except
-for departures, arrivals and new demands. The runtime image copies
+for departures, arrivals, promotions and new demands. The runtime image copies
 `content/` for this.

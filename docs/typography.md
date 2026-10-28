@@ -52,7 +52,7 @@ The stack below is EB Garamond + Fira Sans. Change the Latin families together i
 :root {
   --font-display: "EB Garamond", Georgia, serif;
   --font-ui: "Fira Sans", system-ui, sans-serif;
-  --font-han: "Noto Serif CJK TC", "Noto Serif TC", "Songti TC", serif;
+  --font-han: "Noto Serif CJK TC", "Noto Serif TC", "Songti TC", "PMingLiU", serif;
 }
 
 body {

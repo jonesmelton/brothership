@@ -34,5 +34,5 @@ is free. To see why the model decided as it did, read `reply.reasoning` in
 the cache entry for that call.
 
 Not built yet: the cheap checks (length, conventional names from
-`pennants.tsv`), the one rewrite after a block, logging verdicts to the event
-log, and wiring the gate into anything that shows text to players.
+`pennants.tsv`), the one rewrite after a block, and logging verdicts to the event
+log. The server's speakers (`speech`) gate every line they write.

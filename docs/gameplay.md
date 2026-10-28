@@ -260,7 +260,7 @@ Then the ship departs, and the new world gives everything a new meaning.
 
 Which ship a player crews changes the crossing. A ship's kinematics and
 fittings come from its character, and its values decide which work it
-notices. Starting profiles for the playtest cast, from `sim/ships.mbt`:
+notices. Starting profiles for the playtest cast, from `ships/profiles.mbt`:
 
 | ship | accel, g | γ cap | drive hands | wear | repair | values: drive, hull, craft | temperament |
 |---|---|---|---|---|---|---|---|
