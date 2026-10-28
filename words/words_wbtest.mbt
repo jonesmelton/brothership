@@ -40,8 +40,9 @@ test "an empty ship says so instead of counting zeroes" {
   let (_, s) = p.due(
     @core.State::initial(p.ship(seed=1), profile=p.name),
     1_800_000_000,
+    officer=_ => true,
   )
-  let (_, sea) = p.due(s, 1_800_000_600)
+  let (_, sea) = p.due(s, 1_800_000_600, officer=_ => true)
   debug_inspect(
     where_sentences(sea),
     content=(
@@ -63,6 +64,7 @@ test "a voyage from port to its first moments, in sentences" {
   let (_, s) = p.due(
     @core.State::initial(p.ship(seed=1), profile=p.name),
     1_800_000_000,
+    officer=_ => true,
   )
   debug_inspect(
     where_sentences(s),
@@ -79,7 +81,7 @@ test "a voyage from port to its first moments, in sentences" {
       #|["You join the crew when the ship departs."]
     ),
   )
-  let (_, sea) = p.due(s, 1_800_000_600)
+  let (_, sea) = p.due(s, 1_800_000_600, officer=_ => true)
   let sea = sea.apply(Crew(crew="ann", intent=Posted(post=Drive))) catch {
     _ => panic()
   }
@@ -197,6 +199,87 @@ test "button labels are sentence case and need no article" {
     @core.refits.map(refit_label),
     content=(
       #|["Baffles", "Plating", "Injectors", "Coils"]
+    ),
+  )
+}
+
+///|
+test "ranks have a title, a name, an abbreviation and an insignia" {
+  let ranks : Array[Int64] = [-1, 0, 1, 2, 3, 4, 9]
+  debug_inspect(
+    ranks.map(rank_title),
+    content=(
+      #|[
+      #|  "Ensign",
+      #|  "Ensign",
+      #|  "Lieutenant junior grade",
+      #|  "Lieutenant",
+      #|  "Lieutenant commander",
+      #|  "Commander",
+      #|  "Commander",
+      #|]
+    ),
+  )
+  debug_inspect(
+    ranks.map(rank_name),
+    content=(
+      #|[
+      #|  "ensign",
+      #|  "ensign",
+      #|  "lieutenant junior grade",
+      #|  "lieutenant",
+      #|  "lieutenant commander",
+      #|  "commander",
+      #|  "commander",
+      #|]
+    ),
+  )
+  debug_inspect(
+    ranks.map(rank_abbreviation),
+    content=(
+      #|["ENS", "ENS", "LTJG", "LT", "LCDR", "CDR", "CDR"]
+    ),
+  )
+  debug_inspect(
+    ranks.map(rank_insignia),
+    content=(
+      #|["○", "○", "●", "●●", "●●●", "★", "★"]
+    ),
+  )
+}
+
+///|
+test "a promotion is told in full and announced" {
+  let tally : @core.Tally = {
+    drive: 0,
+    hull: 0,
+    craft: 0,
+    regard: 0,
+    work: 0,
+    watches_stood: 0,
+    watches_broken: 0,
+  }
+  let h : @core.Happening = Promoted(crew="0", rank=3L, tally~)
+  debug_inspect(
+    [told(h, you="0", ship="The Tigress"), told(h, you="1", ship="The Tigress")],
+    content=(
+      #|[
+      #|  "You were promoted to lieutenant commander.",
+      #|  "A hand was promoted to lieutenant commander.",
+      #|]
+    ),
+  )
+  let e : @core.Entry = { seq: 1, at: 0, happening: h, }
+  debug_inspect(
+    [priority(e, you="0", story=[e]), priority(e, you="1", story=[e])],
+    content=(
+      #|[Announce, Announce]
+    ),
+  )
+  debug_inspect(
+    [page_of(e, you="0", story=[e]), page_of(e, you="1", story=[e])],
+    content=(
+      #|[You, Ship]
     ),
   )
 }

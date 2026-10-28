@@ -200,7 +200,7 @@ pub(all) enum Happening {
   Left(crew~ : String)
   Stood(crew~ : String)
   Finished(crew~ : String)
-  Promoted(crew~ : String, rank~ : Int64)
+  Promoted(crew~ : String, rank~ : Int64, tally~ : Tally)
   Spoke(line~ : String, about~ : Int64)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 

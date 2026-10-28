@@ -124,6 +124,39 @@ test "a promotion is a happening" {
   let e : @core.Event = Promoted(crew="ann", rank=2L)
   debug_inspect(
     @core.happenings(s, e, s),
-    content="[Promoted(crew=\"ann\", rank=2)]",
+    content=(
+      #|[
+      #|  Promoted(
+      #|    crew="ann",
+      #|    rank=2,
+      #|    tally={
+      #|      drive: 0,
+      #|      hull: 0,
+      #|      craft: 0,
+      #|      regard: 0,
+      #|      work: 0,
+      #|      watches_stood: 0,
+      #|      watches_broken: 0,
+      #|    },
+      #|  ),
+      #|]
+    ),
   )
+}
+
+///|
+test "a promotion carries the crossing's tally" {
+  let s = underway(plan20(), ship())
+  let s = s.apply(Crew(crew="ann", intent=Posted(post=Drive))) catch {
+    _ => panic()
+  }
+  let s = s.apply(Tick(at=s.at + 3600L))
+  let e : @core.Event = Promoted(crew="ann", rank=1L)
+  match @core.happenings(s, e, s) {
+    [Promoted(crew="ann", rank=1L, tally~)] => {
+      assert_true(tally.drive > 0L)
+      assert_eq(tally, s.crossing().unwrap().tallies.get("ann").unwrap())
+    }
+    _ => fail("expected one Promoted")
+  }
 }

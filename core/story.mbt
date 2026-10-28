@@ -25,8 +25,9 @@ pub(all) enum Happening {
   Stood(crew~ : String)
   /// `crew` finished a work.
   Finished(crew~ : String)
-  /// The ship promoted `crew` to `rank`.
-  Promoted(crew~ : String, rank~ : Int64)
+  /// The ship promoted `crew` to `rank`; `tally` is what they did this
+  /// crossing.
+  Promoted(crew~ : String, rank~ : Int64, tally~ : Tally)
   Spoke(line~ : String, about~ : Int64)
 } derive(Debug, Eq, ToJson, FromJson)
 
@@ -41,7 +42,13 @@ pub fn happenings(
   let out : Array[Happening] = []
   match event {
     Spoke(line~, about~) => return [Happening::Spoke(line~, about~)]
-    Promoted(crew~, rank~) => return [Promoted(crew~, rank~)]
+    Promoted(crew~, rank~) => {
+      let tally = match before.crossing() {
+        Some(c) => c.tallies.get(crew).unwrap_or(no_tally)
+        None => no_tally
+      }
+      return [Promoted(crew~, rank~, tally~)]
+    }
     Docked => {
       out.push(Docked(recruits=after.ship.recruits - before.ship.recruits))
       return out

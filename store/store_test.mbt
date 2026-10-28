@@ -213,7 +213,24 @@ async test "a promotion row replays and joins the story" {
   }
   let story = live.story("tigress", after=0).unwrap()
   let at = story.search_by(e => e.happening is Promoted(..)).unwrap()
-  debug_inspect(story[at].happening, content="Promoted(crew=\"ann\", rank=1)")
+  debug_inspect(
+    story[at].happening,
+    content=(
+      #|Promoted(
+      #|  crew="ann",
+      #|  rank=1,
+      #|  tally={
+      #|    drive: 154436,
+      #|    hull: 0,
+      #|    craft: 0,
+      #|    regard: 166284,
+      #|    work: 0,
+      #|    watches_stood: 0,
+      #|    watches_broken: 0,
+      #|  },
+      #|)
+    ),
+  )
   guard story[at + 1].happening is Docked(..) else {
     fail("expected docking right after the promotion")
   }

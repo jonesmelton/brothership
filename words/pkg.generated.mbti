@@ -40,6 +40,14 @@ pub fn post_name(@core.Post) -> String
 
 pub fn priority(@core.Entry, you~ : String, story~ : Array[@core.Entry]) -> Priority
 
+pub fn rank_abbreviation(Int64) -> String
+
+pub fn rank_insignia(Int64) -> String
+
+pub fn rank_name(Int64) -> String
+
+pub fn rank_title(Int64) -> String
+
 pub fn refit_effect(@core.Refit, Int64) -> String
 
 pub fn refit_label(@core.Refit) -> String
@@ -64,6 +72,7 @@ pub(all) struct Ledger {
   regard : Int64
   works : Int64
   crossings : Int64
+  rank : Int64?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn Ledger::of(@core.State, you~ : String) -> Self
 

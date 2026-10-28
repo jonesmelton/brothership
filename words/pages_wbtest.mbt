@@ -15,6 +15,7 @@ fn in_port(seed~ : Int64 = 1L) -> @core.State {
   let (_, s) = p.due(
     @core.State::initial(p.ship(seed~), profile=p.name),
     1_800_000_000L,
+    officer=_ => true,
   )
   s
 }
@@ -25,13 +26,15 @@ fn sea(
   posts~ : Array[@core.Post] = [],
   ticks~ : Int64 = 0L,
   seed~ : Int64 = 1L,
+  records~ : Map[String, @core.Record] = {},
 ) -> @core.State {
   let p = page_profile()
   let (_, s) = p.due(
-    @core.State::initial(p.ship(seed~), profile=p.name),
+    @core.State::initial({ ..p.ship(seed~), records, }, profile=p.name),
     1_800_000_000L,
+    officer=_ => true,
   )
-  let (_, s) = p.due(s, 1_800_000_600L)
+  let (_, s) = p.due(s, 1_800_000_600L, officer=_ => true)
   let mut s = s
   for i, post in posts {
     s = s.apply(@core.Crew(crew=i.to_string(), intent=@core.Posted(post~))) catch {
@@ -66,7 +69,7 @@ fn docked(posts~ : Array[@core.Post] = [], seed~ : Int64 = 1L) -> @core.State {
     if s.ship.crossings > 0L {
       break
     }
-    s = p.due(s, s.at + 600L).1
+    s = p.due(s, s.at + 600L, officer=_ => true).1
   }
   s
 }
@@ -220,13 +223,19 @@ test "ledger totals do not fall across a docking" {
   debug_inspect(
     early,
     content=(
-      #|{ at: 1800000600, regard: 0, works: 0, crossings: 1 }
+      #|{ at: 1800000600, regard: 0, works: 0, crossings: 1, rank: Some(0) }
     ),
   )
   debug_inspect(
     Ledger::of(docked, you="0"),
     content=(
-      #|{ at: 1800045000, regard: 270620, works: 0, crossings: 1 }
+      #|{
+      #|  at: 1800045000,
+      #|  regard: 270620,
+      #|  works: 0,
+      #|  crossings: 1,
+      #|  rank: Some(0),
+      #|}
     ),
   )
   debug_inspect(
@@ -238,7 +247,7 @@ test "ledger totals do not fall across a docking" {
   debug_inspect(
     Ledger::of(in_port(), you="0"),
     content=(
-      #|{ at: 1800000000, regard: 0, works: 0, crossings: 0 }
+      #|{ at: 1800000000, regard: 0, works: 0, crossings: 0, rank: Some(0) }
     ),
   )
 }
@@ -250,12 +259,14 @@ test "since names what was earned" {
     regard: 36L * @core.REGARD_HOUR,
     works: 0,
     crossings: 0,
+    rank: Some(0L),
   }
   let now : Ledger = {
     at: 600,
     regard: 42L * @core.REGARD_HOUR,
     works: 2,
     crossings: 1,
+    rank: Some(1L),
   }
   debug_inspect(
     since(before, now),
@@ -263,7 +274,7 @@ test "since names what was earned" {
       #|[
       #|  "You earned 6 hours of regard.",
       #|  "You finished 2 works.",
-      #|  "You reached rank 1.",
+      #|  "You were promoted to lieutenant junior grade.",
       #|]
     ),
   )
@@ -284,7 +295,7 @@ test "what a driver earns" {
       #|[
       #|  "No regard yet this crossing, earning 2 an hour.",
       #|  "Doubled: the ship asks for the drive.",
-      #|  "40 hours of regard to rank 1.",
+      #|  "40 hours of regard before the ship can promote you to lieutenant junior grade.",
       #|]
     ),
   )
@@ -305,7 +316,7 @@ test "what an artist earns" {
       #|[
       #|  "4 hours of regard this crossing, earning 2 an hour.",
       #|  "Work 1: 2 of 6 crew-hours.",
-      #|  "36 hours of regard to rank 1.",
+      #|  "36 hours of regard before the ship can promote you to lieutenant junior grade.",
       #|]
     ),
   )
@@ -315,7 +326,7 @@ test "what an artist earns" {
       #|[
       #|  "No regard yet this crossing, earning 2 an hour.",
       #|  "Work 1: 0 of 6 crew-hours.",
-      #|  "40 hours of regard to rank 1.",
+      #|  "40 hours of regard before the ship can promote you to lieutenant junior grade.",
       #|]
     ),
   )
@@ -544,7 +555,7 @@ test "law: a ledger never falls" {
     let mut ok = true
     for i in 0..<steps.length().min(30) {
       let (slot, post, wait) = steps[i]
-      s = p.due(s, s.at + fold32(wait, 2400).to_int64() + 60L).1
+      s = p.due(s, s.at + fold32(wait, 2400).to_int64() + 60L, officer=_ => true).1
       s = s.apply(
         @core.Crew(
           crew=fold32(slot, 6).to_string(),
@@ -696,4 +707,75 @@ test "law: every page sentence is plain text" {
     lines.all(is_clean)
   })
   assert_true(checked > 0)
+}
+
+///|
+test "a stored ledger without a rank still parses and claims no promotion" {
+  let old : Ledger = @json.from_json(
+    @json.parse(
+      "{\"at\":\"5\",\"regard\":\"100\",\"works\":\"0\",\"crossings\":\"1\"}",
+    ),
+  ) catch {
+    _ => panic()
+  }
+  debug_inspect(
+    old,
+    content=(
+      #|{ at: 5, regard: 100, works: 0, crossings: 1, rank: None }
+    ),
+  )
+  let now : Ledger = {
+    ..old,
+    rank: Some(2L),
+    regard: 500L * @core.REGARD_HOUR,
+  }
+  debug_inspect(
+    since(old, now),
+    content=(
+      #|["You earned 499 hours of regard."]
+    ),
+  )
+  debug_inspect(
+    since(now, old),
+    content=(
+      #|[]
+    ),
+  )
+}
+
+///|
+fn record(regard : Int64, rank : Int64?) -> Map[String, @core.Record] {
+  { "0": { regard, works: 0, carry: 0, rank, } }
+}
+
+///|
+test "the next promotion is stated honestly" {
+  let hr = @core.REGARD_HOUR
+  let ready = sea(posts=[Drive], records=record(50L * hr, Some(0L)))
+  debug_inspect(
+    earning_sentences(ready, you="0").last(),
+    content=(
+      #|Some("The ship can promote you to lieutenant junior grade when it arrives, if it has room for another.")
+    ),
+  )
+  let held = sea(posts=[Drive], records=record(130L * hr, Some(2L)))
+  debug_inspect(
+    earning_sentences(held, you="0").last(),
+    content=(
+      #|Some("150 hours of regard before the ship can promote you to lieutenant commander.")
+    ),
+  )
+  let top = sea(posts=[Drive], records=record(600L * hr, Some(4L)))
+  debug_inspect(
+    earning_sentences(top, you="0").last(),
+    content=(
+      #|Some("You hold the highest rank.")
+    ),
+  )
+  debug_inspect(
+    Ledger::of(top, you="0").rank,
+    content=(
+      #|Some(4)
+    ),
+  )
 }

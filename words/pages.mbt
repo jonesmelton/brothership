@@ -30,7 +30,7 @@ fn zero_tally() -> @core.Tally {
 ///|
 /// A record of zero, for a crew member the ship has never carried.
 fn zero_record() -> @core.Record {
-  { regard: 0, works: 0, carry: 0, }
+  { regard: 0, works: 0, carry: 0, rank: None, }
 }
 
 ///|
@@ -145,6 +145,7 @@ fn page_of_entry(
   match e.happening {
     Departed | Began(_) | Docked(_) | Opened(_) | Met(_) | Missed(_) => Voyage
     Landed(..) | Asked(_) => Ship
+    Promoted(crew~, ..) => if crew == you { You } else { Ship }
     Took(crew~, ..) | Left(crew~) | Stood(crew~) | Finished(crew~) =>
       if crew == you {
         You
@@ -261,7 +262,23 @@ pub(all) struct Ledger {
   works : Int64
   /// Crossings the ship has flown, plus one while underway.
   crossings : Int64
+  /// The rank held. Absent in a ledger stored before ranks were held, which
+  /// says nothing about promotion.
+  rank : Int64?
 } derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// The rank `crew` holds: the hand's aboard, else the ship's record.
+fn held_rank(s : @core.State, crew : String) -> Int64 {
+  match s.crossing() {
+    Some(c) =>
+      match c.hands.get(crew) {
+        Some(h) => h.rank
+        None => s.ship.rank(crew)
+      }
+    None => s.ship.rank(crew)
+  }
+}
 
 ///|
 pub fn Ledger::of(s : @core.State, you~ : String) -> Ledger {
@@ -276,12 +293,13 @@ pub fn Ledger::of(s : @core.State, you~ : String) -> Ledger {
     works: record.works + (record.carry + tally.work) / @core.WORK_SIZE,
     crossings: s.ship.crossings +
     (if s.crossing() is Some(_) { 1L } else { 0L }),
+    rank: Some(held_rank(s, you)),
   }
 }
 
 ///|
 /// What `you` earned between two ledgers, for the top of the You page:
-/// regard, works, rank reached. Empty when nothing changed.
+/// regard, works, promotion. Empty when nothing changed.
 pub fn since(before : Ledger, now : Ledger) -> Array[String] {
   let lines : Array[String] = []
   let regard = now.regard - before.regard
@@ -294,10 +312,8 @@ pub fn since(before : Ledger, now : Ledger) -> Array[String] {
   } else if works > 1L {
     lines.push("You finished \{works} works.")
   }
-  let was = @core.rank_of(before.regard)
-  let reached = @core.rank_of(now.regard)
-  if reached > was {
-    lines.push("You reached rank \{reached}.")
+  if (before.rank, now.rank) is (Some(was), Some(reached)) && reached > was {
+    lines.push("You were promoted to \{rank_name(reached)}.")
   }
   lines
 }
@@ -305,7 +321,7 @@ pub fn since(before : Ledger, now : Ledger) -> Array[String] {
 ///|
 /// What `you` is earning now, with rates: regard this crossing and per
 /// hour, with the ship's ask and an open demand's doubling named; progress
-/// toward the next work for an artist; hours of regard to the next rank.
+/// toward the next work for an artist; the next promotion.
 pub fn earning_sentences(s : @core.State, you~ : String) -> Array[String] {
   guard s.crossing() is Some(c) else { return [] }
   guard c.hands.get(you) is Some(h) else { return [] }
@@ -342,15 +358,21 @@ pub fn earning_sentences(s : @core.State, you~ : String) -> Array[String] {
     )
   }
   let regard = record.regard + tally.regard
-  let rank = @core.rank_of(regard)
-  if rank.to_int() + 1 >= @core.rank_thresholds.length() {
-    lines.push("You have reached the highest rank.")
+  if h.rank >= @core.COMMANDER {
+    lines.push("You hold the highest rank.")
   } else {
-    let next = @core.rank_thresholds[rank.to_int() + 1] * @core.REGARD_HOUR
-    let hours = (next - regard + @core.REGARD_HOUR - 1L) / @core.REGARD_HOUR
-    lines.push(
-      "\{plural(hours, "hour", "hours")} of regard to rank \{rank + 1L}.",
-    )
+    let next = rank_name(h.rank + 1L)
+    if @core.rank_floor(regard) > h.rank {
+      lines.push(
+        "The ship can promote you to \{next} when it arrives, if it has room for another.",
+      )
+    } else {
+      let at = @core.rank_thresholds[(h.rank + 1L).to_int()] * @core.REGARD_HOUR
+      let hours = (at - regard + @core.REGARD_HOUR - 1L) / @core.REGARD_HOUR
+      lines.push(
+        "\{plural(hours, "hour", "hours")} of regard before the ship can promote you to \{next}.",
+      )
+    }
   }
   lines
 }

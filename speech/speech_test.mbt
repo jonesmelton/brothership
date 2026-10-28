@@ -194,3 +194,73 @@ async test "the prompt carries the faces, the readout and what happened" {
   assert_true(call.user.contains("Burning toward the next port."))
   assert_true(call.user.contains("Hands on the drive."))
 }
+
+///|
+fn tally() -> @core.Tally {
+  {
+    drive: 3 * 4 * 3600,
+    hull: 2 * 4 * 3600,
+    craft: 0,
+    regard: 0,
+    work: 0,
+    watches_stood: 2,
+    watches_broken: 1,
+  }
+}
+
+///|
+test "a promotion beats the arrival and is spoken inside the quiet window" {
+  let story = [
+    entry(5, T0 + 60, Began(phase=Arrived)),
+    entry(6, T0 + 60, Promoted(crew="ann", rank=2, tally=tally())),
+  ]
+  debug_inspect(
+    @speech.worth(story, quiet_until=0).map(e => e.seq),
+    content="Some(6)",
+  )
+  debug_inspect(
+    @speech.worth(story, quiet_until=T0 + @speech.QUIET).map(e => e.seq),
+    content="Some(6)",
+  )
+  debug_inspect(
+    @speech.worth(
+      [entry(6, T0 + 60, Promoted(crew="ann", rank=2, tally=tally()))],
+      quiet_until=T0 + @speech.QUIET,
+    ).map(e => e.seq),
+    content="Some(6)",
+  )
+}
+
+///|
+async test "a promotion prompt carries facts about the officer and no id" {
+  let store = departed()
+  defer store.close()
+  let state = store.snapshot("tigress").unwrap().state
+  let state = {
+    ..state,
+    ship: {
+      ..state.ship,
+      records: {
+        "officer-9f3a": {
+          regard: 130 * @core.REGARD_HOUR,
+          works: 4,
+          carry: 0,
+          rank: Some(2),
+        },
+      },
+    },
+  }
+  let promoted = entry(
+    9,
+    T0 + 900,
+    Promoted(crew="officer-9f3a", rank=2, tally=tally()),
+  )
+  let call = speech().call(voice(), state, [promoted], promoted)
+  assert_false(call.user.contains("officer-9f3a"))
+  debug_inspect(
+    call.user,
+    content=(
+      #|"# what just happened\n\nA hand was promoted to lieutenant.\n\n# the officer promoted\n\n- New rank: lieutenant.\n- Hours on the drive this crossing: 3.\n- Hours on the hull this crossing: 2.\n- Hours at crafts this crossing: 0.\n- Watches stood this crossing: 2.\n- Watches broken this crossing: 1.\n- Works finished in all: 4.\n- Hours of regard on record: 130.\n\nYou have no name or handle for them: speak of them by what they did.\n\n# where you are\n\nBurning toward the next port.\nArriving in about 18 hours, if the drive stays as set.\nHull at 100%.\nDrive at 35% of full burn, with none of the 5 hands it needs.\nNobody is on a post yet.\nThe ship asks for hands on the drive.\n\n# earlier on this crossing\n\n- Nothing yet.\n\n# what you are asking for\n\nHands on the drive.\n"
+    ),
+  )
+}

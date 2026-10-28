@@ -52,7 +52,7 @@ pub const QUIET : Int64 = 900
 fn weight(h : @core.Happening) -> Int32? {
   match h {
     Opened(_) => Some(7)
-    Missed(_) => Some(6)
+    Missed(_) | Promoted(..) => Some(6)
     Began(phase=Arrived) | Departed => Some(5)
     Began(_) => Some(4)
     Met(_) => Some(3)
@@ -68,9 +68,10 @@ fn weight(h : @core.Happening) -> Int32? {
 }
 
 ///|
-/// Spoken even within `QUIET` of the last line.
+/// Spoken even within `QUIET` of the last line. A promotion lands with the
+/// arrival, which is urgent anyway, and must not be lost to the quiet.
 fn urgent(h : @core.Happening) -> Bool {
-  h is (Opened(_) | Departed | Began(phase=Arrived))
+  h is (Opened(_) | Departed | Began(phase=Arrived) | Promoted(..))
 }
 
 ///|
@@ -126,6 +127,36 @@ pub fn tidy(reply : String) -> String? {
 const RECALLED : Int32 = 8
 
 ///|
+/// Whole hours in `quarters`, quarter-hand-ticks.
+fn crew_hours(quarters : Int64) -> Json {
+  Json::number((quarters / (@core.HAND * @core.HOUR)).to_double())
+}
+
+///|
+/// What the ship may know of a promoted officer: counts from this
+/// crossing and the record, never an id, a name or anything a player wrote.
+fn officer_facts(
+  state : @core.State,
+  crew : String,
+  rank : Int64,
+  tally : @core.Tally,
+) -> Json {
+  let record = state.ship.records.get(crew)
+  let works = record.map(r => r.works).unwrap_or(0L)
+  let regard = record.map(r => r.regard).unwrap_or(0L)
+  {
+    "rank": Json(@words.rank_name(rank)),
+    "drive_hours": crew_hours(tally.drive),
+    "hull_hours": crew_hours(tally.hull),
+    "craft_hours": crew_hours(tally.craft),
+    "watches_stood": Json::number(tally.watches_stood.to_double()),
+    "watches_broken": Json::number(tally.watches_broken.to_double()),
+    "works": Json::number(works.to_double()),
+    "regard_hours": Json::number((regard / @core.REGARD_HOUR).to_double()),
+  }
+}
+
+///|
 /// The call asking the model for `voice`'s line about `about`, in `state`,
 /// recalling what came before it in `story`.
 pub fn Speech::call(
@@ -154,8 +185,13 @@ pub fn Speech::call(
     "captain": Json(voice.captain),
     "voice": Json(voice.voice),
   })
+  let officer = match about.happening {
+    Promoted(crew~, rank~, tally~) => officer_facts(state, crew, rank, tally)
+    _ => Json::null()
+  }
   let user = self.prompts.render("user", {
     "happening": Json(@words.told(about.happening, you="", ship~)),
+    "officer": officer,
     "readout": Json(@words.where_sentences(state)),
     "recent": Json(recent),
     "ask": match ask {

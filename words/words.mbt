@@ -44,6 +44,41 @@ fn soon_words(seconds : Int64) -> String {
 }
 
 ///|
+fn clamp_rank(rank : Int64) -> Int32 {
+  rank.max(0L).min(@core.COMMANDER).to_int()
+}
+
+///|
+/// A rank as a label: sentence case. Ranks outside 0 to 4 clamp.
+pub fn rank_title(rank : Int64) -> String {
+  [
+    "Ensign", "Lieutenant junior grade", "Lieutenant", "Lieutenant commander", "Commander",
+  ][clamp_rank(rank)]
+}
+
+///|
+/// A rank inside a sentence: lowercase. Ranks outside 0 to 4 clamp.
+pub fn rank_name(rank : Int64) -> String {
+  rank_title(rank).to_lower()
+}
+
+///|
+/// A rank's abbreviation: ENS, LTJG, LT, LCDR or CDR. For labels, never
+/// for prose.
+pub fn rank_abbreviation(rank : Int64) -> String {
+  ["ENS", "LTJG", "LT", "LCDR", "CDR"][clamp_rank(rank)]
+}
+
+///|
+/// A rank's insignia: one mark that repeats the abbreviation, so it is
+/// decoration for a screen reader.
+pub fn rank_insignia(rank : Int64) -> String {
+  [
+    "\u{25cb}", "\u{25cf}", "\u{25cf}\u{25cf}", "\u{25cf}\u{25cf}\u{25cf}", "\u{2605}",
+  ][clamp_rank(rank)]
+}
+
+///|
 pub fn post_name(post : @core.Post) -> String {
   match post {
     Drive => "the drive"
@@ -265,6 +300,7 @@ pub fn priority(
       Announce
     Stood(crew~) | Finished(crew~) => if crew == you { Announce } else { Quiet }
     Asked(_) | Took(..) | Left(_) => Quiet
+    Promoted(..) => Announce
     Spoke(about~, ..) =>
       match story.iter().find_first(x => x.seq == about) {
         Some(x) if x.happening is Opened(_) => Interrupt
@@ -303,6 +339,8 @@ pub fn told(h : @core.Happening, you~ : String, ship~ : String) -> String {
         "A hand stood a watch to its end."
       }
     Finished(crew~) => "\{who(crew)} finished a work."
+    Promoted(crew~, rank~, ..) =>
+      "\{who(crew)} \{if crew == you { "were" } else { "was" }} promoted to \{rank_name(rank)}."
     Spoke(line~, ..) => "\{ship}: \{line}"
   }
 }
