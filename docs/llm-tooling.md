@@ -76,6 +76,12 @@ The game server is native, so `llm`, `llm/prompt` and `llm/cache` run there as
 they are. `llm` and `llm/prompt` also build for js, but a browser must not hold
 provider keys, so in-game calls go through a server route.
 
+The ships' lines are the first in-game calls: `speech` on the server writes
+them with `meta:muse-spark-1.3` and gates them with `llm/gate`, uncached
+(see "story and speech" in [architecture](architecture.md)). `cmd/speak`
+runs the same speaker over a simulated crossing, cached in `.cache/llm`, for
+auditioning a ship's voice.
+
 The runtime planner and decider will want tool calls. `gaato/openai` has
 `ToolDef`, `ToolCall` and `ChatMessage::tool`, but no loop; the loop is ours to
 write (about 50 lines) and is untested against Meta Model API.

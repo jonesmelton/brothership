@@ -11,7 +11,10 @@
 | `store`       | native    | sqlite event log; replays through `core` on open.                     |
 | `api`         | native    | Moonback routes over `store`.                                         |
 | `cmd/server`  | native    | Server entry: opens the store, serves the API and static assets.      |
+| `words`       | js native | Every sentence a player reads or hears, and each happening's priority. |
+| `speech`      | native    | The ship speaks: which happening earns a line, its prompt, the speaker. |
 | `cmd/browser` | js        | Rabbita (TEA) client.                                                 |
+| `cmd/speak`   | native    | Flies one ship through a crossing in memory and prints its lines.     |
 | `llm`         | js native | Model calls: `Call`, `Backend` and its wrappers (route, limit, retry). |
 | `llm/prompt`  | js native | Minijinja templates, strict undefined, set up for markdown.           |
 | `llm/cache`   | native    | Content-addressed reply cache, one json file per call.                |
@@ -77,8 +80,10 @@ Measured 2026-10-27 on Meta Model API, one run of 18 gate checks of about
 | `muse-spark-1.3` | 2.1 s | 1.3 to 4.8 s |
 | `muse-spark-1.3-contributor` | 5 s | 2.6 to 23.5 s |
 
-Generation has not been measured. It writes more than a check does, so
-expect it to take longer.
+Measured 2026-10-28 with `cmd/speak`, two runs of one Tigress crossing,
+12 lines: writing a line with `muse-spark-1.3` took 2.8 to 8.8 s, and
+gating it 2.1 to 4.6 s, so a line lands 6 to 12 s after what prompted it.
+The server's speakers print each line's times.
 
 - A model call never sits between a player's input and its feedback. The
   input is applied and committed at once; the message arrives later as its
@@ -99,6 +104,8 @@ expect it to take longer.
   that far; keep it independent of the game routes.
 - `GET /api/ships` returns `Array[@core.Listing]`, in order of commission.
 - `GET /api/ships/:id/snapshot` returns `@core.Snapshot`.
+- `GET /api/ships/:id/story?after=seq` returns `@core.Story`: the ship's
+  happenings after `seq`, and whether it is writing a line.
 - `POST /api/ships/:id/proposals` takes `@core.Proposal` and returns
   `@core.Receipt`. An unknown ship is a 404.
   A proposal is a crew id and an `Intent`. Nothing checks the id: until
@@ -116,7 +123,9 @@ in service yet when it starts. A tick is written for each ship at least once
 a minute while the server runs. The events one call appends go in one
 transaction. A snapshot's `seq` is the log position of the ship's latest
 row, so it rises but skips. Each ship's in-memory snapshot is its rows
-replayed through `State::apply` and is rebuilt on open. Logs from before
+replayed through `State::apply` and is rebuilt on open. So is its story:
+the happenings `@core.happenings` derives from each row and the states
+either side of it, kept in memory and never written. Logs from before
 commissioning are kept in `event_legacy` and not replayed.
 Migrations live in `store/schema.mbt`, are forward-only and are tracked with
 `pragma user_version`; append new ones, never edit a shipped one. Writes are
@@ -146,3 +155,20 @@ fuse `a*b+c` into an FMA where JS won't. Floats belong in rendering only.
 
 `Int64` serializes to JSON as a decimal string (`"clock": "9"`), because JS
 numbers lose precision above 2^53.
+
+## story and speech
+
+Phases, demands and refits change inside ticks, so most of what a player
+is told is not a row. `@core.happenings(before, event, after)` derives it,
+the store keeps each ship's story, and the client reads it from `/story`
+for the log, "while you were away" and announcements.
+
+`cmd/server` runs one speaker per ship whose `captain.md` and `voice.md` are
+approved, when a `MODEL_API_KEY` is set. Every 3 s it weighs the
+happenings it has not seen (`@speech.worth`), and for one that earns a
+line it renders `content/speech/` with the ship's faces and the same
+sentences a player reads, writes the line, gates it, and appends
+`Spoke(line, about)` through `Store::speak`. A failed or blocked line
+leaves nothing. After a line the ship keeps quiet for 15 minutes except
+for departures, arrivals and new demands. The runtime image copies
+`content/` for this.

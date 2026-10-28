@@ -59,7 +59,7 @@ Small caps are always `all-small-caps` from the font (`smcp`, `c2sc`), with `fon
 
 - One column at every width, `max-width: 36rem`, centered, with `1rem` side padding (`1.5rem` from 40rem wide). Desktop gets the phone layout with more margin, not a second layout.
 - Sections are separated by a `--rule` hairline and `2rem` of space, not boxes.
-- The vertical order is fixed and never changes with state: masthead, where the ship is, while you were away, you, choices, other ships. A section with nothing to say says so in a sentence rather than disappearing.
+- The vertical order is fixed and never changes with state: masthead, where the ship is, while you were away, you, choices, log, other ships. A section with nothing to say says so in a sentence rather than disappearing.
 - Nothing is fixed or sticky; at 400% zoom the page is a plain scroll.
 
 ## components
@@ -94,6 +94,16 @@ Three stretches, burn, coast and approach, each as wide as its expected duration
 
 It is `aria-hidden` and adds nothing the sentences don't say: the phase sentence names the phase, the arrival sentence gives the time. Its widths are a forecast that moves with the drive setting, so it must not grow labels with times or percentages. That would make it a second, more precise forecast than the coarsened one in the sentence. Computed by `stretches` in `cmd/browser/track.mbt`.
 
+### log
+
+The ship's story, newest first, the latest 20 entries: one `li` per happening, its sentence, then how long ago in `--quiet` at 0.875rem. A ship's line in the log is set as the ship's voice. The list has no markers, so it carries `role="list"`, which Safari otherwise drops. While a line is being written, a `--quiet` italic Garamond sentence above the list says the ship is finding words; it is not a live region, since the line itself is announced when it lands.
+
+Under the list, a choice group sets what is read aloud as it happens: everything, urgent only, or nothing.
+
+### announcements
+
+Two visually hidden live regions, polite and assertive, are rendered from the first frame and outside `main`, so screen readers watch them before anything is said. New happenings go to them by priority (`@words.priority`); at most three sentences, then how many more wait in the log.
+
 ### choices
 
 Each choice group is a `fieldset` whose `legend` is a label. Controls are native `button`s:
@@ -109,8 +119,6 @@ The ship list ("Choose a ship", "Other ships") is the same buttons, each carryin
 
 ## not yet designed
 
-- The event log and its announcements, which need the priority levels in [accessibility](accessibility.md) first.
-- How a pending model line looks while its gate check runs.
 - A works shelf and a crew roster. Both will be tables, with tabular lining figures.
 - An in-game scheme toggle, if players ask for one.
 

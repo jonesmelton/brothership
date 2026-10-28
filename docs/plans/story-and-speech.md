@@ -1,5 +1,8 @@
 # plan: the story, and the ship speaks
 
+Built 2026-10-28. What shipped is described in "story and speech" in
+[architecture](../architecture.md); this plan keeps the reasoning.
+
 Two features that share one foundation: the log a player reads, and the
 ship's own lines written by a model.
 

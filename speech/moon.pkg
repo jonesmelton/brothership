@@ -1,0 +1,26 @@
+import {
+  "local/brothership/core",
+  "local/brothership/llm",
+  "local/brothership/llm/gate" @llm_gate,
+  "local/brothership/llm/prompt",
+  "local/brothership/ships",
+  "local/brothership/store",
+  "local/brothership/words",
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+}
+
+import {
+  "local/brothership/core",
+  "local/brothership/llm",
+  "local/brothership/llm/gate" @llm_gate,
+  "local/brothership/ships",
+  "local/brothership/store",
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+} for "test"
+
+supported_targets = "native"
+
+warnings = "-79"

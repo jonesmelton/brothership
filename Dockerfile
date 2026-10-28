@@ -30,6 +30,7 @@ COPY cmd/cast/moon.pkg cmd/cast/
 COPY cmd/gate/moon.pkg cmd/gate/
 COPY cmd/harness/moon.pkg cmd/harness/
 COPY cmd/server/moon.pkg cmd/server/
+COPY cmd/speak/moon.pkg cmd/speak/
 COPY cmd/survey/moon.pkg cmd/survey/
 COPY core/moon.pkg core/
 COPY core/math/moon.pkg core/math/
@@ -39,7 +40,9 @@ COPY llm/gate/moon.pkg llm/gate/
 COPY llm/prompt/moon.pkg llm/prompt/
 COPY ships/moon.pkg ships/
 COPY sim/moon.pkg sim/
+COPY speech/moon.pkg speech/
 COPY store/moon.pkg store/
+COPY words/moon.pkg words/
 RUN moon update \
   && moon build --target native --dry-run > /dev/null
 
@@ -62,6 +65,8 @@ COPY --from=build /app/dist/server.exe /app/server
 COPY --from=litestream /usr/local/bin/litestream /usr/local/bin/litestream
 COPY litestream.yml /etc/litestream.yml
 COPY entrypoint.sh /app/entrypoint.sh
+# The speech prompts, ships' faces and gate policy the server reads at boot.
+COPY content /app/content
 
 # Tripwire: a shared library missing from the runtime stage fails the build
 # here ("not found" makes ldd exit non-zero) instead of crashing at boot.

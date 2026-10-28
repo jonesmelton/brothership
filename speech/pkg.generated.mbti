@@ -1,0 +1,50 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "local/brothership/speech"
+
+import {
+  "local/brothership/core",
+  "local/brothership/llm",
+  "local/brothership/llm/gate",
+  "local/brothership/llm/prompt",
+  "local/brothership/ships",
+  "local/brothership/store",
+}
+
+// Values
+pub const QUIET : Int64 = 900
+
+pub fn meta_backend(String, limit? : Int32) -> @llm.Backend
+
+pub async fn meta_key() -> String?
+
+pub fn tidy(String) -> String?
+
+pub fn worth(Array[@core.Entry], quiet_until~ : Int64) -> @core.Entry?
+
+// Errors
+
+// Types and methods
+pub struct Speaker {
+  // private fields
+}
+pub fn Speaker::new(String, Voice, Speech, @llm.Backend, from~ : Int64) -> Self
+pub fn Speaker::speaking(Self) -> Bool
+pub async fn Speaker::step(Self, @store.Store, clock~ : () -> Int64) -> Unit
+
+pub struct Speech {
+  // private fields
+}
+pub fn Speech::call(Self, Voice, @core.State, Array[@core.Entry], @core.Entry) -> @llm.Call raise @prompt.PromptError
+pub async fn Speech::load(content~ : String, model~ : String, gate_model~ : String) -> Self
+pub fn Speech::new(system~ : String, user~ : String, setting~ : String, model~ : String, gate~ : @gate.Gate) -> Self
+
+pub(all) struct Voice {
+  epithet : String
+  captain : String
+  voice : String
+}
+pub async fn Voice::load(content~ : String, @ships.Title) -> Self?
+
+// Type aliases
+
+// Traits
