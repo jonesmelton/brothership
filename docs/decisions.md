@@ -156,3 +156,19 @@ Why: `Snapshot` and `Crew` events publish every crew id (`hands`, `tallies`,
 aboard. A table, not a signed cookie, keeps the mapping revocable and leaves a
 place for names and recovery codes.
 Revisit if: crew ids stop being public, or a signed cookie replaces the table.
+
+## 2026-10-28 · a trend is the linear flow until the next boundary, without its settling
+`Crossing::trend` reads rates by advancing a copy with `flow(span)`, not
+`apply(Elapsed)`, so it leaves out what `settle` adds at a boundary: a
+watch's bonus, a missed demand's hull loss, a salvage's refit progress.
+Why: those are jumps, not rates, and counting them would put a one-off
+into every per-hour figure shown beside a stock.
+Revisit if: the interface wants jumps shown beside rates.
+
+## 2026-10-28 · the bar of pages is fixed only on tall viewports
+The nav is `position: fixed` at the bottom only under `(min-height: 34em)`,
+and in the flow at the end of the page otherwise.
+Why: an always-fixed bar eats the space left at 400% zoom, which
+`docs/accessibility.md` rules out.
+Revisit if: the bar needs to stay fixed at every size, or 34em hides it on
+common phones in landscape.
