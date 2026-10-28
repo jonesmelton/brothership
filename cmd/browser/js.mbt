@@ -46,3 +46,12 @@ extern "js" fn stored_ship() -> String =
 ///|
 extern "js" fn store_ship(ship : String) -> Unit =
   #|(ship) => localStorage.setItem("brothership.ship", ship)
+
+///|
+/// Move focus to the element with `id`, if the page has one.
+extern "js" fn focus_id(id : String) -> Unit =
+  #|(id) => document.getElementById(id)?.focus()
+
+///|
+extern "js" fn set_document_title(title : String) -> Unit =
+  #|(title) => { document.title = title; }

@@ -142,6 +142,46 @@ fn epithet(model : Model) -> String {
 }
 
 ///|
+/// The id of the choice group that takes focus when `intent` removes the
+/// control the player pressed, or `None` when that control stays. `standing`
+/// is the order the cancel button would remove, which names its phase's
+/// group.
+fn focus_after(intent : @core.Intent, standing : @core.Order?) -> String? {
+  match intent {
+    Watched(_) => Some("watch")
+    Ordered(order=None) =>
+      standing.map(o => "order-\{@words.phase_name(o.phase)}")
+    Left => Some("post")
+    _ => None
+  }
+}
+
+///|
+/// Focus after the DOM patch, when the target exists.
+fn focus_cmd(id : String) -> @rabbita.Cmd {
+  @cmd.custom_cmd(_ => focus_id(id), kind=@cmd.AfterRender)
+}
+
+///|
+/// The document title: the ship in English when aboard, the game otherwise.
+fn page_title(model : Model) -> String {
+  match model.ship {
+    Some(ship) =>
+      model.ships
+      .iter()
+      .find_first(l => l.id == ship)
+      .map(l => l.name)
+      .unwrap_or("brothership")
+    None => "brothership"
+  }
+}
+
+///|
+fn title_cmd(model : Model) -> @rabbita.Cmd {
+  @rabbita.effect(() => set_document_title(page_title(model)))
+}
+
+///|
 fn update(
   model : Model,
   msg : Msg,
@@ -197,20 +237,24 @@ fn update(
       )
     }
     (_, Listed(Ok(ships))) => {
-      let model = { ..model, ships, }
-      match model.ship {
+      let listed = { ..model, ships, }
+      let (model, cmd) = match listed.ship {
         Some(ship) if ships.iter().any(l => l.id == ship) =>
-          if model.sync is Loading {
-            board(model, ship, emit)
+          if listed.sync is Loading {
+            board(listed, ship, emit)
           } else {
-            (model, @rabbita.none)
+            (listed, @rabbita.none)
           }
-        _ => ({ ..model, ship: None, }, @rabbita.none)
+        _ => ({ ..listed, ship: None, }, @rabbita.none)
       }
+      (model, @rabbita.batch([cmd, title_cmd(model)]))
     }
     (_, Listed(Err(err))) =>
       ({ ..model, sync: Offline(reason=err.to_string()), }, @rabbita.none)
-    (_, Choose(ship)) => board(model, ship, emit)
+    (_, Choose(ship)) => {
+      let (model, cmd) = board(model, ship, emit)
+      (model, @rabbita.batch([cmd, title_cmd(model), focus_cmd("title")]))
+    }
     (_, Loaded(ship, _) | Settled(ship, _)) if !current(ship) =>
       (model, @rabbita.none)
     (Ready(sync), Loaded(ship, Ok(snapshot))) =>
@@ -223,17 +267,28 @@ fn update(
     (Ready(sync), Propose(intent)) =>
       match model.ship {
         None => (model, @rabbita.none)
-        Some(ship) =>
+        Some(ship) => {
+          let standing = sync
+            .predicted()
+            .crossing()
+            .bind(c => c.hands.get(model.crew))
+            .bind(h => h.order)
           try sync.propose(model.crew, intent) catch {
             // Refused locally: the server would refuse it too.
             _ => (model, @rabbita.none)
           } noraise {
-            (next, _) =>
+            (next, _) => {
+              let focus = match focus_after(intent, standing) {
+                Some(id) => focus_cmd(id)
+                None => @rabbita.none
+              }
               (
                 { ..model, sync: Ready(next), },
-                send_next(emit, ship, sync, next),
+                @rabbita.batch([send_next(emit, ship, sync, next), focus]),
               )
+            }
           }
+        }
       }
     (Ready(sync), Settled(ship, Ok(receipt))) => {
       let next = sync.settle(receipt)
@@ -333,26 +388,18 @@ fn choice(
 }
 
 ///|
-/// A post as a control's label.
-fn post_label(post : @core.Post) -> String {
-  match post {
-    Drive => "Drive"
-    Hull => "Hull"
-    Craft => "Craft"
-  }
-}
-
-///|
-fn capitalized(s : String) -> String {
-  match s.get_char(0) {
-    Some(c) => "\{c.to_ascii_uppercase()}\{s.view(start_offset=1)}"
-    None => s
-  }
-}
-
-///|
-fn group(legend : String, buttons : Array[@rabbita.Html]) -> @rabbita.Html {
-  @html.fieldset([@html.legend(legend), ..buttons])
+/// A choice group, focusable so it can take focus after its last control
+/// goes away. Nothing tab-stops to it; see docs/accessibility.md.
+fn group(
+  id : String,
+  legend : String,
+  buttons : Array[@rabbita.Html],
+) -> @rabbita.Html {
+  @html.fieldset(
+    id~,
+    attrs=@html.Attrs::build().tabindex(-1),
+    [@html.legend(legend), ..buttons],
+  )
 }
 
 ///|
@@ -368,20 +415,23 @@ fn choices(
   let at = hand.map(h => h.post)
   let posts : Array[@core.Post] = [Drive, Hull, Craft]
   let post = group(
+    "post",
     "Post",
     posts.map(p => {
-      choice(emit, post_label(p), Posted(post=p), pressed=at == Some(p))
+      choice(emit, @words.post_label(p), Posted(post=p), pressed=at == Some(p))
     }) +
     (if hand is Some(_) { [choice(emit, "Leave the crew", Left)] } else { [] }),
   )
   guard hand is Some(h) else { [post] }
   let watch = match h.watch {
-    Some(_) => [group("Watch", [@html.p("On watch. Changing post breaks it.")])]
+    Some(_) =>
+      [group("watch", "Watch", [@html.p("On watch. Changing post breaks it.")])]
     None => {
       let longest = @core.max_watch(h.rank) / @core.HOUR
       let hours : Array[Int64] = [1, 2, 4, 8, 12]
       [
         group(
+          "watch",
           "Watch",
           hours
           .filter(n => n <= longest)
@@ -406,7 +456,7 @@ fn choices(
       let order : @core.Order = { phase, post: p, }
       choice(
         emit,
-        post_label(p),
+        @words.post_label(p),
         Ordered(order=Some(order)),
         pressed=h.order == Some(order),
       )
@@ -416,29 +466,36 @@ fn choices(
         [choice(emit, "Cancel the order", Ordered(order=None))]
       _ => []
     }
-    group("When the \{@words.phase_name(phase)} begins", buttons + cancel)
+    group(
+      "order-\{@words.phase_name(phase)}",
+      "When the \{@words.phase_name(phase)} begins",
+      buttons + cancel,
+    )
   })
   let crafts : Array[@core.Craft] = [Artist, Engineer]
   let craft = group(
+    "craft",
     "Craft",
     crafts.map(k => {
-      let label = match k {
-        Artist => "Art"
-        Engineer => "Engineering"
-      }
-      choice(emit, label, Crafted(craft=k), pressed=h.craft == k)
+      choice(
+        emit,
+        @words.craft_label(k),
+        Crafted(craft=k),
+        pressed=h.craft == k,
+      )
     }),
   )
   let refit = if h.craft == Engineer {
     [
       group(
+        "refit",
         "Refit",
         @core.refits
         .filter(r => c.fit.can_refit(r))
         .map(r => {
           choice(
             emit,
-            capitalized(@words.refit_name(r)),
+            @words.refit_label(r),
             Refitting(refit=Some(r)),
             pressed=c.fit.refit == Some(r),
           )
@@ -454,8 +511,9 @@ fn choices(
 ///|
 /// The ships to board, in a fixed order, the current one pressed.
 fn ship_choices(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
-  group(
-    "Ship",
+  // A div, not a fieldset: the heading above already names the list.
+  @html.div(
+    class="choice-row",
     model.ships.map(l => {
       @html.button(
         type_="button",
@@ -556,6 +614,7 @@ fn log_section(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
     (Nothing, "Nothing"),
   ]
   let hear = group(
+    "hear",
     "Read aloud as it happens",
     hears.map(h => {
       @html.button(
@@ -591,7 +650,10 @@ fn page(model : Model, content : Array[@rabbita.Html]) -> @rabbita.Html {
 
 ///|
 fn[C : @html.IsChildren] masthead(heading : C) -> @rabbita.Html {
-  @html.header(class="masthead", @html.h1(heading))
+  @html.header(
+    class="masthead",
+    @html.h1(id="title", attrs=@html.Attrs::build().tabindex(-1), heading),
+  )
 }
 
 ///|

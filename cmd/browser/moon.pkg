@@ -4,6 +4,7 @@ import {
   "local/brothership/ships",
   "local/brothership/words",
   "moonbit-community/rabbita",
+  "moonbit-community/rabbita/cmd",
   "moonbit-community/rabbita/html",
   "moonbit-community/rabbita/http",
   "moonbit-community/rabbita/sub",
