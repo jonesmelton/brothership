@@ -337,9 +337,7 @@ p,
   font-weight: 600;
 }
 .checkin summary {
-  min-height: 2.75rem;
-  display: flex;
-  align-items: center;
+  padding-block: 0.625rem;
   font-weight: 500;
   cursor: pointer;
 }
@@ -637,12 +635,15 @@ p,
   border-inline-start-width: 4px;
 }
 .log .when,
+.stage .when,
 .pending {
   color: var(--quiet);
 }
-.log .when {
+.log .when,
+.stage .when {
   font-family: var(--font-ui);
   font-size: 0.875rem;
+  white-space: nowrap;
 }
 .pending {
   font-family: var(--font-text);

@@ -118,7 +118,7 @@ What the ship itself says, as opposed to telemetry about it: a gated line. A `p 
 
 ### the ship says
 
-An `h2` section under the masthead of every page, before the page's own `h2`, with no rule above it and a fixed position. In order: the ship's latest line as ship's voice, the ship's current ask as a sentence ("The ship asks for hands on the drive."), and, while a line is being written or a choice weighed, the pending sentence in `--quiet` italic Newsreader. With no line yet it says "The Tigress has not spoken yet." instead of disappearing. It is not a live region: a line is announced when it lands, by the announcement regions. The log still lists every line.
+An `h2` section under the masthead of every page, before the page's own `h2`, with no rule above it and a fixed position. In order: the ship's latest line as ship's voice, followed by how long ago it was said as in the log, since an old line can ask for something the ship no longer wants; the ship's current ask as a sentence ("The ship asks for hands on the drive."), and, while a line is being written or a choice weighed, the pending sentence in `--quiet` italic Newsreader. With no line yet it says "The Tigress has not spoken yet." instead of disappearing. It is not a live region: a line is announced when it lands, by the announcement regions. The log still lists every line.
 
 ### bars
 

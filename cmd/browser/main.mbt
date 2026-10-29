@@ -511,8 +511,13 @@ fn where_section(s : @core.State) -> @rabbita.Html {
 fn stage_section(model : Model, s : @core.State) -> @rabbita.Html {
   let ship = epithet(model)
   let said = match latest_line(model.told.entries) {
-    Some(line) => @html.p(class="voice stage-voice", line)
-    None => @html.p("\{ship} has not spoken yet.")
+    Some({ happening: Spoke(line~, ..), at, .. }) =>
+      @html.p(class="voice stage-voice", [
+        @html.text(line),
+        @html.text(" "),
+        @html.span(class="when", @words.ago((model.now - at).max(0L))),
+      ])
+    Some(_) | None => @html.p("\{ship} has not spoken yet.")
   }
   let ask = match s.crossing() {
     Some(c) if c.phase != Arrived => sentences(@words.ask_sentence(c))
@@ -532,11 +537,11 @@ fn stage_section(model : Model, s : @core.State) -> @rabbita.Html {
 }
 
 ///|
-/// The ship's latest line in `entries`, oldest first.
-fn latest_line(entries : Array[@core.Entry]) -> String? {
+/// The entry of the ship's latest line in `entries`, oldest first.
+fn latest_line(entries : Array[@core.Entry]) -> @core.Entry? {
   for i = entries.length() - 1; i >= 0; i = i - 1 {
-    if entries[i].happening is Spoke(line~, ..) {
-      return Some(line)
+    if entries[i].happening is Spoke(_) {
+      return Some(entries[i])
     }
   }
   None

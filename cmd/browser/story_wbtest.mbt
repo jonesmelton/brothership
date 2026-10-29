@@ -105,6 +105,6 @@ test "the stage holds the latest line, and nothing before the first" {
     entry(3, Spoke(line="Coasting, then.", about=2)),
     entry(4, Took(crew="cy", post=Drive)),
   ]
-  assert_eq(latest_line(entries), Some("Coasting, then."))
-  assert_eq(latest_line(entries[1:2].to_owned()), None)
+  assert_eq(latest_line(entries).map(e => e.seq), Some(3L))
+  assert_eq(latest_line(entries[1:2].to_owned()).map(e => e.seq), None)
 }
