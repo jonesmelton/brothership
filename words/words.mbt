@@ -313,12 +313,9 @@ pub fn priority(
     Opened(_) => Interrupt
     Departed | Began(_) | Docked(_) | Met(_) | Missed(_) | Landed(..) =>
       Announce
-    Stood(crew~) | Finished(crew~) | Made(crew~, ..) =>
-      if crew == you {
-        Announce
-      } else {
-        Quiet
-      }
+    // Your own making is announced by its effect sentence already.
+    Made(_) => Quiet
+    Stood(crew~) | Finished(crew~) => if crew == you { Announce } else { Quiet }
     Asked(_) | Took(..) | Left(_) => Quiet
     Promoted(..) => Announce
     Spoke(about~, ..) =>
@@ -359,8 +356,8 @@ pub fn told(h : @core.Happening, you~ : String, ship~ : String) -> String {
         "A hand stood a watch to its end."
       }
     Finished(crew~) => "\{who(crew)} finished a work."
-    Made(crew~, units~, percent~) =>
-      "\{who(crew)} made \{crew_hours_words(units)} of work at \{percent}%."
+    Made(crew~, craft~, units~, percent~) =>
+      "\{who(crew)} made \{crew_hours_words(units)} of \{craft_name(craft)} at \{percent}%."
     Promoted(crew~, rank~, ..) =>
       "\{who(crew)} \{if crew == you { "were" } else { "was" }} promoted to \{rank_name(rank)}."
     Spoke(line~, ..) => "\{ship}: \{line}"

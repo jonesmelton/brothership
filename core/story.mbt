@@ -28,7 +28,7 @@ pub(all) enum Happening {
   /// `crew` made their banked work: `units` of it, at `percent` of the bank.
   /// Not told for the making at 100 percent when a hand leaves or the ship
   /// docks.
-  Made(crew~ : String, units~ : Int64, percent~ : Int64)
+  Made(crew~ : String, craft~ : Craft, units~ : Int64, percent~ : Int64)
   /// The ship promoted `crew` to `rank`; `tally` is what they did this
   /// crossing.
   Promoted(crew~ : String, rank~ : Int64, tally~ : Tally)
@@ -64,7 +64,9 @@ pub fn happenings(
     (Some(a), Some(b)) => {
       if event is Crew(crew~, intent=Made) && a.hands.get(crew) is Some(h) {
         let percent = craft_percent(a.ship.seed, crew, a.t)
-        out.push(Made(crew~, units=h.banked * percent / 100L, percent~))
+        out.push(
+          Made(crew~, craft=h.craft, units=h.banked * percent / 100L, percent~),
+        )
       }
       if b.phase > a.phase {
         // A long tick can cross more than one phase.

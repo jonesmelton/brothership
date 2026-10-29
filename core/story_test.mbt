@@ -94,11 +94,11 @@ test "making banked work is told, and finishing and landing follow from it" {
     said,
     content=(
       #|[
-      #|  Made(crew="ann", units=520128, percent=129),
+      #|  Made(crew="ann", craft=Artist, units=520128, percent=129),
       #|  Finished(crew="ann"),
-      #|  Made(crew="bo", units=554400, percent=110),
+      #|  Made(crew="bo", craft=Engineer, units=554400, percent=110),
       #|  Landed(refit=Baffles, level=1),
-      #|  Made(crew="cy", units=554400, percent=110),
+      #|  Made(crew="cy", craft=Engineer, units=554400, percent=110),
       #|  Landed(refit=Baffles, level=2),
       #|]
     ),
