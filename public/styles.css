@@ -14,6 +14,20 @@
   font-display: swap;
 }
 @font-face {
+  font-family: "Newsreader";
+  src: url("./fonts/newsreader.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Newsreader";
+  src: url("./fonts/newsreader-italic.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
   font-family: "Fira Sans";
   src: url("./fonts/fira-sans-400.woff2") format("woff2");
   font-weight: 400;
@@ -65,8 +79,11 @@
   --rule: #c9bca4;
   --accent: #7e2e22;
   --font-display: "EB Garamond", Georgia, serif;
+  --font-text: "Newsreader", "EB Garamond", Georgia, serif;
   --font-ui: "Fira Sans", system-ui, sans-serif;
   --font-han: "Noto Serif CJK TC", "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --weight-display: 400;
+  --weight-text: 400;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -75,6 +92,8 @@
     --quiet: #8f9b92;
     --rule: #2b3630;
     --accent: #c6a15b;
+    --weight-display: 450;
+    --weight-text: 450;
   }
 }
 
@@ -91,6 +110,11 @@ body {
   font-family: var(--font-ui);
   font-synthesis: none;
   line-height: 1.5;
+}
+
+p,
+.log li {
+  text-wrap: pretty;
 }
 
 .han {
@@ -199,10 +223,11 @@ body {
 .masthead h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: var(--weight-display);
   font-size: 2.25rem;
   line-height: 1.05;
   text-wrap: balance;
+  text-autospace: normal;
 }
 @media (min-width: 40rem) {
   .masthead h1 {
@@ -243,7 +268,10 @@ body {
 
 .checkin h2.page {
   margin-block: 1.5rem 0;
-  font-size: 1.5rem;
+  font-size: 2rem;
+  font-weight: var(--weight-display);
+  font-variant-caps: normal;
+  letter-spacing: 0;
 }
 .checkin h2.page + section {
   margin-block-start: 1rem;
@@ -253,7 +281,9 @@ body {
   margin-block: 0.75rem;
   padding-inline-start: 0.875rem;
   border-inline-start: 2px solid var(--accent);
-  font-family: var(--font-display);
+  font-family: var(--font-text);
+  font-weight: var(--weight-text);
+  font-optical-sizing: auto;
   font-size: 1.1875rem;
   line-height: 1.4;
 }
@@ -494,6 +524,7 @@ body {
   overflow-wrap: break-word;
   hyphens: auto;
   cursor: pointer;
+  text-autospace: normal;
 }
 .checkin button:hover {
   border-color: var(--ink);
@@ -526,7 +557,7 @@ body {
 .log li.voice {
   padding-inline-start: 0.875rem;
   border-inline-start: 2px solid var(--accent);
-  font-family: var(--font-display);
+  font-family: var(--font-text);
   font-size: 1.1875rem;
   line-height: 1.4;
 }
@@ -546,7 +577,9 @@ body {
   font-size: 0.875rem;
 }
 .pending {
-  font-family: var(--font-display);
+  font-family: var(--font-text);
+  font-weight: var(--weight-text);
+  font-optical-sizing: auto;
   font-style: italic;
 }
 

@@ -6,7 +6,7 @@ How the game looks, concretely enough to build from. Fonts and their features ar
 
 The screen is a ship's papers: a registry entry and a log, typeset. The design is done with type, rules and space. It has no panels, glows, gradients, shadows, textures, rounded cards, icons or animated readouts, because those are the science-fiction interface trope the typography already refuses. The only graphics are the voyage track, the progress bars and the reckoning's two drawings, and each repeats a sentence or a table (see [the voyage track](#the-voyage-track), [bars](#bars) and [reckoning](#reckoning)). The reckoning's figures change in place every second, set as an almanac's table, not a readout: no counter rolls, nothing glows, and nothing moves but the digits.
 
-Two voices, as in [typography](typography.md): the book (EB Garamond) for names, headings and the ship's own words; the system (Fira Sans) for telemetry sentences, labels, controls and figures.
+Two voices, as in [typography](typography.md): the book (EB Garamond for names and headings, Newsreader for the ship's own words at text size) and the system (Fira Sans for telemetry sentences, labels, controls and figures).
 
 ## palette
 
@@ -42,19 +42,23 @@ Sizes are in `rem`, so the whole page follows the system text size. The root sta
 
 | role | face | size / leading | details |
 | --- | --- | --- | --- |
-| epithet in the masthead | EB Garamond 400 | 2.25rem / 1.05, 2.75rem from 40rem wide | `text-wrap: balance` |
+| epithet in the masthead | EB Garamond 400 (450 at night) | 2.25rem / 1.05, 2.75rem from 40rem wide | `text-wrap: balance`, `text-autospace: normal` |
 | conventional name in the masthead | Noto Serif TC 400 | 0.8em of the epithet | `lang="zh-Hant"`, nowrap |
 | pennant | Fira Sans 500 | 1rem | tracked 0.08em, `tabular-nums lining-nums slashed-zero` |
+| page heading (`h2.page`) | EB Garamond 400 (450 at night) | 2rem / 1.2 | roman, no small caps, no tracking; one per page |
 | section heading (`h2`) | EB Garamond 500 | 1.25rem / 1.2 | `all-small-caps`, tracked 0.05em |
-| sentence (`p`, `li`) | Fira Sans 400 | 1rem / 1.5 | proportional lining figures |
-| ship's voice | EB Garamond 400 | 1.1875rem / 1.4 | accent rule at the left |
+| sentence (`p`, `li`) | Fira Sans 400 | 1rem / 1.5 | proportional lining figures, `text-wrap: pretty` |
+| ship's voice | Newsreader 400 (450 at night) | 1.1875rem / 1.4 | optical size follows the size; accent rule at the left |
+| pending sentence | Newsreader italic 400 (450 at night) | 1rem / 1.5 | `--quiet`; says the ship is finding words |
 | label, legend | Fira Sans 500 | 1rem | `all-small-caps`, tracked 0.06em, `--quiet` |
 | voyage track label | Fira Sans 500 | 0.875rem | `all-small-caps`, tracked 0.06em, `--quiet`; `aria-hidden` and repeats a sentence |
-| control | Fira Sans 400 | 1rem | pressed 600 |
+| control | Fira Sans 400 | 1rem | pressed 600; `text-autospace: normal` on ship titles |
 | conventional name in a control | Noto Serif TC 500 | 0.95em | Medium at text sizes, per [typography](typography.md) |
 | figures in a table | Fira Sans 400 | 0.9375rem | `tabular-nums lining-nums slashed-zero` |
 
-Small caps are always `all-small-caps` from the font (`smcp`, `c2sc`), with `font-synthesis: none`. Labels stay at 1rem because small caps already read about a third smaller.
+Small caps are always `all-small-caps` from the font (`smcp`, `c2sc`), with `font-synthesis: none`, and only on EB Garamond and Fira Sans. Newsreader has no small caps, so the serif text never asks for them. Labels stay at 1rem because small caps already read about a third smaller.
+
+"(450 at night)" marks the night watch scheme, where `--weight-display` and `--weight-text` are 450 instead of 400. Light type on a dark ground reads thinner, so the serif is heavier there. The sans and the section headings keep their weights in both schemes.
 
 ## layout
 
@@ -100,7 +104,7 @@ The compact form, for a label beside a crew member, is the abbreviation and insi
 
 ### ship's voice
 
-What the ship itself says, as opposed to telemetry about it: today the ask ("The ship asks for hands on the drive."), later the model's own lines. A `p class="voice"` in EB Garamond with a 2px `--accent` rule at its left. Model text goes here once it has passed the gate; while it is pending, the sentence that prompted it stands alone (see "model latency" in [architecture](architecture.md)).
+What the ship itself says, as opposed to telemetry about it: today the ask ("The ship asks for hands on the drive."), later the model's own lines. A `p class="voice"` in Newsreader with a 2px `--accent` rule at its left. Model text goes here once it has passed the gate; while it is pending, the sentence that prompted it stands alone (see "model latency" in [architecture](architecture.md)).
 
 ### bars
 
@@ -116,7 +120,7 @@ The track is a container query context. Below 13em wide, which is a narrow phone
 
 ### log
 
-The ship's story, newest first, the latest 20 entries: one `li` per happening, its sentence, then how long ago in `--quiet` at 0.875rem. A ship's line in the log is set as the ship's voice. Each page's log holds only its own happenings (`@words.page_of`). An entry newer than the last visit has a 4px `--accent` rule at its left; the away list says the same in words, so the rule is never the only signal. The list has no markers, so it carries `role="list"`, which Safari otherwise drops. While a line is being written, a `--quiet` italic Garamond sentence above the list says the ship is finding words; it is not a live region, since the line itself is announced when it lands.
+The ship's story, newest first, the latest 20 entries: one `li` per happening, its sentence, then how long ago in `--quiet` at 0.875rem. A ship's line in the log is set as the ship's voice. Each page's log holds only its own happenings (`@words.page_of`). An entry newer than the last visit has a 4px `--accent` rule at its left; the away list says the same in words, so the rule is never the only signal. The list has no markers, so it carries `role="list"`, which Safari otherwise drops. While a line is being written, a `--quiet` italic Newsreader sentence above the list says the ship is finding words; it is not a live region, since the line itself is announced when it lands.
 
 On the Ship page, a choice group sets what is read aloud as it happens: everything, urgent only, or nothing.
 

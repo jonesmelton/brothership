@@ -72,6 +72,15 @@ let sources : Array[Source] = [
   },
   { file: "EBGaramond-OFL.txt", url: "\{GOOGLE}/ebgaramond/OFL.txt", },
   {
+    file: "Newsreader.ttf",
+    url: "\{GOOGLE}/newsreader/Newsreader%5Bopsz,wght%5D.ttf",
+  },
+  {
+    file: "Newsreader-Italic.ttf",
+    url: "\{GOOGLE}/newsreader/Newsreader-Italic%5Bopsz,wght%5D.ttf",
+  },
+  { file: "Newsreader-OFL.txt", url: "\{GOOGLE}/newsreader/OFL.txt", },
+  {
     file: "FiraSans-Regular.ttf",
     url: "\{GOOGLE}/firasans/FiraSans-Regular.ttf",
   },
@@ -152,6 +161,12 @@ async fn main {
       out: "eb-garamond-italic.woff2",
       keep: latin,
     },
+    { source: "Newsreader.ttf", out: "newsreader.woff2", keep: latin, },
+    {
+      source: "Newsreader-Italic.ttf",
+      out: "newsreader-italic.woff2",
+      keep: latin,
+    },
     { source: "FiraSans-Regular.ttf", out: "fira-sans-400.woff2", keep: latin, },
     {
       source: "FiraSans-Italic.ttf",
@@ -187,7 +202,8 @@ async fn main {
   }
   for
     license in [
-      "EBGaramond-OFL.txt", "FiraSans-OFL.txt", "NotoSerifCJK-LICENSE.txt",
+      "EBGaramond-OFL.txt", "Newsreader-OFL.txt", "FiraSans-OFL.txt",
+      "NotoSerifCJK-LICENSE.txt",
     ] {
     let body = @fs.read_file("\{CACHE}/\{license}").text()
     @fs.write_file("\{OUT}/\{license}", body, create_mode=CreateOrTruncate)
