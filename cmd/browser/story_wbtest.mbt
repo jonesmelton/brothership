@@ -108,3 +108,50 @@ test "the stage holds the latest line, and nothing before the first" {
   assert_eq(latest_line(entries).map(e => e.seq), Some(3L))
   assert_eq(latest_line(entries[1:2].to_owned()).map(e => e.seq), None)
 }
+
+///|
+test "an arrival is one short batch and the roll call stays in the log" {
+  let landing : @core.Landing = {
+    leg: 0,
+    aboard: 50400,
+    works: 3,
+    plan: { burn: 0, coast: 0, eta_rate: 0, coast_rate: 0, },
+  }
+  let tally : @core.Tally = {
+    drive: 0,
+    hull: 0,
+    craft: 0,
+    regard: 0,
+    work: 0,
+    watches_stood: 0,
+    watches_broken: 0,
+    served: 0,
+  }
+  let first = story([entry(4, Departed)])
+  let (told, _) = Told::new().merge(
+    first,
+    you="ann",
+    hear=Everything,
+    ship="The Tigress",
+  )
+  let arrival = story([
+    entry(5, Began(phase=Arrived)),
+    entry(6, Promoted(crew="bo", rank=1, tally~)),
+    entry(7, Promoted(crew="cy", rank=1, tally~)),
+    entry(8, Promoted(crew="di", rank=2, tally~)),
+    entry(9, Promoted(crew="ann", rank=2, tally~)),
+    entry(10, Docked(recruits=1, landing~)),
+  ])
+  let (_, heard) = told.merge(
+    arrival,
+    you="ann",
+    hear=Everything,
+    ship="The Tigress",
+  )
+  inspect(
+    heard.polite,
+    content=(
+      #|The ship arrived. You were promoted to lieutenant. The ship docked, and 1 recruit joined.
+    ),
+  )
+}

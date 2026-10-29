@@ -197,7 +197,7 @@ pub fn Hand::quarters(Self) -> Int64
 pub(all) enum Happening {
   Departed
   Began(phase~ : Phase)
-  Docked(recruits~ : Int64)
+  Docked(recruits~ : Int64, landing~ : Landing)
   Opened(hazard~ : Hazard)
   Met(hazard~ : Hazard)
   Missed(hazard~ : Hazard)
@@ -227,6 +227,13 @@ pub(all) enum Intent {
   Watched(ticks~ : Int64)
   Ordered(order~ : Order?)
   Refitting(refit~ : Refit?)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Landing {
+  leg : Int64
+  aboard : Int64
+  works : Int64
+  plan : Plan
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum Leg {

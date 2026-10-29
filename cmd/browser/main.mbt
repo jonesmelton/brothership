@@ -870,9 +870,32 @@ fn voyage_page(
     where_section(s),
     @html.section([@html.h3("Demands"), ..outlook]),
     reckoning_section(s),
-    away_section(model, Voyage, "While you were away", []),
+    @html.section(
+      [
+        @html.h3("Landfall"),
+        ..sentences(
+          @words.landfall_sentences(
+            model.told.entries,
+            you=model.officer,
+            now=model.now,
+          ),
+        ),
+      ],
+    ),
+    away_section(model, Voyage, "While you were away", missed_landfall(model)),
     log_section(model, Voyage),
   ]
+}
+
+///|
+/// The sentence that points to the Landfall section when the player's
+/// absence held a docking.
+fn missed_landfall(model : Model) -> Array[String] {
+  match (model.seen, model.told.arrived) {
+    (Some(seen), Some(arrived)) =>
+      @words.landfall_away(model.told.entries, after=seen, upto=arrived)
+    _ => []
+  }
 }
 
 ///|

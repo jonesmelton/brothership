@@ -75,7 +75,7 @@ Small caps are always `all-small-caps` from the font (`smcp`, `c2sc`), with `fon
 - One column at every width, `max-width: 36rem`, centered, with `1rem` side padding (`1.5rem` from 40rem wide). Desktop gets the phone layout with more margin, not a second layout.
 - Sections are separated by a `--rule` hairline and `2rem` of space, not boxes.
 - The game has three pages, You, Voyage and Ship, each with its own log, reached from the [bar of pages](#bar-of-pages). The masthead is on all of them. A page opens with its `h2`, which takes focus when the page changes; its sections are `h3`.
-- The vertical order of each page is fixed and never changes with state. Every page opens, under the masthead, with [the ship says](#the-ship-says), then its own `h2`. You: rank, since you were here, your post, choices, log. Voyage: where the ship is, demands, the instruments and reckoning (collapsed), while you were away, log. Ship: the ship, while you were away, log, settings, other ships. A section with nothing to say says so in a sentence rather than disappearing.
+- The vertical order of each page is fixed and never changes with state. Every page opens, under the masthead, with [the ship says](#the-ship-says), then its own `h2`. You: rank, since you were here, your post, choices, log. Voyage: where the ship is, demands, the instruments and reckoning (collapsed), landfall, while you were away, log. Ship: the ship, while you were away, log, settings, other ships. A section with nothing to say says so in a sentence rather than disappearing.
 - The bar of pages is the only fixed element, and only on viewports at least 34em tall (see below). Otherwise the page is a plain scroll, and at 400% zoom it is.
 
 ## components
@@ -119,6 +119,12 @@ What the ship itself says, as opposed to telemetry about it: a gated line. A `p 
 ### the ship says
 
 An `h2` section under the masthead of every page, before the page's own `h2`, with no rule above it and a fixed position. In order: the ship's latest line as ship's voice, followed by how long ago it was said as in the log, since an old line can ask for something the ship no longer wants; the ship's current ask as a sentence ("The ship asks for hands on the drive."), and, while a line is being written or a choice weighed, the pending sentence in `--quiet` italic Newsreader. With no line yet it says "The Tigress has not spoken yet." instead of disappearing. It is not a live region: a line is announced when it lands, by the announcement regions. The log still lists every line.
+
+### landfall
+
+The Voyage page's section on the newest docking, between the reckoning and "While you were away". Plain `p`s, one sentence each, in a fixed order: where the ship came in and from where, with hours aboard against years at the worlds ("Made Occitan from Kerala: 14 hours aboard, 15.7 years at the worlds."); how long ago; the roll call of promotions at the muster, in order, with "you" and "a hand" for crew ids; how many of the ship's asks were answered and how many by you; works delivered and recruits gained. With no promotions, no asks or no deliveries it says so in a sentence. Before the first docking it is one sentence saying there has been no landfall. Built by `@words.landfall_sentences` from the story alone, using the `Docked` happening's `Landing` (leg, ticks aboard, works, plan), so it needs no model call and survives a reload.
+
+The roll call is pulled, not pushed. An arrival announces at most the arrival, your own promotion and the docking; other officers' promotions are log only (`@words.priority`). A player who missed the docking gets one sentence in "While you were away" on the Voyage page, "Landfall at Occitan. The account is under Landfall on this page.", from `@words.landfall_away`.
 
 ### bars
 

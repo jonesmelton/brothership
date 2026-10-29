@@ -48,7 +48,24 @@ test "a crossing told from departure to docking" {
   debug_inspect(
     said,
     content=(
-      #|[Began(phase=Approach), Began(phase=Arrived), Docked(recruits=0)]
+      #|[
+      #|  Began(phase=Approach),
+      #|  Began(phase=Arrived),
+      #|  Docked(
+      #|    recruits=0,
+      #|    landing={
+      #|      leg: 0,
+      #|      aboard: 50430,
+      #|      works: 0,
+      #|      plan: {
+      #|        burn: 10779000000,
+      #|        coast: 18838000000,
+      #|        eta_rate: 1308460,
+      #|        coast_rate: 760500,
+      #|      },
+      #|    },
+      #|  ),
+      #|]
     ),
   )
 }

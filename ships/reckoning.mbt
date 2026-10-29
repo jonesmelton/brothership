@@ -61,6 +61,16 @@ fn coast_lead(d : Double, eta : Double) -> Double {
 }
 
 ///|
+/// Years at the worlds over the whole of `plan`, the `span` of `reckon`.
+pub fn span_of(plan : @core.Plan) -> Double {
+  let top = plan.burn.to_double() / 1.0e9
+  let a = plan.eta_rate.to_double() * YEAR / 1.0e9
+  let coast = plan.coast.to_double() / 1.0e9
+  let coast_lag = if coast > 0.0 { coast_lead(coast, top) } else { 0.0 }
+  burn_run(top, a) * 2.0 + coast + burn_lead(top, a) * 2.0 + coast_lag
+}
+
+///|
 pub fn reckon(c : @core.Crossing) -> Reckoning {
   let plan = c.plan
   let top = plan.burn.to_double() / 1.0e9
