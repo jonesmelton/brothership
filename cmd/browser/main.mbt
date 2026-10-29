@@ -666,7 +666,7 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
       _ if model.ships.is_empty() => [@html.p("Reaching the fleet.")]
       _ => [ship_choices(model, emit)]
     }
-    return page(model, [masthead("Choose a ship"), ..body], [])
+    return page(model, [masthead("Choose a ship"), ..body], [], [])
   }
   let name = model.ships
     .iter()
@@ -698,7 +698,7 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
     Ready(_) => [pages_nav(model)]
     _ => []
   }
-  page(model, [masthead(title(name)), ..body], nav)
+  page(model, [masthead(title(name)), ..body], nav, accent_style(name))
 }
 
 ///|
@@ -954,6 +954,7 @@ fn page(
   model : Model,
   content : Array[@rabbita.Html],
   nav : Array[@rabbita.Html],
+  accent : Array[String],
 ) -> @rabbita.Html {
   // A trailing space on alternate updates makes repeated words new text.
   let pad = if model.said.count % 2 == 1 { "\u{a0}" } else { "" }
@@ -965,6 +966,8 @@ fn page(
     )
   }
   @html.div(
+    class="ship",
+    style=accent,
     [
       @html.main_(class="checkin", content),
       ..nav,
