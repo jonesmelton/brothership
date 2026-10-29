@@ -116,6 +116,15 @@
     --weight-text: 450;
   }
 }
+/* A ship's page sets its accent inline; the defaults are the fallbacks. */
+.ship {
+  --accent: var(--ship-accent-light, #7e2e22);
+}
+@media (prefers-color-scheme: dark) {
+  .ship {
+    --accent: var(--ship-accent-dark, #c6a15b);
+  }
+}
 
 *,
 *::before,

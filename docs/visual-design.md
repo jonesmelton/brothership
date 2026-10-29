@@ -29,6 +29,16 @@ Contrast against `--paper` (WCAG 2.x):
 | `--accent` | 7.4 | 7.6 | AAA text, focus ring |
 | `--rule` | 1.5 | 1.5 | nothing; never the only edge of a control |
 
+Each starting ship's page sets `--accent` to its own colour, on the `.ship` element that wraps the page. A ship outside the cast keeps the `--accent` values above. The contrast figures are paper and night watch, in that order:
+
+| ship | hue | `--accent` paper | `--accent` night watch | on `--paper` | on `--rule` |
+| --- | --- | --- | --- | --- | --- |
+| `EF-147` The Tigress | plum | `#8a2a6b` | `#e596c4` | 6.5 / 8.4 | 4.3 / 5.7 |
+| `EF-287` The Flea on the Drum | verdigris | `#1f6e66` | `#6fd1c0` | 4.9 / 10.2 | 3.2 / 6.9 |
+| `HS-212` The Twin-Tailed Scorpion | indigo | `#33549e` | `#9cb4f2` | 5.9 / 9.0 | 3.9 / 6.1 |
+
+Within each scheme the three accents are at least 37 apart in CIE76 ΔE, where about 2.3 is a just-noticeable difference. The floors (4.5:1 on `--paper`, 3:1 on `--rule`) and the spacing are tested in `cmd/browser/accent_wbtest.mbt`.
+
 Rules:
 
 - Text is `--ink` or `--quiet`, never `--rule`. Accent text is allowed but unused so far.
