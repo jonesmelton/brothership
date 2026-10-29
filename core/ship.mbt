@@ -177,9 +177,12 @@ pub(all) struct Record {
   works : Int64
   /// Work units toward the next work, carried to the next crossing.
   carry : Int64
-  /// Rank held. Missing in a record written before promotions: the rank
-  /// falls back to `rank_floor(regard)` until the next dock writes it.
+  /// Rank held. Missing in a record written before promotions, which
+  /// counts as an ensign until the next dock writes it.
   rank : Int64?
+  /// Ticks served aboard this ship, holding a post, over every crossing
+  /// docked.
+  served : Int64
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
@@ -199,24 +202,6 @@ pub const LIEUTENANT_COMMANDER : Int64 = 3L
 ///|
 /// Commander, the highest rank.
 pub const COMMANDER : Int64 = 4L
-
-///|
-/// Regard, in `REGARD_HOUR`s, at which each rank becomes available.
-pub let rank_thresholds : Array[Int64] = [0, 40, 120, 280, 500]
-
-///|
-/// The highest rank a regard makes someone eligible for: 0 to 4. A rank held
-/// is a record's `rank`, not this.
-pub fn rank_floor(regard : Int64) -> Int64 {
-  let hours = regard / REGARD_HOUR
-  let mut rank = ENSIGN
-  for i, at in rank_thresholds {
-    if hours >= at {
-      rank = i.to_int64()
-    }
-  }
-  rank
-}
 
 ///|
 /// The ship between crossings: what it is fitted with, the state of its
@@ -249,12 +234,10 @@ pub fn Ship::new(values : Values, fit : Fit, seed~ : Int64) -> Ship {
 }
 
 ///|
-/// `crew`'s rank: the record's explicit rank, else the floor for its regard,
-/// else 0.
+/// `crew`'s rank: the record's, else an ensign's.
 pub fn Ship::rank(self : Ship, crew : String) -> Int64 {
   match self.records.get(crew) {
     Some({ rank: Some(r), .. }) => r
-    Some(r) => rank_floor(r.regard)
-    None => ENSIGN
+    _ => ENSIGN
   }
 }

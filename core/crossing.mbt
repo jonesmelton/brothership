@@ -104,6 +104,8 @@ pub(all) struct Tally {
   work : Int64
   watches_stood : Int64
   watches_broken : Int64
+  /// Ticks aboard holding a post, away or not.
+  served : Int64
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
@@ -115,6 +117,7 @@ let no_tally : Tally = {
   work: 0,
   watches_stood: 0,
   watches_broken: 0,
+  served: 0,
 }
 
 ///|
@@ -167,7 +170,7 @@ pub(all) suberror CrossingRejected {
   BadWatch(ticks~ : Int64)
   OnWatch(crew~ : String)
   Unbuildable(refit~ : Refit)
-  /// A promotion is one step up, to at most `COMMANDER`, at arrival.
+  /// A promotion is one step up, to at most `COMMANDER`.
   BadPromotion(crew~ : String, rank~ : Int64)
   /// Orders are for a phase still to come.
   BadOrder(phase~ : Phase)
@@ -191,6 +194,14 @@ pub fn Crossing::new(plan : Plan, ship : Ship) -> Crossing {
     ask: None,
     arrived_at: None,
   }.settle()
+}
+
+///|
+/// Ticks `crew` has served aboard this ship: every crossing docked, and
+/// this one so far.
+pub fn Crossing::served(self : Crossing, crew : String) -> Int64 {
+  self.ship.records.get(crew).map(r => r.served).unwrap_or(0L) +
+  self.tallies.get(crew).map(t => t.served).unwrap_or(0L)
 }
 
 ///|
@@ -411,6 +422,7 @@ fn Crossing::flow(self : Crossing, step : Int64) -> Crossing {
       ..t,
       regard: t.regard + self.regard_rate(h) * step,
       work: t.work + work,
+      served: t.served + step,
     }
   }
   let demands = self.demands.map(d => {
@@ -668,7 +680,7 @@ pub fn Crossing::apply(
     Asked(post~) => { ..self, ask: post, }
     Promoted(crew~, rank~) => {
       let h = self.hand(crew)
-      guard self.phase == Arrived && rank == h.rank + 1L && rank <= COMMANDER else {
+      guard rank == h.rank + 1L && rank <= COMMANDER else {
         raise BadPromotion(crew~, rank~)
       }
       self.with_hand(crew, { ..h, rank, })
@@ -730,7 +742,7 @@ pub fn Crossing::dock(self : Crossing) -> Ship? {
   for crew, t in self.tallies {
     let r = records
       .get(crew)
-      .unwrap_or({ regard: 0, works: 0, carry: 0, rank: None, })
+      .unwrap_or({ regard: 0, works: 0, carry: 0, rank: None, served: 0, })
     let rank = match self.hands.get(crew) {
       Some(h) => h.rank
       None => ship.rank(crew)
@@ -742,6 +754,7 @@ pub fn Crossing::dock(self : Crossing) -> Ship? {
       works: r.works + units / WORK_SIZE,
       carry: units % WORK_SIZE,
       rank: Some(rank),
+      served: r.served + t.served,
     }
   }
   let toward = ship.toward_recruit + delivered

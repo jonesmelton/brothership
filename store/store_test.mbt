@@ -241,13 +241,14 @@ async test "a promotion row replays and joins the story" {
       #|  crew="ann",
       #|  rank=1,
       #|  tally={
-      #|    drive: 154436,
+      #|    drive: 175472,
       #|    hull: 0,
       #|    craft: 0,
-      #|    regard: 166284,
+      #|    regard: 215844,
       #|    work: 0,
       #|    watches_stood: 0,
       #|    watches_broken: 0,
+      #|    served: 43868,
       #|  },
       #|)
     ),

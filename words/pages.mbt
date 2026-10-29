@@ -24,13 +24,14 @@ fn zero_tally() -> @core.Tally {
     work: 0,
     watches_stood: 0,
     watches_broken: 0,
+    served: 0,
   }
 }
 
 ///|
 /// A record of zero, for a crew member the ship has never carried.
 fn zero_record() -> @core.Record {
-  { regard: 0, works: 0, carry: 0, rank: None, }
+  { regard: 0, works: 0, carry: 0, rank: None, served: 0, }
 }
 
 ///|
@@ -308,7 +309,7 @@ pub fn since(before : Ledger, now : Ledger) -> Array[String] {
 ///|
 /// What `you` is earning now, with rates: regard this crossing and per
 /// hour, with the ship's ask and an open demand's doubling named; progress
-/// toward the next work for an artist; the next promotion.
+/// toward the next work for an artist; time served and the next promotion.
 pub fn earning_sentences(s : @core.State, you~ : String) -> Array[String] {
   guard s.crossing() is Some(c) else { return [] }
   guard c.hands.get(you) is Some(h) else { return [] }
@@ -344,22 +345,21 @@ pub fn earning_sentences(s : @core.State, you~ : String) -> Array[String] {
       "Work \{record.works + works + 1L}: \{tenths_words(units % @core.WORK_SIZE * 10L / crew_hour)} of \{@core.WORK_SIZE / crew_hour} crew-hours.",
     )
   }
-  let regard = record.regard + tally.regard
+  let served = c.served(you)
+  lines.push(
+    "Served \{plural(served / @core.HOUR, "hour", "hours")} aboard this ship.",
+  )
   if h.rank >= @core.COMMANDER {
     lines.push("You hold the highest rank.")
+  } else if @ships.eligible(c, you) {
+    lines.push(
+      "Promotion to \{rank_name(h.rank + 1L)} is the ship's to give, when it chooses.",
+    )
   } else {
-    let next = rank_name(h.rank + 1L)
-    if @core.rank_floor(regard) > h.rank {
-      lines.push(
-        "The ship can promote you to \{next} when it arrives, if it has room for another.",
-      )
-    } else {
-      let at = @core.rank_thresholds[(h.rank + 1L).to_int()] * @core.REGARD_HOUR
-      let hours = (at - regard + @core.REGARD_HOUR - 1L) / @core.REGARD_HOUR
-      lines.push(
-        "\{plural(hours, "hour", "hours")} of regard before the ship can promote you to \{next}.",
-      )
-    }
+    let left = (@ships.ENSIGN_SERVICE - served + @core.HOUR - 1L) / @core.HOUR
+    lines.push(
+      "The ship can promote an ensign after \{@ships.ENSIGN_SERVICE / @core.HOUR} hours aboard: \{plural(left, "hour", "hours")} to go.",
+    )
   }
   lines
 }

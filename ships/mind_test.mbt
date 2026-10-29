@@ -5,7 +5,8 @@ fn departed(p : @ships.Profile) -> (@core.State, Int64) {
   let ship = p.ship(seed=1)
   let records : Map[String, @core.Record] = {
     "a": {
-      regard: 200L * @core.REGARD_HOUR,
+      regard: 0,
+      served: @ships.ENSIGN_SERVICE,
       works: 0,
       carry: 0,
       rank: Some(0L),
@@ -63,35 +64,4 @@ test "a minded ship waits for its mind at arrival, then promotes by script" {
   )
   inspect(late.contains(Docked), content="true")
   inspect(late.contains(Promoted(crew="a", rank=1)), content="true")
-}
-
-///|
-test "a mind's promotions keep to one step, the hands aboard and the caps" {
-  let p = @ships.profiles()[1]
-  let c = @core.Crossing::new(p.next_plan(legs=0, coils=0), p.ship(seed=1))
-  let hand = (rank : Int64) => @core.Hand::{
-    post: Drive,
-    craft: Artist,
-    rank,
-    watch: None,
-    order: None,
-  }
-  let c = {
-    ..c,
-    phase: Arrived,
-    hands: {
-      "a": hand(3),
-      "b": hand(3),
-      "c": hand(2),
-      "d": hand(0),
-      "e": hand(1),
-    },
-  }
-  debug_inspect(
-    @ships.allowed(c, ["d", "a", "b", "c", "ghost", "d"], officer=_ => true),
-    content=(
-      #|[("d", 1), ("a", 4), ("c", 3)]
-    ),
-  )
-  debug_inspect(@ships.allowed(c, ["e"], officer=id => id != "e"), content="[]")
 }

@@ -59,10 +59,6 @@ pub fn demands_for(Plan, Int64, Int64) -> Array[Demand]
 
 pub fn happenings(State, Event, State) -> Array[Happening]
 
-pub fn rank_floor(Int64) -> Int64
-
-pub let rank_thresholds : Array[Int64]
-
 pub let refits : Array[Refit]
 
 pub fn replay(Iter[Event]) -> State? raise Rejected
@@ -120,6 +116,7 @@ pub fn Crossing::next_boundary(Self) -> Int64
 pub fn Crossing::outcomes(Self) -> Array[Outcome]?
 pub fn Crossing::project(Self) -> Self?
 pub fn Crossing::quarters(Self, Post) -> Int64
+pub fn Crossing::served(Self, String) -> Int64
 pub fn Crossing::setting(Self) -> Int64
 pub fn Crossing::trend(Self, String) -> Trend
 
@@ -301,6 +298,7 @@ pub(all) struct Record {
   works : Int64
   carry : Int64
   rank : Int64?
+  served : Int64
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum Refit {
@@ -365,6 +363,7 @@ pub(all) struct Tally {
   work : Int64
   watches_stood : Int64
   watches_broken : Int64
+  served : Int64
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Trend {

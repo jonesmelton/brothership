@@ -258,6 +258,7 @@ test "a promotion is told in full and announced" {
     work: 0,
     watches_stood: 0,
     watches_broken: 0,
+    served: 0,
   }
   let h : @core.Happening = Promoted(crew="0", rank=3L, tally~)
   debug_inspect(

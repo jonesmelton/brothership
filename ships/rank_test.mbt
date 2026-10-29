@@ -1,11 +1,10 @@
 ///|
-/// An arrived crossing with one hand per `(id, rank, regard)`, whose total
-/// regard (record plus tally) is `regard` hours.
+/// An arrived crossing with one hand per `(id, rank, hours)`, who has served
+/// `hours` aboard.
 fn bench(crew : Array[(String, Int64, Int64)]) -> @core.Crossing {
   let p = @ships.profiles()[1]
   let c = @core.Crossing::new(p.next_plan(legs=0, coils=0), p.ship(seed=1))
   let hands : Map[String, @core.Hand] = Map([])
-  let tallies : Map[String, @core.Tally] = Map([])
   let records : Map[String, @core.Record] = Map([])
   for entry in crew {
     let (id, rank, hours) = entry
@@ -16,18 +15,15 @@ fn bench(crew : Array[(String, Int64, Int64)]) -> @core.Crossing {
       watch: None,
       order: None,
     }
-    tallies[id] = {
-      drive: 0,
-      hull: 0,
-      craft: 0,
-      regard: hours * @core.REGARD_HOUR,
-      work: 0,
-      watches_stood: 0,
-      watches_broken: 0,
+    records[id] = {
+      regard: 0,
+      works: 0,
+      carry: 0,
+      rank: Some(rank),
+      served: hours * @core.HOUR,
     }
-    records[id] = { regard: 0, works: 0, carry: 0, rank: Some(rank), }
   }
-  { ..c, phase: Arrived, hands, tallies, ship: { ..c.ship, records, }, }
+  { ..c, phase: Arrived, hands, ship: { ..c.ship, records, }, }
 }
 
 ///|
@@ -36,79 +32,64 @@ fn everyone(_ : String) -> Bool {
 }
 
 ///|
-test "rank caps are one table, uncapped at ensign" {
+test "an ensign is eligible after ENSIGN_SERVICE, anyone above at once" {
+  let c = bench([("new", 0, 5), ("old", 0, 6), ("lt", 1, 0)])
   debug_inspect(
-    @ships.rank_caps(10L),
-    content="[None, Some(4), Some(3), Some(2), Some(1)]",
+    ["new", "old", "lt", "ghost"].map(id => @ships.eligible(c, id)),
+    content="[false, true, true, false]",
   )
 }
 
 ///|
-test "a solo officer climbs one step per arrival" {
-  let c = bench([("a", 0L, 600L)])
-  debug_inspect(@ships.promotions(c, officer=everyone), content="[(\"a\", 1)]")
-  let c = bench([("a", 3L, 600L)])
-  debug_inspect(@ships.promotions(c, officer=everyone), content="[(\"a\", 4)]")
+test "the ship may promote as many as it likes, one step each, to commander" {
+  let c = bench([("a", 4, 50), ("b", 3, 50), ("c", 3, 50), ("d", 0, 1)])
+  debug_inspect(
+    @ships.allowed(c, ["a", "b", "c", "d", "b", "ghost"], officer=everyone),
+    content=(
+      #|[("b", 4), ("c", 4)]
+    ),
+  )
+  debug_inspect(@ships.allowed(c, ["b"], officer=id => id != "b"), content="[]")
 }
 
 ///|
-test "nobody is promoted past commander, demoted, or without the regard" {
+test "by script, arrival promotes the longest-serving officer it may" {
+  let c = bench([("a", 0, 7), ("b", 2, 30), ("c", 0, 2), ("d", 4, 99)])
   debug_inspect(
-    @ships.promotions(
-      bench([("a", 4L, 9000L), ("b", 2L, 0L), ("c", 3L, 100L)]),
-      officer=everyone,
+    @ships.promotions(c, officer=everyone),
+    content=(
+      #|[("b", 3)]
     ),
+  )
+  let tie = bench([("y", 0, 7), ("x", 0, 7)])
+  debug_inspect(
+    @ships.promotions(tie, officer=everyone),
+    content=(
+      #|[("x", 1)]
+    ),
+  )
+  debug_inspect(
+    @ships.promotions({ ..c, phase: Coast, }, officer=everyone),
     content="[]",
   )
 }
 
 ///|
-test "a crossing that has not arrived promotes nobody" {
-  let c = { ..bench([("a", 0L, 600L)]), phase: Burn, }
-  debug_inspect(@ships.promotions(c, officer=everyone), content="[]")
-}
-
-///|
-test "the officer predicate excludes everyone else" {
-  let c = bench([("a", 0L, 600L), ("b", 0L, 600L)])
+test "a crew three in four ensigns, one of them eligible, is bottom-heavy" {
+  let heavy = bench([("a", 0, 7), ("b", 0, 1), ("c", 0, 1), ("d", 2, 9)])
+  inspect(@ships.bottom_heavy(heavy, officer=everyone), content="true")
   debug_inspect(
-    @ships.promotions(c, officer=id => id == "b"),
-    content="[(\"b\", 1)]",
+    @ships.first_ensign(heavy, officer=everyone),
+    content=(
+      #|[("a", 1)]
+    ),
   )
-}
-
-///|
-test "regard decides who takes the last place, then crew id" {
-  let c = bench([("a", 3L, 300L), ("b", 3L, 600L), ("c", 3L, 600L)])
-  debug_inspect(@ships.promotions(c, officer=everyone), content="[(\"b\", 4)]")
-  let tie = bench([("z", 0L, 100L), ("m", 0L, 100L), ("a", 0L, 100L)])
-  debug_inspect(
-    @ships.promotions(tie, officer=everyone),
-    content="[(\"a\", 1), (\"m\", 1), (\"z\", 1)]",
-  )
-}
-
-///|
-test "a promotion frees the rank it leaves for the next in line" {
-  let c = bench([("a", 3L, 600L), ("b", 2L, 300L)])
-  debug_inspect(
-    @ships.promotions(c, officer=everyone),
-    content="[(\"a\", 4), (\"b\", 3)]",
-  )
-}
-
-///|
-test "a topheavy ship promotes nobody into a full rank but fills lower ones" {
-  let c = bench([
-    ("a", 4L, 600L),
-    ("b", 3L, 600L),
-    ("c", 3L, 400L),
-    ("d", 2L, 300L),
-    ("e", 2L, 300L),
-    ("f", 2L, 300L),
-    ("g", 0L, 130L),
-  ])
-  debug_inspect(@ships.promotions(c, officer=everyone), content="[(\"g\", 1)]")
+  let green = bench([("a", 0, 1), ("b", 0, 1)])
+  inspect(@ships.bottom_heavy(green, officer=everyone), content="false")
+  let mixed = bench([("a", 0, 7), ("b", 0, 7), ("c", 1, 9), ("d", 2, 9)])
+  inspect(@ships.bottom_heavy(mixed, officer=everyone), content="false")
+  let alone = bench([("a", 0, 7)])
+  inspect(@ships.bottom_heavy(alone, officer=everyone), content="false")
 }
 
 ///|
@@ -123,6 +104,7 @@ test "the clock promotes before it docks, in one batch" {
         works: 0,
         carry: 0,
         rank: Some(0L),
+        served: @ships.ENSIGN_SERVICE,
       },
     },
   }

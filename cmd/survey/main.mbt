@@ -296,7 +296,7 @@ fn voyages() -> Unit {
       ])
     }
     let last = voyage[voyage.length() - 1].docked
-    let counts = Array::make(@core.rank_thresholds.length(), 0)
+    let counts = Array::make(@core.COMMANDER.to_int() + 1, 0)
     for crew in last.records.keys() {
       if s.actor_of(crew).map(a => a.is_player()).unwrap_or(false) {
         counts[last.rank(crew).to_int()] += 1

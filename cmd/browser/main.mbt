@@ -700,9 +700,9 @@ fn you_page(
           Some((done, of)) => [measure("Work toward the next work", done, of)]
           None => []
         },
-        ..match regard_span(c, you) {
+        ..match service_span(c, you) {
           Some((done, of)) =>
-            [measure("Regard toward the next promotion", done, of)]
+            [measure("Service before the ship can promote you", done, of)]
           None => []
         },
       ]

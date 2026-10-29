@@ -8,6 +8,8 @@ import {
 }
 
 // Values
+pub const ENSIGN_SERVICE : Int64 = 21_600
+
 pub const MAX_SLEEP : Int64 = 60
 
 pub const MIND_WAIT : Int64 = 300
@@ -17,6 +19,12 @@ pub const PORT_STAY : Int64 = 600
 pub fn allowed(@core.Crossing, Array[String], officer~ : (String) -> Bool) -> Array[(String, Int64)]
 
 pub fn arrived_at(@core.State) -> Int64?
+
+pub fn bottom_heavy(@core.Crossing, officer~ : (String) -> Bool) -> Bool
+
+pub fn eligible(@core.Crossing, String) -> Bool
+
+pub fn first_ensign(@core.Crossing, officer~ : (String) -> Bool) -> Array[(String, Int64)]
 
 pub fn fleet() -> Array[Berth]
 
@@ -31,8 +39,6 @@ pub fn profile_named(String) -> Profile?
 pub fn profiles() -> Array[Profile]
 
 pub fn promotions(@core.Crossing, officer~ : (String) -> Bool) -> Array[(String, Int64)]
-
-pub fn rank_caps(Int64) -> Array[Int64?]
 
 // Errors
 

@@ -154,20 +154,13 @@ pub fn Prompts::muster(
   thoughts~ : Array[String],
 ) -> @llm.Call raise {
   guard state.crossing() is Some(c) else { fail("the ship is not underway") }
-  let caps = @ships.rank_caps(c.hands.length().to_int64())
-  let held = Array::make(caps.length(), 0L)
+  let held = Array::make(@core.COMMANDER.to_int() + 1, 0L)
   for _, h in c.hands {
     held[h.rank.to_int()] += 1L
   }
   let room = []
-  for rank in 1..<caps.length() {
-    let name = @words.rank_name(rank.to_int64())
-    room.push(
-      match caps[rank] {
-        Some(cap) => "\{name}: \{cap} places, \{held[rank]} held."
-        None => "\{name}: any number, \{held[rank]} held."
-      },
-    )
+  for rank, n in held {
+    room.push("\{@words.rank_name(rank.to_int64())}: \{n} held.")
   }
   let user = self.prompts.render("muster", {
     "room": strings(room),

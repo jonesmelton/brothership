@@ -39,18 +39,11 @@ fn work_span(c : @core.Crossing, crew : String) -> (Int64, Int64)? {
 }
 
 ///|
-/// `crew`'s regard since their held rank's threshold and what the next
-/// rank's threshold asks, or `None` at the highest rank or when not aboard.
-/// Regard past the next threshold fills the bar.
-fn regard_span(c : @core.Crossing, crew : String) -> (Int64, Int64)? {
-  guard c.hands.get(crew) is Some(h) else { None }
-  let rank = h.rank.max(0L).to_int()
-  guard rank + 1 < @core.rank_thresholds.length() else { None }
-  let kept = c.ship.records.get(crew).map(r => r.regard).unwrap_or(0L)
-  let made = c.tallies.get(crew).map(t => t.regard).unwrap_or(0L)
-  let from = @core.rank_thresholds[rank] * @core.REGARD_HOUR
-  let to = @core.rank_thresholds[rank + 1] * @core.REGARD_HOUR
-  Some(((kept + made - from).min(to - from), to - from))
+/// An ensign's service toward `ENSIGN_SERVICE`, as done and needed, or
+/// `None` once the ship may promote them or when not aboard.
+fn service_span(c : @core.Crossing, crew : String) -> (Int64, Int64)? {
+  guard c.hands.get(crew) is Some(_) && !@ships.eligible(c, crew) else { None }
+  Some((c.served(crew), @ships.ENSIGN_SERVICE))
 }
 
 ///|

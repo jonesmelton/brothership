@@ -205,6 +205,7 @@ fn tally() -> @core.Tally {
     work: 0,
     watches_stood: 2,
     watches_broken: 1,
+    served: 5 * 3600,
   }
 }
 
@@ -246,6 +247,7 @@ async test "a promotion prompt carries facts about the officer and no id" {
           works: 4,
           carry: 0,
           rank: Some(2),
+          served: 0,
         },
       },
     },

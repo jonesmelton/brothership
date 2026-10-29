@@ -17,6 +17,7 @@ fn tally_of(c : @core.Crossing, crew : String) -> @core.Tally {
     work: 0,
     watches_stood: 0,
     watches_broken: 0,
+    served: 0,
   })
 }
 
