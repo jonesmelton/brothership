@@ -10,6 +10,10 @@ primary_region = "ord"
   WARREN_HOST = "0.0.0.0"
   WARREN_PORT = "8080"
   BROTHERSHIP_DB = "/data/brothership.sqlite"
+  MODEL = "meta:muse-spark-1.3-contributor"
+  MIND_MODEL = "meta:muse-spark-1.3-contributor"
+  WRITER_MODEL = "meta:muse-spark-1.3-contributor"
+  GATE_MODEL = "meta:muse-spark-1.3-contributor"
 
 [[mounts]]
   source = "brothership_data"

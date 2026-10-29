@@ -218,4 +218,5 @@ log, so it never calls the model.
 `cmd/audition` flies the Tigress with four scripted officers to a
 departure, a demand, the coast and an arrival, and gives each moment to
 every ship's character and values, sampled, on the models it is given.
-Replies are cached in `.cache/llm`.
+Replies are cached in `.cache/llm`. See `docs/tools.md` for how to run it
+and `cmd/speak`.

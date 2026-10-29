@@ -104,15 +104,16 @@ const CONTENT : String = "content"
 ///|
 /// The model that writes ships' lines, the one that gates them, and the one
 /// that makes the ship's choices, unless `WRITER_MODEL`, `GATE_MODEL` or
-/// `MIND_MODEL` names another. The contributor tier of Muse Spark 1.3 is
-/// much cheaper and about twice as slow.
+/// `MIND_MODEL` names another, or else `MODEL` does. The contributor tier
+/// of Muse Spark 1.3 is much cheaper and about twice as slow.
 const DEFAULT_MODEL : String = "meta:muse-spark-1.3-contributor"
 
 ///|
 fn model(variable : String) -> String {
-  match @env.get_env_var(variable) {
-    Some(m) if m != "" => m
-    _ => DEFAULT_MODEL
+  let set = (name : String) => @env.get_env_var(name).filter(m => m != "")
+  match set(variable) {
+    Some(m) => m
+    None => set("MODEL").unwrap_or(DEFAULT_MODEL)
   }
 }
 
