@@ -787,6 +787,22 @@ pub fn Crossing::forecast(self : Crossing) -> Int64? {
 }
 
 ///|
+/// When the current phase ends if no one changes post, in ticks since
+/// departure: `None` once arrived, or if it would take more than
+/// `MAX_BOUNDARIES` steps.
+pub fn Crossing::phase_ends(self : Crossing) -> Int64? {
+  guard self.phase != Arrived else { None }
+  let mut c = self
+  for _ in 0..<MAX_BOUNDARIES {
+    if c.phase != self.phase {
+      return Some(c.t)
+    }
+    c = c.advance(c.next_boundary())
+  }
+  None
+}
+
+///|
 /// Settle an arrived crossing into the ship that leaves port: regard and
 /// works go to each crew member's record, works bring recruits, the yard
 /// repairs the hull, and refits stay fitted.

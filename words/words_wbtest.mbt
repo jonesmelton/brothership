@@ -47,13 +47,17 @@ test "an empty ship says so instead of counting zeroes" {
     where_sentences(sea),
     content=(
       #|[
-      #|  "Burning toward the next port.",
+      #|  "Burning toward Occitan.",
+      #|  "15.7 of the 15.7 light-years from Kerala still to go.",
+      #|  "Under a day has passed at Kerala and Occitan since departure.",
       #|  "Arriving in about 18 hours, if the drive stays as set.",
+      #|  "The coast begins in about 6 hours.",
       #|  "Hull at 100%.",
       #|  "Drive at 35% of full burn, with none of the 5 hands it needs.",
       #|  "Nobody is on a post yet.",
       #|  "The ship asks for hands on the drive.",
       #|]
+
     ),
   )
 }
@@ -70,9 +74,10 @@ test "a voyage from port to its first moments, in sentences" {
     where_sentences(s),
     content=(
       #|[
-      #|  "In port. Departs in about 10 minutes on a 12 light-year hop.",
+      #|  "In port at Kerala. Departs in about 10 minutes for Occitan, 15.7 light-years away.",
       #|  "Hull at 100%.",
       #|]
+
     ),
   )
   debug_inspect(
@@ -89,13 +94,17 @@ test "a voyage from port to its first moments, in sentences" {
     where_sentences(sea),
     content=(
       #|[
-      #|  "Burning toward the next port.",
-      #|  "Arriving in about 12 hours, if the drive stays as set.",
+      #|  "Burning toward Occitan.",
+      #|  "15.7 of the 15.7 light-years from Kerala still to go.",
+      #|  "Under a day has passed at Kerala and Occitan since departure.",
+      #|  "Arriving in about 15 hours, if the drive stays as set.",
+      #|  "The coast begins in about 4 hours.",
       #|  "Hull at 100%.",
       #|  "Drive at 58% of full burn, with 1 of the 5 hands it needs.",
       #|  "1 hand on the drive, 0 on the hull, 0 at crafts.",
       #|  "The ship asks for hands on the drive.",
       #|]
+
     ),
   )
   debug_inspect(

@@ -1,5 +1,6 @@
 import {
   "local/brothership/core",
+  "local/brothership/core/math",
   "moonbitlang/core/math" @fmath,
 }
 

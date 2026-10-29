@@ -28,6 +28,10 @@ pub fn hazard_name(@core.Hazard) -> String
 
 pub fn in_words(Int64) -> String
 
+pub fn instrument_rows(@core.State) -> Array[(String, String)]
+
+pub fn next_leg_rows(@core.State) -> Array[(String, String)]
+
 pub fn outlook_sentences(@core.Crossing) -> Array[String]
 
 pub fn page_of(@core.Entry, you~ : String, story~ : Array[@core.Entry]) -> Page
@@ -49,6 +53,8 @@ pub fn rank_insignia(Int64) -> String
 pub fn rank_name(Int64) -> String
 
 pub fn rank_title(Int64) -> String
+
+pub fn reckoning_rows(@core.State) -> Array[(String, String)]
 
 pub fn refit_effect(@core.Refit, Int64) -> String
 

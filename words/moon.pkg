@@ -2,6 +2,7 @@ import {
   "local/brothership/core",
   "local/brothership/core/math",
   "local/brothership/ships",
+  "moonbitlang/core/math" @fmath,
   "moonbitlang/core/json",
 }
 

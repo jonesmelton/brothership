@@ -230,12 +230,13 @@ test "ledger totals do not fall across a docking" {
     Ledger::of(docked, you="0"),
     content=(
       #|{
-      #|  at: 1800045000,
-      #|  regard: 270620,
+      #|  at: 1800049800,
+      #|  regard: 270900,
       #|  works: 0,
       #|  crossings: 1,
       #|  rank: Some(1),
       #|}
+
     ),
   )
   debug_inspect(
@@ -562,7 +563,7 @@ test "law: a ledger never falls" {
     let mut ok = true
     for i in 0..<steps.length().min(30) {
       let (slot, post, wait) = steps[i]
-      s = p.due(s, s.at + fold32(wait, 2400).to_int64() + 60L, officer=_ => true).1
+      s = p.due(s, s.at + fold32(wait, 3600).to_int64() + 60L, officer=_ => true).1
       s = s.apply(
         @core.Crew(
           crew=fold32(slot, 6).to_string(),

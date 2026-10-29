@@ -241,16 +241,17 @@ async test "a promotion row replays and joins the story" {
       #|  crew="ann",
       #|  rank=1,
       #|  tally={
-      #|    drive: 175472,
+      #|    drive: 194952,
       #|    hull: 0,
       #|    craft: 0,
       #|    regard: 215844,
       #|    work: 0,
       #|    watches_stood: 0,
       #|    watches_broken: 0,
-      #|    served: 43868,
+      #|    served: 48738,
       #|  },
       #|)
+
     ),
   )
   guard story[at + 1].happening is Docked(..) else {

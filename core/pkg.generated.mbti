@@ -121,6 +121,7 @@ pub fn Crossing::moment(Self) -> Moment
 pub fn Crossing::new(Plan, Ship) -> Self
 pub fn Crossing::next_boundary(Self) -> Int64
 pub fn Crossing::outcomes(Self) -> Array[Outcome]?
+pub fn Crossing::phase_ends(Self) -> Int64?
 pub fn Crossing::project(Self) -> Self?
 pub fn Crossing::quarters(Self, Post) -> Int64
 pub fn Crossing::served(Self, String) -> Int64

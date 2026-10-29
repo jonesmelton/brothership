@@ -185,19 +185,20 @@ pub fn plural(n : Int64, one : String, many : String) -> String {
 pub fn where_sentences(s : @core.State) -> Array[String] {
   match s.leg {
     InPort(since~) => {
-      let next = @ships.itinerary[(s.ship.crossings %
-        @ships.itinerary.length().to_int64()).to_int()]
+      let (at, next) = @ships.leg(s.ship.crossings)
+      let hop = fixed(@ships.hop(s.ship.crossings), 1)
       [
-        "In port. Departs \{soon_words(since + @ships.PORT_STAY - s.at)} on a \{next.to_int()} light-year hop.",
+        "In port at \{at.name}. Departs \{soon_words(since + @ships.PORT_STAY - s.at)} for \{next.name}, \{hop} light-years away.",
         "Hull at \{pct(s.ship.hull, @core.HULL_FULL)}%.",
       ]
     }
     Underway(crossing=c, ..) => {
+      let to = @ships.leg(s.ship.crossings).1.name
       let phase = match c.phase {
-        Burn => "Burning toward the next port."
-        Coast => "Coasting at the cap."
-        Approach => "Burning to slow for port."
-        Arrived => "Arrived. Docking."
+        Burn => "Burning toward \{to}."
+        Coast => "Coasting toward \{to} at the cap."
+        Approach => "Burning to slow for \{to}."
+        Arrived => "Arrived at \{to}. Docking."
       }
       let arrival = match c.forecast() {
         _ if c.phase == Arrived => []
@@ -223,7 +224,9 @@ pub fn where_sentences(s : @core.State) -> Array[String] {
       }
       [
         phase,
+        ..reckoning_sentences(c, s.ship.crossings),
         ..arrival,
+        ..turn_sentence(c),
         "Hull at \{pct(c.hull, @core.HULL_FULL)}%.",
         ..drive,
         hands,

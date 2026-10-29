@@ -442,6 +442,32 @@ test "law: the forecast is exact" {
 }
 
 ///|
+test "law: the phase ends when its forecast says" {
+  let mut checked = 0
+  @qc.quick_check_fn((
+    input : (Array[(Int32, Int32, Int64)], (Int32, Int32, Int32), Int32),
+  ) => {
+    let (steps, fit, hull) = input
+    let c = drive_schedule(plan20(), any_ship(fit, hull), steps)
+    guard c.phase_ends() is Some(at) else { c.phase == Arrived }
+    let early = c.apply(Elapsed(ticks=at - c.t - 1L)) catch { _ => c }
+    let on_time = c.apply(Elapsed(ticks=at - c.t)) catch { _ => panic() }
+    checked += 1
+    early.phase == c.phase && on_time.phase > c.phase
+  })
+  assert_true(checked > 0)
+}
+
+///|
+test "the burn of the 20 ly plan ends where the coast begins" {
+  let c = crew([Drive, Drive, Drive, Drive])
+  let at = c.phase_ends().unwrap()
+  let coast = c.apply(Elapsed(ticks=at)) catch { _ => panic() }
+  debug_inspect((at / 60L, coast.phase), content="(137, Coast)")
+  inspect(coast.phase_ends().unwrap() < c.forecast().unwrap(), content="true")
+}
+
+///|
 /// The research's bound on events per gap: with nobody acting, a crossing
 /// steps through a few dozen boundaries, never thousands. The hull band's
 /// margin is what keeps a ship mending at an edge from making one a tick.

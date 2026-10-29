@@ -14,6 +14,8 @@ pub const MAX_SLEEP : Int64 = 60
 
 pub const MIND_WAIT : Int64 = 300
 
+pub const MINUTES_PER_YEAR : Double = 525960.0
+
 pub const PORT_STAY : Int64 = 600
 
 pub fn allowed(@core.Crossing, Array[String], officer~ : (String) -> Bool) -> Array[(String, Int64)]
@@ -30,7 +32,13 @@ pub fn fleet() -> Array[Berth]
 
 pub fn gamma(Int64) -> Double
 
-pub let itinerary : Array[Double]
+pub fn hop(Int64) -> Double
+
+pub let itinerary : Array[World]
+
+pub fn leg(Int64) -> (World, World)
+
+pub fn on_map((Double, Double, Double)) -> (Double, Double)
 
 pub fn open_post(@core.Crossing) -> @core.Post?
 
@@ -39,6 +47,10 @@ pub fn profile_named(String) -> Profile?
 pub fn profiles() -> Array[Profile]
 
 pub fn promotions(@core.Crossing, officer~ : (String) -> Bool) -> Array[(String, Int64)]
+
+pub fn reckon(@core.Crossing) -> Reckoning
+
+pub let worlds : Array[World]
 
 // Errors
 
@@ -72,6 +84,24 @@ pub fn Profile::respond(Self, @core.State, minded? : Bool) -> (Array[@core.Event
 pub fn Profile::ship(Self, seed~ : Int64) -> @core.Ship
 pub fn Profile::wake(Self, @core.State, minded? : Bool) -> Int64
 
+pub(all) struct Reckoning {
+  run : Double
+  length : Double
+  years : Double
+  span : Double
+  burn_span : Double
+  eta : Double
+  accel : Double
+  lead : Double
+} derive(@debug.Debug)
+pub fn Reckoning::cone(Self) -> Double
+pub fn Reckoning::doppler(Self) -> Double
+pub fn Reckoning::gamma(Self) -> Double
+pub fn Reckoning::impact(Self) -> Double
+pub fn Reckoning::pace(Self) -> Double
+pub fn Reckoning::shortfall(Self) -> Double
+pub fn Reckoning::to_go(Self) -> Double
+
 pub(all) struct Route {
   distance_ly : Double
   accel_g : Double
@@ -101,6 +131,17 @@ pub(all) struct Title {
   conventional_name : String
   epithet : String
 } derive(Eq, @debug.Debug)
+
+pub(all) struct World {
+  name : String
+  star : String
+  ra : Double
+  dec : Double
+  distance_ly : Double
+} derive(Eq, @debug.Debug)
+pub fn World::distance_to(Self, Self) -> Double
+pub fn World::on_map(Self) -> (Double, Double)
+pub fn World::position(Self) -> (Double, Double, Double)
 
 // Type aliases
 

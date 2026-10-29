@@ -1,11 +1,4 @@
 ///|
-test "every hop of the itinerary is 8 to 30 ly" {
-  for d in @ships.itinerary {
-    assert_true(d >= 8.0 && d <= 30.0)
-  }
-}
-
-///|
 test "every ship in the fleet has a title that agrees with its name" {
   for berth in @ships.fleet() {
     let p = berth.profile

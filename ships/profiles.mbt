@@ -232,22 +232,15 @@ pub fn Temperament::turn(
 }
 
 ///|
-/// The hops the ship flies, in light-years, one after another and round
-/// again. All are 8 to 30 ly: see `docs/sim.md` for the floor.
-pub let itinerary : Array[Double] = [12.0, 20.0, 8.0, 26.0, 15.0, 30.0]
-
-///|
 /// How long the ship stays in port between crossings, in seconds.
 pub const PORT_STAY : Int64 = 600L
 
 ///|
-/// The plan for the hop after `legs` crossings, for a ship with `coils`.
+/// The plan for the leg after `legs` crossings, for a ship with `coils`.
 pub fn Profile::next_plan(
   self : Profile,
   legs~ : Int64,
   coils~ : Int64,
 ) -> @core.Plan {
-  let n = itinerary.length().to_int64()
-  let distance_ly = itinerary[(legs % n).to_int()]
-  { ..self.route, distance_ly, }.plan_with(coils~)
+  { ..self.route, distance_ly: hop(legs) }.plan_with(coils~)
 }
