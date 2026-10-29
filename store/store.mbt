@@ -353,6 +353,46 @@ pub async fn Store::muster(
 }
 
 ///|
+/// Append the promotions `ship`'s mind chose from `picks`, in order, that
+/// `@ships.allowed` lets stand, while the ship is underway and not yet
+/// arrived, after the ship's own events at `now`. Does not dock. Returns
+/// the promotions appended, as (crew, new rank), or `None` if the ship is
+/// in port or has arrived.
+pub async fn Store::promote(
+  self : Store,
+  ship : String,
+  picks : Array[String],
+  now~ : Int64,
+) -> Array[(String, Int64)]? {
+  self.write.acquire()
+  defer self.write.release()
+  guard self.voyages.get(ship) is Some(v) else { return None }
+  let (due, state) = v.profile.due(
+    v.snapshot.state,
+    now,
+    officer=_ => true,
+    minded=v.minded,
+  )
+  guard state.crossing() is Some(c) && @ships.arrived_at(state) is None else {
+    self.commit(ship, v, due, state)
+    return None
+  }
+  let promoted = @ships.allowed(c, picks, officer=_ => true)
+  let events = [..due]
+  let mut s = state
+  for pair in promoted {
+    let e : @core.Event = Promoted(crew=pair.0, rank=pair.1)
+    s = s.apply(e) catch {
+      err =>
+        abort("store: allowed promotion refused: \{err.to_json().stringify()}")
+    }
+    events.push(e)
+  }
+  self.commit(ship, v, events, s)
+  Some(promoted)
+}
+
+///|
 pub fn Store::close(self : Store) -> Unit raise {
   self.conn.close()
 }

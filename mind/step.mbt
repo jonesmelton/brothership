@@ -13,6 +13,8 @@ pub struct Mind {
   priv mut weighed : Array[Int64]?
   /// The arrival, in Unix seconds, last mustered.
   priv mut mustered : Int64?
+  /// Unix seconds of the last mid-crossing promotion cycle.
+  priv mut cycled : Int64?
   priv mut thinking : Bool
   priv thoughts : Array[String]
 }
@@ -26,6 +28,10 @@ const TURN_MS : Int32 = 120_000
 /// Longest a muster waits for the model, in milliseconds: well inside
 /// `MIND_WAIT`, after which the clock docks by script.
 const MUSTER_MS : Int32 = 180_000
+
+///|
+/// Game seconds between mid-crossing promotion cycles.
+const CYCLE_GAP : Int64 = 1800L
 
 ///|
 pub fn Mind::new(
@@ -45,6 +51,7 @@ pub fn Mind::new(
     backend,
     weighed: None,
     mustered: None,
+    cycled: None,
     thinking: false,
     thoughts: [],
   }
@@ -138,7 +145,17 @@ pub async fn Mind::step(
     Some(_) => ()
     None if self.due(c, spoke) =>
       self.turn(store, state, c, spoke, story, clock~)
-    None => ()
+    None => {
+      let now = clock()
+      let ready = match self.cycled {
+        None => true
+        Some(at) => now - at >= CYCLE_GAP
+      }
+      if ready && @ships.bottom_heavy(c, officer=_ => true) {
+        self.cycled = Some(now)
+        self.cycle(store, state, c, story, clock~)
+      }
+    }
   }
 }
 
@@ -226,6 +243,7 @@ async fn Mind::muster(
       state,
       story,
       thoughts=self.thoughts(),
+      arrived=true,
     )
     match @async.with_timeout_opt(MUSTER_MS, () => self.backend.call(call)) {
       Some(reply) => Some(decode_muster(reply.text, names))
@@ -260,6 +278,69 @@ async fn Mind::muster(
       "Hand \{names.get(p.0).unwrap_or("?")} to \{@words.rank_name(p.1)}"
     })
     "At arrival you promoted \{who.join(", ")}."
+  }
+  self.remember(line, why)
+  self.report("\{how} in \{@async.now() - started} ms: \{line} \{why}")
+}
+
+///|
+async fn Mind::cycle(
+  self : Mind,
+  store : @store.Store,
+  state : @core.State,
+  c : @core.Crossing,
+  story : Array[@core.Entry],
+  clock~ : () -> Int64,
+) -> Unit {
+  self.thinking = true
+  defer {
+    self.thinking = false
+  }
+  let names = @speech.handles(c)
+  let started = @async.now()
+  let chosen = try {
+    let call = self.prompts.muster(
+      self.voice,
+      values=self.profile.values,
+      model=self.model,
+      state,
+      story,
+      thoughts=self.thoughts(),
+      arrived=false,
+    )
+    match @async.with_timeout_opt(MUSTER_MS, () => self.backend.call(call)) {
+      Some(reply) => Some(decode_muster(reply.text, names))
+      None => {
+        self.report("no cycle in \{MUSTER_MS} ms")
+        None
+      }
+    }
+  } catch {
+    err => {
+      self.report("cycle failed: \{err}")
+      None
+    }
+  }
+  let (picks, why, how) = match chosen {
+    Some((picks, why)) => (picks, why, "promoted underway")
+    None =>
+      (
+        @ships.first_ensign(c, officer=_ => true).map(p => p.0),
+        "",
+        "promoted underway by its temperament",
+      )
+  }
+  guard store.promote(self.ship, picks, now=clock()) is Some(promoted) else {
+    self.report("the ship was no longer underway")
+    return
+  }
+  let line = if promoted.is_empty() {
+    "Underway you promoted nobody."
+  } else {
+    let who = promoted.map(p => {
+      "Hand \{names.get(p.0).unwrap_or("?")} to \{@words.rank_name(p.1)}"
+    })
+    "Underway you promoted \{who.join(", ")}."
   }
   self.remember(line, why)
   self.report("\{how} in \{@async.now() - started} ms: \{line} \{why}")

@@ -46,6 +46,68 @@ async fn underway() -> @store.Store {
 }
 
 ///|
+/// Prompts whose muster text is marked, so a test can count cycles.
+fn cycle_prompts() -> @mind.Prompts {
+  @mind.Prompts::new(
+    system="{{ epithet }}",
+    turn="{{ ask }} {{ refit }}",
+    muster="CYCLE {{ arrived }}{% for line in roster %} {{ line }}{% endfor %}",
+    setting="",
+  )
+}
+
+///|
+/// A model that replies `text`, or fails if it is empty, counting all calls
+/// and the cycles among them.
+fn cycle_model(
+  text : String,
+  calls : Ref[Int32],
+  cycles : Ref[Int32],
+) -> @llm.Backend {
+  @llm.Backend::new("fake", fn(c) raise {
+    calls.val += 1
+    if c.user.find("CYCLE") is Some(_) {
+      cycles.val += 1
+    }
+    guard text != "" else { fail("no route") }
+    {
+      model: c.model,
+      text,
+      reasoning: None,
+      finish: Some("stop"),
+      usage: @llm.Usage::zero(),
+      raw: Json::null(),
+    }
+  })
+}
+
+///|
+/// A minded Tigress underway with four officers who have served six hours.
+async fn four_served() -> (@store.Store, Int64) {
+  let store = underway()
+  for i, crew in ["ann", "bo", "cy", "di"] {
+    ignore(
+      store.propose(
+        "tigress",
+        { id: i.to_int64() + 1L, crew, intent: Posted(post=Drive), },
+        now=T0 + 601,
+      ),
+    )
+  }
+  let mut now = T0 + 601
+  for _ in 0..<10_000 {
+    let s = store.snapshot("tigress").unwrap().state
+    guard @ships.arrived_at(s) is None else { break }
+    guard s.crossing().unwrap().served("ann") < @ships.ENSIGN_SERVICE else {
+      break
+    }
+    now += 120L
+    store.advance("tigress", now~)
+  }
+  (store, now)
+}
+
+///|
 test "a turn is read from the reply's object, tolerating noise" {
   let p = @ships.profiles()[1]
   let c = @core.Crossing::new(p.next_plan(legs=0, coils=0), p.ship(seed=1))
@@ -172,4 +234,61 @@ async test "at arrival the mind promotes whom the model names, then docks" {
   let s = store.snapshot("tigress").unwrap().state
   inspect(s.leg is InPort(..), content="true")
   debug_inspect((s.ship.rank("ann"), s.ship.rank("bo")), content="(0, 1)")
+}
+
+///|
+async test "a bottom-heavy ship promotes underway at most every half hour" {
+  let (store, now) = four_served()
+  defer store.close()
+  let calls = Ref(0)
+  let cycles = Ref(0)
+  let mind = @mind.Mind::new(
+    "tigress",
+    @ships.fleet()[0].profile,
+    voice(),
+    cycle_prompts(),
+    model="m",
+    cycle_model(
+      "{\"ask\": \"drive\", \"promote\": [\"A\"], \"thought\": \"first\"}", calls,
+      cycles,
+    ),
+  )
+  let at = now
+  // The turn comes first, and is not a cycle.
+  mind.step(store, clock=() => at)
+  inspect(cycles.val, content="0")
+  mind.step(store, clock=() => at)
+  inspect(cycles.val, content="1")
+  debug_inspect(
+    store.snapshot("tigress").unwrap().state.crossing().unwrap().hands
+    .get("ann")
+    .unwrap().rank,
+    content="1",
+  )
+  // Within the gap, no further cycle call.
+  mind.step(store, clock=() => at)
+  inspect(cycles.val, content="1")
+}
+
+///|
+async test "a failed cycle falls back to the longest-serving ensign" {
+  let (store, now) = four_served()
+  defer store.close()
+  let calls = Ref(0)
+  let mind = @mind.Mind::new(
+    "tigress",
+    @ships.fleet()[0].profile,
+    voice(),
+    cycle_prompts(),
+    model="m",
+    model("", calls),
+  )
+  mind.step(store, clock=() => now)
+  mind.step(store, clock=() => now)
+  // Service is tied, and String order is by length first, so bo leads.
+  let hands = store.snapshot("tigress").unwrap().state.crossing().unwrap().hands
+  debug_inspect(
+    ["ann", "bo", "cy", "di"].map(id => hands.get(id).unwrap().rank),
+    content="[0, 1, 0, 0]",
+  )
 }

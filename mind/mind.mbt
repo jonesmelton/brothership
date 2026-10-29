@@ -143,7 +143,8 @@ pub fn Prompts::turn(
 }
 
 ///|
-/// The call asking the model whom `voice`'s ship promotes at arrival.
+/// The call asking the model whom `voice`'s ship promotes at arrival, or,
+/// while underway, in a promotion cycle.
 pub fn Prompts::muster(
   self : Prompts,
   voice : @speech.Voice,
@@ -152,6 +153,7 @@ pub fn Prompts::muster(
   state : @core.State,
   story : Array[@core.Entry],
   thoughts~ : Array[String],
+  arrived~ : Bool,
 ) -> @llm.Call raise {
   guard state.crossing() is Some(c) else { fail("the ship is not underway") }
   let held = Array::make(@core.COMMANDER.to_int() + 1, 0L)
@@ -163,6 +165,7 @@ pub fn Prompts::muster(
     room.push("\{@words.rank_name(rank.to_int64())}: \{n} held.")
   }
   let user = self.prompts.render("muster", {
+    "arrived": Json::boolean(arrived),
     "room": strings(room),
     "roster": strings(@speech.roster(state, story)),
     "recent": recent(state, story, voice.epithet),

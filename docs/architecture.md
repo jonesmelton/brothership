@@ -208,6 +208,13 @@ promotions the model names, as far as `@ships.allowed` lets them stand,
 then docks, through `Store::muster`. The thought is never shown to
 players; the speaker hears it.
 
+While underway, a ship whose officers are bottom-heavy
+(`@ships.bottom_heavy`: three in four are ensigns, and one has served the
+six hours an ensign needs) holds a promotion cycle when no turn is due, at
+most once every 30 minutes. The cycle renders the muster prompt with
+`arrived` false, appends what the model names through `Store::promote`,
+which never docks, and falls back to the longest-serving ensign.
+
 A failed, unreadable or late reply (2 minutes for a turn, 3 for a muster)
 falls back to the temperament and `@ships.promotions`. If the mind never
 musters, the clock promotes by script and docks `MIND_WAIT` (5 minutes)

@@ -83,8 +83,10 @@ pub fn roster(state : @core.State, story : Array[@core.Entry]) -> Array[String] 
     let works = record.map(r => r.works).unwrap_or(0L) +
       (record.map(r => r.carry).unwrap_or(0L) + t.work) / @core.WORK_SIZE
     let regard = record.map(r => r.regard).unwrap_or(0L) + t.regard
+    let served = c.served(crew) / @core.HOUR
+    let too_new = state.rank(crew) == @core.ENSIGN && !@ships.eligible(c, crew)
     out.push(
-      "Hand \{handle}, \{rank}: \{where_}. This crossing \{hours_of(t.drive)} h on the drive, \{hours_of(t.hull)} h on the hull, \{hours_of(t.craft)} h at crafts; watches stood \{t.watches_stood}, broken \{t.watches_broken}; answered your ask \{@words.plural(answers.get(crew).unwrap_or(0L), "time", "times")}. Works finished in all: \{works}. Regard: \{regard / @core.REGARD_HOUR} h.",
+      "Hand \{handle}, \{rank}: \{where_}. This crossing \{hours_of(t.drive)} h on the drive, \{hours_of(t.hull)} h on the hull, \{hours_of(t.craft)} h at crafts; watches stood \{t.watches_stood}, broken \{t.watches_broken}; answered your ask \{@words.plural(answers.get(crew).unwrap_or(0L), "time", "times")}. Works finished in all: \{works}. Regard: \{regard / @core.REGARD_HOUR} h. Served \{served} h aboard.\{if too_new { " Too new to promote." } else { "" }}",
     )
   }
   out

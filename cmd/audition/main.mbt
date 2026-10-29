@@ -236,7 +236,15 @@ async fn main {
         try {
           if arrival {
             let call = {
-              ..prompts.muster(voice, values~, model=mind_model, state, story, thoughts=[]),
+              ..prompts.muster(
+                voice,
+                values~,
+                model=mind_model,
+                state,
+                story,
+                thoughts=[],
+                arrived=true,
+              ),
               sample,
             }
             let (crew, why) = @mind.decode_muster(
