@@ -1,6 +1,6 @@
 # typography
 
-Font choices for the game client: EB Garamond for the book voice, Fira Sans for the interface and data, and Noto Serif CJK TC for the hanzi. Everything recommended here is open-licensed, and the OpenType features were checked in the font files.
+Font choices for the game client: EB Garamond for display, Newsreader for the ship's running text, Fira Sans for the interface and data, and Noto Serif CJK TC for the hanzi. Everything recommended here is open-licensed, and the OpenType features were checked in the font files.
 
 `public/styles.css` implements these choices; [visual design](visual-design.md) has the palette, type scale and components built on them. `scripts/fonts.mbtx` fetches the faces and subsets them into `public/fonts`.
 
@@ -8,23 +8,25 @@ Font choices for the game client: EB Garamond for the book voice, Fira Sans for 
 
 The game has two voices: a book voice for the novel it comes from, and a system voice for a ship that runs on telemetry. Pair them. A single family can do both, but the pairing below gives the anachronism more room and avoids the wide geometric sans that science-fiction interfaces default to. Do not use Eurostile, Microgramma or Bank Gothic; that is the trope.
 
-### EB Garamond + Fira Sans
+### EB Garamond + Newsreader + Fira Sans
 
 | role | font | what it gives you |
 | --- | --- | --- |
-| display and prose | EB Garamond | true small caps in roman and italic; tabular lining by default; oldstyle in tabular and proportional sets |
+| display | EB Garamond | true small caps in roman and italic; tabular lining by default; oldstyle in tabular and proportional sets; wght 400 to 800 |
+| running text | Newsreader | optical size axis (opsz 6 to 72) and wght 200 to 800 in roman and italic; tabular lining by default; `pnum` for proportional lining; no oldstyle, no small caps |
 | UI, labels and data | Fira Sans | true small caps in roman and italic; all four figure sets; slashed zero |
 
-EB Garamond is a Renaissance book face; Fira Sans is a humanist technical sans from the 2010s. They share a humanist skeleton, so the pairing reads as a decision rather than a collision. Use Garamond where the game speaks as a book: titles, ship names in running text, the source codex. Use Fira Sans where the ship speaks as a system: labels, buttons, table text, warnings, and every number that must line up. Tabular lining figures in Fira Sans carry the crossing readouts; a monospace is unnecessary until code or fixed-column editing demands one.
+EB Garamond is a Renaissance book face; Fira Sans is a humanist technical sans from the 2010s. They share a humanist skeleton, so the pairing reads as a decision rather than a collision. Use EB Garamond for the masthead epithet and the headings, where its small caps are used. The ship's own lines are running text at about 19px, so they take Newsreader, whose optical size axis is set to the size of the text by `font-optical-sizing: auto`. Use Fira Sans where the ship speaks as a system: labels, buttons, table text, warnings, and every number that must line up. Tabular lining figures in Fira Sans carry the crossing readouts; a monospace is unnecessary until code or fixed-column editing demands one.
 
 Figure and small-caps behaviour, checked in the Google Fonts builds:
 
 | family | default | tabular lining | tabular oldstyle | proportional oldstyle | small caps |
 | --- | --- | --- | --- | --- | --- |
 | EB Garamond | tabular lining | default or `tnum` | `onum` | `onum` + `pnum` | `smcp`, `c2sc` in roman and italic |
+| Newsreader | tabular lining | default or `tnum` | none | none | none |
 | Fira Sans | proportional lining | `tnum` | `onum` + `tnum` | `onum` | `smcp`, `c2sc` in roman and italic |
 
-The table is the reason for the pairing. EB Garamond's default figures are already tabular, so data can use it without a switch; Fira Sans gives you the full set for labels and prose in the UI. Fira Sans's tabular oldstyle is rare and useful for a table that should feel typeset rather than computed, but use lining figures for telemetry: oldstyle figures in a column of changing numbers make the digits harder to scan.
+The table is the reason for the pairing. EB Garamond's default figures are already tabular, so data can use it without a switch; Newsreader's are too, and `pnum` gives it proportional lining for prose. Fira Sans gives you the full set for labels and prose in the UI. Fira Sans's tabular oldstyle is rare and useful for a table that should feel typeset rather than computed, but use lining figures for telemetry: oldstyle figures in a column of changing numbers make the digits harder to scan.
 
 ### Source Serif 4 + Source Sans 3 + Source Code Pro
 
@@ -42,17 +44,27 @@ Literata has true small caps in roman and italic, proportional lining, tabular l
 
 ### Recommendation
 
-Use EB Garamond + Fira Sans. It gives the game a book voice and a system voice that are recognizably different, and both faces have the features the interface needs. Use Noto Serif CJK TC for the hanzi. The Source superfamily is the fallback if one family across serif, sans and mono matters more than character; Literata is the fallback if one Latin family is required.
+Use EB Garamond for display, Newsreader for the ship's running text, and Fira Sans for the interface and data. The book voice and the system voice stay recognizably different, and each face has the features its role uses. Use Noto Serif CJK TC for the hanzi. The Source superfamily is the fallback if one family across serif, sans and mono matters more than character; Literata is the fallback if one Latin family is required.
 
 ### CSS
 
-The stack below is EB Garamond + Fira Sans. Change the Latin families together if you pick the Source superfamily; the feature settings stay the same.
+The stack below is EB Garamond + Newsreader + Fira Sans. Change the Latin families together if you pick the Source superfamily; the feature settings stay the same.
 
 ```css
 :root {
   --font-display: "EB Garamond", Georgia, serif;
+  --font-text: "Newsreader", "EB Garamond", Georgia, serif;
   --font-ui: "Fira Sans", system-ui, sans-serif;
   --font-han: "Noto Serif CJK TC", "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --weight-display: 400;
+  --weight-text: 400;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --weight-display: 450;
+    --weight-text: 450;
+  }
 }
 
 body {
@@ -60,9 +72,22 @@ body {
   font-synthesis: none;
 }
 
-.prose {
+p,
+.log li {
+  text-wrap: pretty;
+}
+
+.masthead h1 {
   font-family: var(--font-display);
-  font-variant-numeric: oldstyle-nums proportional-nums;
+  font-weight: var(--weight-display);
+  text-autospace: normal;
+}
+
+.prose {
+  font-family: var(--font-text);
+  font-optical-sizing: auto;
+  font-weight: var(--weight-text);
+  font-variant-numeric: proportional-nums;
 }
 
 .data {
@@ -92,7 +117,9 @@ body {
 }
 ```
 
-`font-synthesis: none` is what keeps a missing small-cap or italic from being faked. `font-variant-caps: all-small-caps` uses `smcp` and `c2sc`; with synthesis off, a font that lacks the feature will not get a synthetic one. Check `smcp` and `c2sc` in the build you ship.
+`font-synthesis: none` is what keeps a missing small-cap or italic from being faked. `font-variant-caps: all-small-caps` uses `smcp` and `c2sc`; with synthesis off, a font that lacks the feature will not get a synthetic one. Newsreader has neither feature, so small caps on Newsreader text render as typed. Check `smcp` and `c2sc` in the build you ship.
+
+Night watch (`prefers-color-scheme: dark`) raises the serif weights to 450. Light type on a dark ground looks thinner, and both EB Garamond and Newsreader have the weight range to take 450. Fira Sans ships at 400, 500 and 600 only, so the sans keeps its design weights. The page heading uses `--weight-display` too.
 
 ## Chinese
 
@@ -117,6 +144,7 @@ The Chinese face and the Latin face do not need to share a designer; they need t
 - Hanzi fill the em square and look larger than Latin lowercase at the same size. Start at `0.95em` beside Latin text, align baselines, and adjust to the Latin cap height. A standalone mark can use a fixed size and `line-height: 1.5`.
 - Use the same ink as the Latin name. No red, seal, box, glow or outline. The science-fiction treatment belongs to the layout (a registry line, a rule, a grid), not to the hanzi.
 - Keep punctuation outside the hanzi span. The names have no punctuation; a Latin gloss takes Latin punctuation.
+- Set `text-autospace: normal` on the element that holds a name beside Latin text: the masthead `h1` and the ship buttons. The browser then adds the gap between hanzi and Latin, including the one between hanzi and a numeral such as `EF-147`. Keep the literal spaces that `title` in `cmd/browser/main.mbt` writes around the hanzi span. `normal` is `insert`, which adds spacing only where no space character already sits, so the gap does not double. `replace` would swap the literal spaces for the autospace width. Chrome 140, Firefox 145 and Safari 18.4 support it; older browsers ignore it and show the literal spaces alone.
 
 ### What the hanzi is attached to
 
@@ -130,6 +158,8 @@ For the full title, the accessible name is the title in the language of the surr
 
 Subset the font to the characters you ship. `scripts/fonts.mbtx` does this from the `name_hant` and `star_zh` columns; rerun it if the game shows hanzi from anywhere else. The 108 `name_hant` values and 108 `star_zh` values from [`heroes.tsv`](../research/water-margin/heroes.tsv) use 251 unique characters. A subset of Noto Serif CJK TC Regular to those characters is about 85 KB as WOFF2, and the two weights the game uses about 170 KB. That is small enough to self-host and preload the weight used above the fold. Do not hotlink Google Fonts: the game should work offline, and the CSS request is a privacy leak.
 
+Newsreader is Latin only. Its roman subset is 157 KB and its italic 178 KB as WOFF2, both variable with `wght` and `opsz`. The roman is preloaded because the ship's latest line sits above the fold; the italic loads on the first pending sentence.
+
 Noto Serif CJK TC has no Reserved Font Name, so a subset can keep the name. Source Han Serif TW and Source Han Sans TC carry the Reserved Font Name 'Source'; rename a subset before redistributing it. Subsetting counts as a modification under the OFL.
 
 Fallback stack: `"Noto Serif CJK TC", "Songti TC", "PMingLiU", serif`. Test with the webfont disabled; a Japanese fallback will show Japanese glyph forms.
@@ -137,6 +167,7 @@ Fallback stack: `"Noto Serif CJK TC", "Songti TC", "PMingLiU", serif`. Test with
 ## Sources
 
 - [EB Garamond](https://github.com/octaviopardo/EBGaramond12)
+- [Newsreader](https://github.com/google/fonts/tree/main/ofl/newsreader), as served by Google Fonts
 - [Fira Sans](https://github.com/mozilla/Fira)
 - [Source Serif](https://github.com/adobe-fonts/source-serif)
 - [Source Han Serif](https://github.com/adobe-fonts/source-han-serif)
