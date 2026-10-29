@@ -32,6 +32,7 @@ test "focus follows the control that disappears" {
     Some("order-coast"),
   )
   assert_eq(focus_after(@core.Left, None), Some("post"))
+  assert_eq(focus_after(@core.Made, None), Some("craft"))
   assert_eq(focus_after(@core.Posted(post=Drive), Some(standing)), None)
   assert_eq(focus_after(@core.Crafted(craft=Artist), None), None)
   assert_eq(focus_after(@core.Refitting(refit=Some(@core.Baffles)), None), None)

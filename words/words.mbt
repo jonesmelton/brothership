@@ -161,6 +161,17 @@ fn pct(n : Int64, of : Int64) -> Int64 {
 }
 
 ///|
+/// Work units as whole crew-hours, "3 crew-hours", or "under a crew-hour".
+pub fn crew_hours_words(units : Int64) -> String {
+  let hours = units / (@core.HOUR * @core.CRAFT_UNIT)
+  if hours <= 0L {
+    "under a crew-hour"
+  } else {
+    plural(hours, "crew-hour", "crew-hours")
+  }
+}
+
+///|
 pub fn plural(n : Int64, one : String, many : String) -> String {
   if n == 1L {
     "1 \{one}"
@@ -302,7 +313,12 @@ pub fn priority(
     Opened(_) => Interrupt
     Departed | Began(_) | Docked(_) | Met(_) | Missed(_) | Landed(..) =>
       Announce
-    Stood(crew~) | Finished(crew~) => if crew == you { Announce } else { Quiet }
+    Stood(crew~) | Finished(crew~) | Made(crew~, ..) =>
+      if crew == you {
+        Announce
+      } else {
+        Quiet
+      }
     Asked(_) | Took(..) | Left(_) => Quiet
     Promoted(..) => Announce
     Spoke(about~, ..) =>
@@ -343,6 +359,8 @@ pub fn told(h : @core.Happening, you~ : String, ship~ : String) -> String {
         "A hand stood a watch to its end."
       }
     Finished(crew~) => "\{who(crew)} finished a work."
+    Made(crew~, units~, percent~) =>
+      "\{who(crew)} made \{crew_hours_words(units)} of work at \{percent}%."
     Promoted(crew~, rank~, ..) =>
       "\{who(crew)} \{if crew == you { "were" } else { "was" }} promoted to \{rank_name(rank)}."
     Spoke(line~, ..) => "\{ship}: \{line}"

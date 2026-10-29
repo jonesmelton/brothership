@@ -184,6 +184,7 @@ fn focus_after(intent : @core.Intent, standing : @core.Order?) -> String? {
     Ordered(order=None) =>
       standing.map(o => "order-\{@words.phase_name(o.phase)}")
     Left => Some("post")
+    Made => Some("craft")
     _ => None
   }
 }
@@ -498,8 +499,8 @@ fn group(
 }
 
 ///|
-/// The choices of the You page, always in the same order: post, watch,
-/// standing order and craft. Only the post is offered to someone not yet
+/// The choices of the You page, always in the same order: making banked
+/// work when there is some, then post, watch, standing order and craft. Only the post is offered to someone not yet
 /// aboard. `reup` is a watch just stood, offered again first.
 fn choices(
   emit : @rabbita.Emit[Msg],
@@ -582,7 +583,20 @@ fn choices(
       )
     }),
   )
-  [post, ..watch, ..order, craft]
+  let make = if h.banked > 0L {
+    [
+      group("make", "Banked work", [
+        choice(
+          emit,
+          "Make \{@words.crew_hours_words(h.banked)} of banked \{@words.craft_name(h.craft)}",
+          Made,
+        ),
+      ]),
+    ]
+  } else {
+    []
+  }
+  [..make, post, ..watch, ..order, craft]
 }
 
 ///|

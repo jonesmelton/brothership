@@ -45,14 +45,15 @@ frequent as events. Events still happen, but as demands on the same hours
 
 A returning player first hears what happened while they were away: phase
 changes, demands opened or closed, refits landed, their own watch stood and
-works finished. Then they have up to five choices, each on its own timescale:
+works finished. Then they have up to six choices, each on its own timescale:
 
 | choice | event | lasts | reaches |
 |---|---|---|---|
 | post | `Posted` | until changed | arrival and hull, for everyone |
 | watch | `Watched` | 1 hour or more; the interface offers up to 12 | a quarter more from this hand; regard |
 | standing order | `Ordered` | until the next phase begins | the post taken at the phase change |
-| craft | `Crafted` | until changed | the ship's refit, or one's own works |
+| make banked work | `Made` | at once | the ship's refit, or one's own works, at 100% to 150% of the bank |
+| craft | `Crafted` | until changed | where the next making goes |
 | refit, for engineers | `Refitting` | until it lands | the ship, for good |
 
 Demands set deadlines on posts between check-ins, and docking carries each
@@ -127,6 +128,24 @@ work together each make a quarter more for every other one, up to double.
 | engineer | refits | the whole ship, for good | yes |
 | artist | works of 6 crew-hours, delivered at port | the maker's record; recruits for the ship | yes |
 | navigator | charts that add reachable destinations | the whole ship's choices | not yet |
+
+Hours at the craft post accrue to a personal bank, counted in the same work
+units as refits and works. Nothing is built while the player is away. On
+return, the player makes the bank in one action (`Made`), and it goes into
+their current craft at 100% to 150% of its size: an artist's works, or the
+engineers' refit progress, which can land a refit at once. The percent is a
+pure function of the ship's seed, the crew id and the tick of the making,
+so a replay gives the same result. A bank is made only when asked for, with
+two exceptions: a hand who leaves the crew, and every hand when the ship
+docks, make theirs at 100%, so no hour is lost. Changing craft or post keeps
+the bank, and it is made into whatever craft the hand holds at the time. A
+making is allowed at any phase while aboard, including after arrival and
+before docking. Ship posts do not bank.
+
+Because refits land only when work is made, engineers who never check in
+land nothing during the crossing, apart from the progress a met salvage adds.
+Their banks are made at 100% when the ship docks, so the refit is fitted for
+the next crossing.
 
 Each payoff belongs to a different person, so crew depend on each other.
 Works do not yet take inputs gathered in port: core counts crew-hours. The

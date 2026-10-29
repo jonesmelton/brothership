@@ -14,6 +14,7 @@ fn bench(crew : Array[(String, Int64, Int64)]) -> @core.Crossing {
       rank,
       watch: None,
       order: None,
+      banked: 0,
     }
     records[id] = {
       regard: 0,

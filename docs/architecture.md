@@ -137,7 +137,9 @@ row, so it rises but skips. Each ship's in-memory snapshot is its rows
 replayed through `State::apply` and is rebuilt on open. So is its story:
 the happenings `@core.happenings` derives from each row and the states
 either side of it, kept in memory and never written. Logs from before
-commissioning are kept in `event_legacy` and not replayed.
+commissioning are kept in `event_legacy` and not replayed, and logs from
+before banked craft work are kept in `event_before_banking`, because banking
+changes when refits land and so when ships arrive.
 Sessions live in a `session` table beside the log: a random token and the
 officer it names. They are not events, do not replay, and are restored with
 the database.
