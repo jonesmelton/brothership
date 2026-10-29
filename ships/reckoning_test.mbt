@@ -11,7 +11,7 @@ fn first_leg() -> @core.Crossing {
 }
 
 ///|
-fn fixed(x : Double, places : Int) -> String {
+fn fixed(x : Double, places : Int32) -> String {
   let scale = @fmath.pow(10.0, places.to_double())
   let n = (x * scale).round().to_int64()
   let whole = n / scale.to_int64()
@@ -62,7 +62,6 @@ test "at the cap, the sky, the light and the hull" {
       #|  "impact, TeV": "22.5",
       #|  "lead, light-minutes": "13.4",
       #|}
-
     ),
   )
 }
@@ -94,7 +93,6 @@ test "law: across a crossing the ship only gains on Kerala and loses to light" {
     ),
     content=(
       #|("15.703", "15.703", "15.703", "26.8", 1)
-
     ),
   )
 }

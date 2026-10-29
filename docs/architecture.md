@@ -6,7 +6,7 @@
 | ------------- | --------- | --------------------------------------------------------------------- |
 | `core/math`   | js native | Verified arithmetic kernels (`moon prove`). Proof-friendly code only. |
 | `core`        | js native | Events, state, the transition function, wire types, optimistic sync.  |
-| `ships`       | js native | Routes and their float plans, ship profiles, itinerary, the ship's scripted turn. |
+| `ships`       | js native | Routes and their float plans, ship profiles, the worlds and itinerary, the reckoning in the worlds' frame, the ship's scripted turn. |
 | `sim`         | js native | The crossing simulator: scenarios, crew policies, batches, voyages.   |
 | `store`       | native    | sqlite event log; replays through `core` on open.                     |
 | `api`         | native    | Moonback routes over `store`.                                         |

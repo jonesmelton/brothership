@@ -4,12 +4,18 @@
 
 ///|
 /// `x` to `places` decimals, `x` at least 0.
-fn fixed(x : Double, places : Int) -> String {
+fn fixed(x : Double, places : Int32) -> String {
   let scale = @fmath.pow(10.0, places.to_double()).to_int64()
   let n = (x * scale.to_double()).round().to_int64()
   guard places > 0 else { grouped(n) }
   let part = (n % scale).to_string()
   "\{grouped(n / scale)}." + "0".repeat(places - part.length()) + part
+}
+
+///|
+/// `x` to `places` decimals, grouped: a figure for a label beside a drawing.
+pub fn figure(x : Double, places : Int32) -> String {
+  fixed(x, places)
 }
 
 ///|

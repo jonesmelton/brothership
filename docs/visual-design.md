@@ -4,7 +4,7 @@ How the game looks, concretely enough to build from. Fonts and their features ar
 
 ## direction
 
-The screen is a ship's papers: a registry entry and a log, typeset. The design is done with type, rules and space. It has no panels, glows, gradients, shadows, textures, rounded cards, icons or animated readouts, because those are the science-fiction interface trope the typography already refuses. The only graphics are the voyage track and the progress bars, and each repeats a sentence (see [the voyage track](#the-voyage-track) and [bars](#bars)).
+The screen is a ship's papers: a registry entry and a log, typeset. The design is done with type, rules and space. It has no panels, glows, gradients, shadows, textures, rounded cards, icons or animated readouts, because those are the science-fiction interface trope the typography already refuses. The only graphics are the voyage track, the progress bars and the reckoning's two drawings, and each repeats a sentence or a table (see [the voyage track](#the-voyage-track), [bars](#bars) and [reckoning](#reckoning)). The reckoning's figures change in place every second, set as an almanac's table, not a readout: no counter rolls, nothing glows, and nothing moves but the digits.
 
 Two voices, as in [typography](typography.md): the book (EB Garamond) for names, headings and the ship's own words; the system (Fira Sans) for telemetry sentences, labels, controls and figures.
 
@@ -61,7 +61,7 @@ Small caps are always `all-small-caps` from the font (`smcp`, `c2sc`), with `fon
 - One column at every width, `max-width: 36rem`, centered, with `1rem` side padding (`1.5rem` from 40rem wide). Desktop gets the phone layout with more margin, not a second layout.
 - Sections are separated by a `--rule` hairline and `2rem` of space, not boxes.
 - The game has three pages, You, Voyage and Ship, each with its own log, reached from the [bar of pages](#bar-of-pages). The masthead is on all of them. A page opens with its `h2`, which takes focus when the page changes; its sections are `h3`.
-- The vertical order of each page is fixed and never changes with state. You: rank, since you were here, your post, choices, log. Voyage: where the ship is, demands, while you were away, log. Ship: the ship, while you were away, log, read aloud, other ships. A section with nothing to say says so in a sentence rather than disappearing.
+- The vertical order of each page is fixed and never changes with state. You: rank, since you were here, your post, choices, log. Voyage: where the ship is, reckoning, demands, while you were away, log. Ship: the ship, while you were away, log, read aloud, other ships. A section with nothing to say says so in a sentence rather than disappearing.
 - The bar of pages is the only fixed element, and only on viewports at least 34em tall (see below). Otherwise the page is a plain scroll, and at 400% zoom it is.
 
 ## components
@@ -139,9 +139,24 @@ Each choice group is a `fieldset` whose `legend` is a label. Controls are native
 
 The ship list ("Choose a ship", "Other ships") is the same buttons, each carrying the ship's title on one line: pennant, conventional name (Medium, `aria-hidden`), epithet. The accessible name is the English title, as in the masthead.
 
+### reckoning
+
+The crossing as the worlds see it, on the Voyage page under "Where the ship is". Built in `cmd/browser/reckoning.mbt` from `@ships.reckon` and `@words.reckoning_rows`; the physics and units follow research/liveship-travel-math.md, section 11.
+
+Underway, in this order:
+
+1. **Two clocks.** The crossing's rapidity over hours aboard, drawn linearly: a ramp, a plateau, a ramp down, so it is the crossing's profile. Under it a second axis, years at the worlds, and dotted lines carry each turn down to where it falls in those years, with an `--ink` line for the ship. The burns, a fifth of the hours aboard, are a sliver of the years. The aboard axis is sized as the track is, by each phase's hours at the current setting, so it moves with the drive. Flown is a 2px `--accent` line, still to fly a dashed 1px `--quiet` one; hairlines stay hairlines at any width (`vector-effect: non-scaling-stroke`). Each axis has a small-caps label and its length, in tabular figures.
+2. **The crossing**, a table: time aboard, time at the worlds, light-years run and to go, and how far the light of departure leads the ship.
+3. **Instruments**, a table: γ, η, pace, acceleration, how fast light outruns the ship, the Doppler factor ahead and behind, green light ahead as photon energy, how close to the bow aberration crowds half the sky, and the energy each atom ahead strikes with. Absent once arrived.
+4. **The map**: the four worlds in their plane, every lane between them as a `--rule` hairline, the leg flown in `--accent` and the rest dashed, the ship as an `--accent` dot, and the Sun as a hollow `--quiet` one. Names are HTML over the drawing, above each point, so they follow the text size; each star's name is under its world's in `--quiet`.
+
+In port, the map with the next leg dashed, then **Next leg**: from, to, distance, years at the worlds and the hours aboard it can take.
+
+Tables are `table.figures`: a small-caps `--quiet` caption, a `th scope="row"` label at the start and its figure at the end in `tabular-nums lining-nums slashed-zero`, rows divided by `--rule` hairlines. They are what a screen reader reads; both drawings are `aria-hidden` and add nothing the tables and sentences don't say. The sentences in "Where the ship is" carry the same facts coarsened and don't tick; the tables' figures tick, as the client's clock moves every second, and are not live regions, so nothing is announced.
+
 ## not yet designed
 
-- A works shelf and a crew roster. Both will be tables, with tabular lining figures.
+- A works shelf and a crew roster. Both will be tables like the reckoning's, with tabular lining figures.
 - An in-game scheme toggle, if players ask for one.
 
 ## Related

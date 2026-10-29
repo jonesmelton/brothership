@@ -10,7 +10,9 @@ test "the worlds lie as their stars do, 13.8 to 25.4 ly apart" {
   let pairs = []
   for i in 0..<ws.length() {
     for j in (i + 1)..<ws.length() {
-      pairs.push("\{ws[i].name} \{ws[j].name} \{tenths(ws[i].distance_to(ws[j]))}")
+      pairs.push(
+        "\{ws[i].name} \{ws[j].name} \{tenths(ws[i].distance_to(ws[j]))}",
+      )
     }
   }
   debug_inspect(
@@ -80,6 +82,6 @@ test "the map is drawn in the worlds' plane, true to within 0.05 ly" {
 test "the next plan flies the itinerary's hop" {
   let p = @ships.profiles()[1]
   let plan = p.next_plan(legs=0, coils=0)
-  let flown = { ..p.route, distance_ly: @ships.hop(0) }.plan()
+  let flown = { ..p.route, distance_ly: @ships.hop(0), }.plan()
   assert_eq(plan, flown)
 }

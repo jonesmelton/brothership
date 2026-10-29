@@ -251,7 +251,6 @@ async test "a promotion row replays and joins the story" {
       #|    served: 48738,
       #|  },
       #|)
-
     ),
   )
   guard story[at + 1].happening is Docked(..) else {

@@ -236,7 +236,6 @@ test "ledger totals do not fall across a docking" {
       #|  crossings: 1,
       #|  rank: Some(1),
       #|}
-
     ),
   )
   debug_inspect(

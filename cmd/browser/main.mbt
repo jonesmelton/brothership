@@ -56,6 +56,8 @@ enum Msg {
   Requested(@url.UrlRequest)
   /// The local clock moved.
   Tock
+  /// A second passed: only the figures that tick move.
+  Second
   Poll
 }
 
@@ -65,6 +67,10 @@ const TOCK_MS : Int32 = 5_000
 
 ///|
 const POLL_MS : Int32 = 15_000
+
+///|
+/// How often the reckoning's figures move. Only the screen's clock changes.
+const SECOND_MS : Int32 = 1_000
 
 ///|
 /// The officer this browser acts as. The server sets the session cookie on
@@ -260,6 +266,7 @@ fn update(
       }
       (ticked, @rabbita.batch([ask, keep_ledger(ticked)]))
     }
+    (_, Second) => ({ ..model, now: unix_now(), }, @rabbita.none)
     // Pushing the address brings the page back as `Went`.
     (_, Requested(Internal(url))) =>
       (model, @nav.push_url("#" + url.fragment.unwrap_or("")))
@@ -753,8 +760,8 @@ fn you_page(
 }
 
 ///|
-/// The Voyage page: where the ship is, how its demands will close, a way to
-/// answer each open one, and the voyage's log.
+/// The Voyage page: where the ship is, its reckoning, how its demands will
+/// close, a way to answer each open one, and the voyage's log.
 fn voyage_page(
   model : Model,
   emit : @rabbita.Emit[Msg],
@@ -770,6 +777,7 @@ fn voyage_page(
   }
   [
     where_section(s),
+    reckoning_section(s),
     @html.section([@html.h3("Demands"), ..outlook]),
     away_section(model, Voyage, "While you were away", []),
     log_section(model, Voyage),
@@ -1008,6 +1016,7 @@ fn main {
       subscriptions=(_, emit) => {
         @sub.batch([
           @sub.every(TOCK_MS, emit(Tock)),
+          @sub.every(SECOND_MS, emit(Second)),
           @sub.every(POLL_MS, emit(Poll)),
           @sub.on_url_request(emit.map(r => Requested(r))),
           @sub.on_url_changed(

@@ -78,14 +78,11 @@ pub fn reckon(c : @core.Crossing) -> Reckoning {
       let d = coast - c.left.to_double() / 1.0e9
       (burned + d, burn_lead(top, a) + coast_lead(d, top))
     }
-    Approach =>
-      (length - burn_run(eta, a), full_lead - burn_lead(eta, a))
+    Approach => (length - burn_run(eta, a), full_lead - burn_lead(eta, a))
     Arrived => (length, full_lead)
   }
   let accel = if c.firing() {
-    a / G *
-    c.setting().to_double() /
-    @math.SETTING_FULL.to_double()
+    a / G * c.setting().to_double() / @math.SETTING_FULL.to_double()
   } else {
     0.0
   }

@@ -1,7 +1,16 @@
 ///|
 test "time at the worlds coarsens, and agrees with its verb" {
   let day = 1.0 / 365.25
-  let at : Array[Double] = [0.0, 0.5 * day, 3.0 * day, 40.0 * day, 1.0, 1.4, 2.6, 24.2]
+  let at : Array[Double] = [
+    0.0,
+    0.5 * day,
+    3.0 * day,
+    40.0 * day,
+    1.0,
+    1.4,
+    2.6,
+    24.2,
+  ]
   debug_inspect(
     at.map(passed_at_worlds),
     content=(
@@ -22,7 +31,14 @@ test "time at the worlds coarsens, and agrees with its verb" {
 ///|
 test "figures in the units research section 11 asks for" {
   let day = 1.0 / 365.25
-  let ys : Array[Double] = [0.0, 30.0 / 525960.0, 3.0 / 8766.0, 5.0 * day, 0.25, 11.274]
+  let ys : Array[Double] = [
+    0.0,
+    30.0 / 525960.0,
+    3.0 / 8766.0,
+    5.0 * day,
+    0.25,
+    11.274,
+  ]
   debug_inspect(
     ys.map(years_figure),
     content=(
@@ -34,7 +50,6 @@ test "figures in the units research section 11 asks for" {
       #|  "0.25 years",
       #|  "11.27 years",
       #|]
-
     ),
   )
   let ns : Array[Double] = [1.0, 1.2345, 9.994, 10.4, 999.6, 24000.4, 1234567.0]
@@ -68,7 +83,7 @@ test "figures in the units research section 11 asks for" {
 }
 
 ///|
-fn first_leg(drivers~ : Int) -> @core.State {
+fn first_leg(drivers~ : Int32) -> @core.State {
   let p = @ships.fleet()[0].profile
   let (_, s) = p.due(
     @core.State::initial(p.ship(seed=1), profile=p.name),
@@ -102,7 +117,6 @@ test "the reckoning and instruments mid-coast" {
       #|  ("To go", "12.354 ly to Occitan"),
       #|  ("Departure’s light leads by", "13.4 light-minutes"),
       #|]
-
     ),
   )
   debug_inspect(
@@ -120,7 +134,6 @@ test "the reckoning and instruments mid-coast" {
       #|  ("Half the sky lies within", "8.59″ of the bow"),
       #|  ("Each atom ahead strikes at", "22.5 TeV"),
       #|]
-
     ),
   )
 }
@@ -143,7 +156,6 @@ test "the next leg, from port" {
       #|  ("At the worlds", "15.70 years"),
       #|  ("Aboard", "10.1 to 19.1 hours"),
       #|]
-
     ),
   )
 }

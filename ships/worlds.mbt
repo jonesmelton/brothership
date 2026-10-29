@@ -107,10 +107,7 @@ pub fn on_map(p : (Double, Double, Double)) -> (Double, Double) {
   let n = worlds.length().to_double()
   let d = (p.0 - c.0 / n, p.1 - c.1 / n, p.2 - c.2 / n)
   let (a, b) = map_axes
-  (
-    d.0 * a.0 + d.1 * a.1 + d.2 * a.2,
-    d.0 * b.0 + d.1 * b.1 + d.2 * b.2,
-  )
+  (d.0 * a.0 + d.1 * a.1 + d.2 * a.2, d.0 * b.0 + d.1 * b.1 + d.2 * b.2)
 }
 
 ///|

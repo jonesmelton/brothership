@@ -57,7 +57,6 @@ test "an empty ship says so instead of counting zeroes" {
       #|  "Nobody is on a post yet.",
       #|  "The ship asks for hands on the drive.",
       #|]
-
     ),
   )
 }
@@ -77,7 +76,6 @@ test "a voyage from port to its first moments, in sentences" {
       #|  "In port at Kerala. Departs in about 10 minutes for Occitan, 15.7 light-years away.",
       #|  "Hull at 100%.",
       #|]
-
     ),
   )
   debug_inspect(
@@ -104,7 +102,6 @@ test "a voyage from port to its first moments, in sentences" {
       #|  "1 hand on the drive, 0 on the hull, 0 at crafts.",
       #|  "The ship asks for hands on the drive.",
       #|]
-
     ),
   )
   debug_inspect(

@@ -24,6 +24,8 @@ pub fn earning_sentences(@core.State, you~ : String) -> Array[String]
 
 pub fn effect(@core.State, @core.State, you~ : String) -> Array[String]
 
+pub fn figure(Double, Int32) -> String
+
 pub fn hazard_name(@core.Hazard) -> String
 
 pub fn in_words(Int64) -> String

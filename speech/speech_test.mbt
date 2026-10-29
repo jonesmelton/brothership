@@ -263,7 +263,6 @@ async test "a promotion prompt carries facts about the officer and no id" {
     call.user,
     content=(
       #|"# what just happened\n\nA hand was promoted to lieutenant.\n\n# the officer promoted\n\n- New rank: lieutenant.\n- Hours on the drive this crossing: 3.\n- Hours on the hull this crossing: 2.\n- Hours at crafts this crossing: 0.\n- Watches stood this crossing: 2.\n- Watches broken this crossing: 1.\n- Works finished in all: 4.\n- Hours of regard on record: 130.\n\nYou have no name or handle for them: speak of them by what they did.\n\n# where you are\n\nBurning toward Occitan.\n15.7 of the 15.7 light-years from Kerala still to go.\nUnder a day has passed at Kerala and Occitan since departure.\nArriving in about 18 hours, if the drive stays as set.\nThe coast begins in about 6 hours.\nHull at 100%.\nDrive at 35% of full burn, with none of the 5 hands it needs.\nNobody is on a post yet.\nThe ship asks for hands on the drive.\n\n# your crew this crossing\n\n- Nobody has taken a post yet.\n\n# earlier on this crossing\n\n- Nothing yet.\n\n# what you are asking for\n\nHands on the drive.\n"
-
     ),
   )
 }

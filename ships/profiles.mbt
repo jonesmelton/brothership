@@ -242,5 +242,5 @@ pub fn Profile::next_plan(
   legs~ : Int64,
   coils~ : Int64,
 ) -> @core.Plan {
-  { ..self.route, distance_ly: hop(legs) }.plan_with(coils~)
+  { ..self.route, distance_ly: hop(legs), }.plan_with(coils~)
 }
