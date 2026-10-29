@@ -65,7 +65,7 @@ Small caps are always `all-small-caps` from the font (`smcp`, `c2sc`), with `fon
 - One column at every width, `max-width: 36rem`, centered, with `1rem` side padding (`1.5rem` from 40rem wide). Desktop gets the phone layout with more margin, not a second layout.
 - Sections are separated by a `--rule` hairline and `2rem` of space, not boxes.
 - The game has three pages, You, Voyage and Ship, each with its own log, reached from the [bar of pages](#bar-of-pages). The masthead is on all of them. A page opens with its `h2`, which takes focus when the page changes; its sections are `h3`.
-- The vertical order of each page is fixed and never changes with state. You: rank, since you were here, your post, choices, log. Voyage: where the ship is, reckoning, demands, while you were away, log. Ship: the ship, while you were away, log, read aloud, other ships. A section with nothing to say says so in a sentence rather than disappearing.
+- The vertical order of each page is fixed and never changes with state. You: rank, since you were here, your post, choices, log. Voyage: where the ship is, reckoning, demands, while you were away, log. Ship: the ship, while you were away, log, settings, other ships. A section with nothing to say says so in a sentence rather than disappearing.
 - The bar of pages is the only fixed element, and only on viewports at least 34em tall (see below). Otherwise the page is a plain scroll, and at 400% zoom it is.
 
 ## components
@@ -122,11 +122,13 @@ The track is a container query context. Below 13em wide, which is a narrow phone
 
 The ship's story, newest first, the latest 20 entries: one `li` per happening, its sentence, then how long ago in `--quiet` at 0.875rem. A ship's line in the log is set as the ship's voice. Each page's log holds only its own happenings (`@words.page_of`). An entry newer than the last visit has a 4px `--accent` rule at its left; the away list says the same in words, so the rule is never the only signal. The list has no markers, so it carries `role="list"`, which Safari otherwise drops. While a line is being written, a `--quiet` italic Newsreader sentence above the list says the ship is finding words; it is not a live region, since the line itself is announced when it lands.
 
-On the Ship page, a choice group sets what is read aloud as it happens: everything, urgent only, or nothing.
+On the Ship page the Settings section holds three choice groups, in this order: what is read aloud as it happens (everything, urgent only, nothing), sounds (on, off; off by default), and type (book, legible). Each is a set of native buttons with `aria-pressed`, and each is stored in `localStorage`. Legible sets `data-face="legible"` on the root, which replaces `--font-display` and `--font-ui` with Atkinson Hyperlegible Next; the hanzi keep `--font-han`. The face has no small caps, oldstyle figures or slashed zero, so labels set in small caps appear in lowercase and figures in lining. Its font files are not preloaded and load only when chosen.
 
 ### announcements
 
-Two visually hidden live regions, polite and assertive, are rendered from the first frame and outside `main`, so screen readers watch them before anything is said. New happenings go to them by priority (`@words.priority`); at most three sentences, then how many more wait in the log.
+New happenings are announced by priority (`@words.priority`): at most three sentences each for interrupts and announcements, then how many more wait in the log. Where the browser has `document.ariaNotify`, a batch goes through it as one string: an interrupt makes the call `high` and is placed first, and a batch with announcements only is `normal`. One string per batch matters because some screen readers speak only the most recent call. Otherwise two visually hidden live regions, polite and assertive, carry the text. They are rendered from the first frame and outside `main`, so screen readers are already watching them if `ariaNotify` is missing, and they stay empty when it is present, so nothing is spoken twice. The sentences for the player's own choices go the same way.
+
+When sounds are on, a happening that is read aloud also plays a synthesized cue: one 180 ms tone for an announcement, a two-note figure of 280 ms for an interrupt, and a softer 220 ms tone for a ship's line. Each peaks at 0.2 gain or less. A cue is never the only signal and is not played for anything the read-aloud setting filters out. The audio context is created after a gesture.
 
 ### choices
 

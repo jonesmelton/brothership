@@ -69,6 +69,20 @@
   font-style: normal;
   font-display: swap;
 }
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("./fonts/atkinson-hyperlegible-next.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("./fonts/atkinson-hyperlegible-next-italic.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: italic;
+  font-display: swap;
+}
 
 /* Palette and faces. Values and contrast in docs/visual-design.md. */
 :root {
@@ -84,6 +98,12 @@
   --font-han: "Noto Serif CJK TC", "Noto Serif TC", "Songti TC", "PMingLiU", serif;
   --weight-display: 400;
   --weight-text: 400;
+}
+/* The player's choice of Type. Not preloaded: the file loads only when a
+   rule uses it. The hanzi keep --font-han. */
+:root[data-face="legible"] {
+  --font-display: "Atkinson Hyperlegible Next", system-ui, sans-serif;
+  --font-ui: "Atkinson Hyperlegible Next", system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root {

@@ -11,13 +11,13 @@ fn story(entries : Array[@core.Entry]) -> @core.Story {
 ///|
 test "the first story of a visit is not read aloud, later news is" {
   let first = story([entry(4, Departed), entry(5, Took(crew="bo", post=Hull))])
-  let (told, polite, assertive) = Told::new().merge(
+  let (told, heard) = Told::new().merge(
     first,
     you="ann",
     hear=Everything,
     ship="The Tigress",
   )
-  inspect(polite + assertive, content="")
+  inspect(heard.polite + heard.assertive, content="")
   debug_inspect(told.arrived, content="Some(5)")
   let later = story([
     entry(5, Took(crew="bo", post=Hull)),
@@ -26,7 +26,7 @@ test "the first story of a visit is not read aloud, later news is" {
     entry(11, Began(phase=Coast)),
     entry(12, Took(crew="cy", post=Drive)),
   ])
-  let (told, polite, assertive) = told.merge(
+  let (told, heard) = told.merge(
     later,
     you="ann",
     hear=Everything,
@@ -34,19 +34,19 @@ test "the first story of a visit is not read aloud, later news is" {
   )
   inspect(told.entries.length(), content="6")
   inspect(
-    assertive,
+    heard.assertive,
     content="A breach opened on the hull. The Tigress: Hands to the hull!",
   )
-  inspect(polite, content="The coast began.")
-  let (_, polite, assertive) = Told::new().merge(
+  inspect(heard.polite, content="The coast began.")
+  let (_, heard) = Told::new().merge(
     first,
     you="ann",
     hear=Urgent,
     ship="The Tigress",
   ).0.merge(later, you="ann", hear=Urgent, ship="The Tigress")
-  inspect(polite, content="")
+  inspect(heard.polite, content="")
   inspect(
-    assertive,
+    heard.assertive,
     content="A breach opened on the hull. The Tigress: Hands to the hull!",
   )
 }
@@ -61,7 +61,7 @@ test "a long announcement points to the log" {
 
 ///|
 test "while you were away covers the absence, not this visit" {
-  let (told, _, _) = Told::new().merge(
+  let (told, _) = Told::new().merge(
     story([
       entry(3, Departed),
       entry(4, Took(crew="bo", post=Hull)),
@@ -71,7 +71,7 @@ test "while you were away covers the absence, not this visit" {
     hear=Everything,
     ship="The Tigress",
   )
-  let (told, _, _) = told.merge(
+  let (told, _) = told.merge(
     story([entry(8, Began(phase=Coast))]),
     you="ann",
     hear=Everything,

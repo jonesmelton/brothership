@@ -27,6 +27,12 @@ struct Model {
   effect : Array[String]
   told : Told
   hear : Hear
+  /// Whether a tone marks what is read aloud; kept in `localStorage`.
+  sounds : Sounds
+  /// The typeface; kept in `localStorage`.
+  face : Face
+  /// The browser has `document.ariaNotify`, so the live regions stay empty.
+  notify : Bool
   said : Said
   sync : Sync
 } derive(Eq)
@@ -50,6 +56,8 @@ enum Msg {
   Settled(String, Result[@core.Receipt, Error])
   Storied(String, Result[@core.Story, Error])
   Hear(Hear)
+  Sound(Sounds)
+  Typeface(Face)
   /// The address now names this page.
   Went(@words.Page)
   /// A link was followed. Rabbita stops the browser following it.
@@ -294,26 +302,44 @@ fn update(
       }
     (_, Hear(hear)) =>
       ({ ..model, hear, }, @rabbita.effect(() => store_hear(hear.name())))
+    (_, Sound(sounds)) =>
+      (
+        { ..model, sounds, },
+        @rabbita.effect(() => {
+          store_sounds(sounds.name())
+          if sounds == On {
+            arm_sound()
+          }
+        }),
+      )
+    (_, Typeface(face)) =>
+      (
+        { ..model, face, },
+        @rabbita.effect(() => {
+          store_face(face.name())
+          set_face(face.name())
+        }),
+      )
     (_, Storied(ship, _)) if !current(ship) => (model, @rabbita.none)
     (_, Storied(_, Err(_))) => (model, @rabbita.none)
     (_, Storied(ship, Ok(story))) => {
-      let (told, polite, assertive) = model.told.merge(
+      let (told, heard) = model.told.merge(
         story,
         you=model.officer,
         hear=model.hear,
         ship=epithet(model),
       )
-      let said = if polite == "" && assertive == "" {
-        model.said
-      } else {
-        { polite, assertive, count: model.said.count + 1, }
-      }
       let last = told.last()
       let viewed = model.viewed.settle(last).mark(model.page, last)
-      let next = { ..model, told, said, viewed, }
+      let (next, spoken) = { ..model, told, viewed, }.say(
+        polite=heard.polite,
+        assertive=heard.assertive,
+      )
       (
         next,
         @rabbita.batch([
+          spoken,
+          next.chime(heard.cue),
           @rabbita.effect(() => store_seen(ship, last.to_string())),
           keep_viewed(next),
         ]),
@@ -375,11 +401,15 @@ fn update(
                 Watched(ticks~) => ticks / @core.HOUR
                 _ => model.last_watch
               }
+              let (moved, spoken) = {
+                ..model,
+                sync: Ready(next),
+                last_watch: hours,
+              }.with_effect(effect)
               (
-                { ..model, sync: Ready(next), last_watch: hours, }.with_effect(
-                  effect,
-                ),
+                moved,
                 @rabbita.batch([
+                  spoken,
                   send_next(emit, ship, sync, next),
                   focus,
                   if hours != model.last_watch {
@@ -810,7 +840,7 @@ fn ship_page(
     ),
     away_section(model, Ship, "While you were away", []),
     log_section(model, Ship),
-    hear_section(model, emit),
+    settings_section(model, emit),
     @html.section([@html.h3("Other ships"), ship_choices(model, emit)]),
   ]
 }
@@ -924,26 +954,64 @@ fn log_section(model : Model, page : @words.Page) -> @rabbita.Html {
 }
 
 ///|
-/// The choice of what is read aloud as it happens.
-fn hear_section(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
-  let hears : Array[(Hear, String)] = [
-    (Everything, "Everything"),
-    (Urgent, "Urgent only"),
-    (Nothing, "Nothing"),
-  ]
-  let hear = group(
-    "hear",
-    "Read aloud as it happens",
-    hears.map(h => {
+/// A choice among `options`, as native toggle buttons.
+fn[T : Eq] toggles(
+  id : String,
+  legend : String,
+  options : Array[(T, String)],
+  current : T,
+  pick : (T) -> Msg,
+  emit : @rabbita.Emit[Msg],
+) -> @rabbita.Html {
+  group(
+    id,
+    legend,
+    options.map(o => {
       @html.button(
         type_="button",
-        on_click=emit(Hear(h.0)),
-        attrs=@html.Attrs::build().aria_pressed((model.hear == h.0).to_string()),
-        h.1,
+        on_click=emit(pick(o.0)),
+        attrs=@html.Attrs::build().aria_pressed((current == o.0).to_string()),
+        o.1,
       )
     }),
   )
-  @html.section([@html.h3("Read aloud"), hear])
+}
+
+///|
+/// The Ship page's settings: what is read aloud as it happens, whether a
+/// tone marks it, and the typeface.
+fn settings_section(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
+  @html.section([
+    @html.h3("Settings"),
+    toggles(
+      "hear",
+      "Read aloud as it happens",
+      [
+        (Everything, "Everything"),
+        (Urgent, "Urgent only"),
+        (Nothing, "Nothing"),
+      ],
+      model.hear,
+      h => Hear(h),
+      emit,
+    ),
+    toggles(
+      "sounds",
+      "Sounds",
+      [(On, "On"), (Off, "Off")],
+      model.sounds,
+      s => Sound(s),
+      emit,
+    ),
+    toggles(
+      "face",
+      "Type",
+      [(Book, "Book"), (Legible, "Legible")],
+      model.face,
+      f => Typeface(f),
+      emit,
+    ),
+  ])
 }
 
 ///|
@@ -1007,10 +1075,22 @@ fn main {
           effect: [],
           told: Told::new(),
           hear: Hear::parse(stored_hear()),
+          sounds: Sounds::parse(stored_sounds()),
+          face: Face::parse(stored_face()),
+          notify: has_aria_notify(),
           said: { polite: "", assertive: "", count: 0, },
           sync: Loading,
         }
-        (model, session(emit))
+        let start = @rabbita.batch([
+          session(emit),
+          @rabbita.effect(() => {
+            set_face(model.face.name())
+            if model.sounds == On {
+              arm_sound()
+            }
+          }),
+        ])
+        (model, start)
       },
       update~,
       subscriptions=(_, emit) => {

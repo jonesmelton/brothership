@@ -18,6 +18,9 @@ fn aboard() -> Model {
     effect: [],
     told: Told::new(),
     hear: Everything,
+    sounds: Off,
+    face: Book,
+    notify: false,
     said: { polite: "", assertive: "", count: 0, },
     sync: Loading,
   }

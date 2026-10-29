@@ -1,6 +1,7 @@
 ///|
 // Fetches the game's fonts and subsets them into public/fonts as WOFF2.
 // See docs/typography.md for the choices and docs/visual-design.md for use.
+// Atkinson Hyperlegible Next is the player's alternative, loaded only when chosen.
 //
 //   moon run scripts/fonts.mbtx
 //
@@ -98,6 +99,18 @@ let sources : Array[Source] = [
   },
   { file: "FiraSans-OFL.txt", url: "\{GOOGLE}/firasans/OFL.txt", },
   {
+    file: "AtkinsonHyperlegibleNext.ttf",
+    url: "\{GOOGLE}/atkinsonhyperlegiblenext/AtkinsonHyperlegibleNext%5Bwght%5D.ttf",
+  },
+  {
+    file: "AtkinsonHyperlegibleNext-Italic.ttf",
+    url: "\{GOOGLE}/atkinsonhyperlegiblenext/AtkinsonHyperlegibleNext-Italic%5Bwght%5D.ttf",
+  },
+  {
+    file: "AtkinsonHyperlegibleNext-OFL.txt",
+    url: "\{GOOGLE}/atkinsonhyperlegiblenext/OFL.txt",
+  },
+  {
     file: "NotoSerifTC-Regular.otf",
     url: "\{NOTO}/SubsetOTF/TC/NotoSerifTC-Regular.otf",
   },
@@ -180,6 +193,16 @@ async fn main {
       keep: latin,
     },
     {
+      source: "AtkinsonHyperlegibleNext.ttf",
+      out: "atkinson-hyperlegible-next.woff2",
+      keep: latin,
+    },
+    {
+      source: "AtkinsonHyperlegibleNext-Italic.ttf",
+      out: "atkinson-hyperlegible-next-italic.woff2",
+      keep: latin,
+    },
+    {
       source: "NotoSerifTC-Regular.otf",
       out: "noto-serif-tc-400.woff2",
       keep: han,
@@ -203,6 +226,7 @@ async fn main {
   for
     license in [
       "EBGaramond-OFL.txt", "Newsreader-OFL.txt", "FiraSans-OFL.txt",
+      "AtkinsonHyperlegibleNext-OFL.txt",
       "NotoSerifCJK-LICENSE.txt",
     ] {
     let body = @fs.read_file("\{CACHE}/\{license}").text()

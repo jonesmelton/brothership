@@ -62,6 +62,15 @@ struct Said {
 } derive(Eq)
 
 ///|
+/// What one merge lets the player hear: text for the two live regions, and
+/// the loudest cue among what is read aloud.
+struct Heard {
+  polite : String
+  assertive : String
+  cue : Cue?
+} derive(Eq, Debug)
+
+///|
 /// The most sentences one announcement reads before pointing to the log.
 const MOST_SPOKEN : Int32 = 3
 
@@ -87,7 +96,7 @@ fn Told::merge(
   you~ : String,
   hear~ : Hear,
   ship~ : String,
-) -> (Told, String, String) {
+) -> (Told, Heard) {
   let last = self.last()
   let fresh = incoming.entries.filter(e => e.seq > last)
   let entries = self.entries + fresh
@@ -99,18 +108,27 @@ fn Told::merge(
     speaking: incoming.speaking,
     thinking: incoming.thinking,
   }
-  guard self.arrived is Some(_) && hear != Nothing else { (next, "", "") }
+  guard self.arrived is Some(_) && hear != Nothing else {
+    (next, { polite: "", assertive: "", cue: None, })
+  }
   let polite = []
   let assertive = []
+  let mut cue = None
   for e in fresh {
+    let spoke = e.happening is Spoke(..)
     match @words.priority(e, you~, story=entries) {
-      Interrupt => assertive.push(@words.told(e.happening, you~, ship~))
-      Announce if hear == Everything =>
+      Interrupt => {
+        assertive.push(@words.told(e.happening, you~, ship~))
+        cue = Some(louder(cue, Alarm))
+      }
+      Announce if hear == Everything => {
         polite.push(@words.told(e.happening, you~, ship~))
+        cue = Some(louder(cue, if spoke { Line } else { Tone }))
+      }
       _ => ()
     }
   }
-  (next, capped(polite), capped(assertive))
+  (next, { polite: capped(polite), assertive: capped(assertive), cue, })
 }
 
 ///|
