@@ -149,3 +149,34 @@ test "overdue ships, as after a restart, still advance on different seconds" {
   })
   debug_inspect(at, content="[1, 13, 33]")
 }
+
+///|
+test "a listing says where the ship is and who is aboard" {
+  let p = @ships.profiles()[1]
+  let t0 = 1_800_000_000L
+  let s = @core.State::initial(p.ship(seed=1), profile=p.name).apply(
+    Tick(at=t0),
+  ) catch {
+    _ => panic()
+  }
+  let s = s.apply(Crew(crew="ann", intent=Signed)) catch { _ => panic() }
+  debug_inspect(
+    @ships.listing("tigress", s),
+    content=(
+      #|{
+      #|  id: "tigress",
+      #|  name: "EF-147 The Tigress",
+      #|  crossings: 0,
+      #|  whereabouts: InPort(departs=1800000600),
+      #|  officers: 1,
+      #|}
+    ),
+  )
+  let (events, s) = p.due(s, t0 + @ships.PORT_STAY, officer=_ => true)
+  assert_true(events.iter().any(e => e is Departed(_)))
+  let c = s.crossing().unwrap()
+  assert_eq(
+    @ships.listing("tigress", s).whereabouts,
+    Underway(arrives=Some(s.at + c.forecast().unwrap() - c.t)),
+  )
+}

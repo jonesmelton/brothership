@@ -57,9 +57,27 @@ async test "api round trip over http" {
     let headers = cookie_header(cookie)
     let (_, body) = @http.get("\{base}/api/ships")
     json_inspect(body.json(), content=[
-      { "id": "tigress", "name": "EF-147 The Tigress" },
-      { "id": "scorpion", "name": "HS-212 The Twin-Tailed Scorpion" },
-      { "id": "flea", "name": "EF-287 The Flea on the Drum" },
+      {
+        "id": "tigress",
+        "name": "EF-147 The Tigress",
+        "crossings": "0",
+        "whereabouts": ["Underway", { "arrives": "1800069192" }],
+        "officers": "0",
+      },
+      {
+        "id": "scorpion",
+        "name": "HS-212 The Twin-Tailed Scorpion",
+        "crossings": "0",
+        "whereabouts": ["InPort", { "departs": "600" }],
+        "officers": "0",
+      },
+      {
+        "id": "flea",
+        "name": "EF-287 The Flea on the Drum",
+        "crossings": "0",
+        "whereabouts": ["InPort", { "departs": "600" }],
+        "officers": "0",
+      },
     ])
     let (_, body) = @http.get("\{base}/api/ships/tigress/snapshot")
     let snapshot : @core.Snapshot = @json.from_json(body.json())
@@ -77,6 +95,10 @@ async test "api round trip over http" {
     let receipt : @core.Receipt = @json.from_json(body.json())
     inspect(receipt is Accepted(id=1, ..), content="true")
     inspect(receipt.snapshot().state.at, content="1800000660")
+    debug_inspect(session.ship, content="None")
+    let (_, body) = @http.get("\{base}/api/session", headers~)
+    let aboard : @core.Session = @json.from_json(body.json())
+    debug_inspect(aboard.ship, content="Some(\"tigress\")")
     let (res, body) = @http.post(
       "\{base}/api/ships/tigress/proposals",
       "{\"id\":",

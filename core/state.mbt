@@ -2,9 +2,16 @@
 /// What a crew member asks to do. Clients send these and nothing else, so a
 /// client cannot express a server event such as a tick.
 pub(all) enum Intent {
-  /// Takes a post, joining the crew if not aboard.
+  /// Signs on to the ship, without a post.
+  Signed
+  /// Takes a post, signing on if not aboard. In port, names the post to
+  /// take at departure.
   Posted(post~ : Post)
+  /// Stands down from the post, staying aboard.
   Left
+  /// Leaves the ship when it next docks, or at once in port; `false`
+  /// stays after all.
+  Leaving(leaving~ : Bool)
   /// Makes the work banked at the craft post, for 100 to 150 percent of it.
   Made
   Crafted(craft~ : Craft)
@@ -54,6 +61,12 @@ pub(all) suberror Rejected {
   Crossing(reason~ : CrossingRejected)
   /// A ship's log begins with `Commissioned`, and has it nowhere else.
   NotFirst(event~ : Event)
+  /// Only an officer aboard can do this.
+  NotSigned(crew~ : String)
+  /// The officer is aboard `ship`, and an officer serves on one ship at a
+  /// time. Refused by the store, which sees every ship, never by
+  /// `State::apply`.
+  AboardAnother(ship~ : String)
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
@@ -66,6 +79,20 @@ pub(all) enum Leg {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
+/// An officer aboard, from signing on until discharged at a dock. Kept
+/// across port stays, unlike a `Hand`.
+pub(all) struct Officer {
+  /// The post to take at the next departure, if any. Set at docking from
+  /// the post held at arrival, and by `Posted` and `Left` in port.
+  post : Post?
+  /// Leaves at the next dock.
+  leaving : Bool
+  /// Has acted since the ship last docked or since signing on. Docking
+  /// discharges an officer who has not.
+  active : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
 /// One ship's voyage. Legs flown so far are `ship.crossings`.
 pub(all) struct State {
   /// Unix seconds of the last tick; 0 before the first.
@@ -75,12 +102,14 @@ pub(all) struct State {
   /// The ship as it last left port.
   ship : Ship
   leg : Leg
+  /// The officers aboard, by crew id, in order of signing on.
+  officers : Map[String, Officer]
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
 /// A voyage that has not begun: `ship` in port, before any tick.
 pub fn State::initial(ship : Ship, profile~ : String) -> State {
-  { at: 0, profile, ship, leg: InPort(since=0), }
+  { at: 0, profile, ship, leg: InPort(since=0), officers: {}, }
 }
 
 ///|
@@ -152,34 +181,88 @@ pub fn State::apply(self : State, event : Event) -> State raise Rejected {
       }
     Departed(plan~) => {
       guard self.leg is InPort(_) else { raise NotInPort(event~) }
-      {
-        ..self,
-        leg: Underway(crossing=Crossing::new(plan, self.ship), spoke=None),
+      // Officers take the posts they named in port.
+      let mut c = Crossing::new(plan, self.ship)
+      for crew, o in self.officers {
+        if o.post is Some(post) {
+          c = c.apply(Posted(crew~, post~)) catch { _ => panic() }
+        }
       }
+      { ..self, leg: Underway(crossing=c, spoke=None), }
     }
     Docked => {
       guard self.leg is Underway(crossing~, ..) && crossing.dock() is Some(ship) else {
         raise NotArrived(event~)
       }
-      { ..self, ship, leg: InPort(since=self.at), }
+      let officers : Map[String, Officer] = Map([])
+      for crew, o in self.officers {
+        if o.active && !o.leaving {
+          let post = crossing.hands.get(crew).map(h => h.post)
+          officers[crew] = { post, leaving: false, active: false, }
+        }
+      }
+      { ..self, ship, leg: InPort(since=self.at), officers, }
     }
     Spoke(_) => self
     Promoted(crew~, rank~) => forward(Promoted(crew~, rank~), false)
     Asked(post~) => forward(Asked(post~), true)
     Refitting(refit~) => forward(Refitting(refit~), false)
-    Crew(crew~, intent~) =>
-      forward(
-        match intent {
-          Posted(post~) => Posted(crew~, post~)
-          Left => Left(crew~)
-          Made => Made(crew~)
-          Crafted(craft~) => Crafted(crew~, craft~)
-          Watched(ticks~) => Watched(crew~, ticks~)
-          Ordered(order~) => Ordered(crew~, order~)
-          Refitting(refit~) => Refitting(refit~)
-        },
-        false,
-      )
+    Crew(crew~, intent~) => {
+      let officer = self.officers.get(crew)
+      // The officers with `crew` as one who has just acted, signed on if
+      // new, and naming `post` for departure if given.
+      let acted = (post : Post?) => {
+        let officers = self.officers.copy()
+        officers[crew] = match (officer, post) {
+          (Some(o), None) => { ..o, active: true, }
+          (Some(o), Some(_)) => { ..o, post, active: true, }
+          (None, _) => { post, leaving: false, active: true, }
+        }
+        officers
+      }
+      let signs = intent is (Signed | Posted(_))
+      let port_only = self.leg is InPort(_) &&
+        !(intent is (Signed | Posted(_) | Left | Leaving(_)))
+      guard signs || port_only || officer is Some(_) else {
+        raise NotSigned(crew~)
+      }
+      match (self.leg, intent) {
+        (_, Signed) => { ..self, officers: acted(None), }
+        (InPort(_), Posted(post~)) => { ..self, officers: acted(Some(post)), }
+        (InPort(_), Left) => {
+          let officers = acted(None)
+          officers[crew] = { ..officers[crew], post: None, }
+          { ..self, officers, }
+        }
+        (InPort(_), Leaving(leaving=true)) => {
+          let officers = self.officers.copy()
+          officers.remove(crew)
+          { ..self, officers, }
+        }
+        (_, Leaving(leaving~)) => {
+          let officers = acted(None)
+          officers[crew] = { ..officers[crew], leaving, }
+          { ..self, officers, }
+        }
+        (InPort(_), _) => raise NotUnderway(event~)
+        (Underway(_), _) => {
+          let s = forward(
+            match intent {
+              Posted(post~) => Posted(crew~, post~)
+              Left => Left(crew~)
+              Made => Made(crew~)
+              Crafted(craft~) => Crafted(crew~, craft~)
+              Watched(ticks~) => Watched(crew~, ticks~)
+              Ordered(order~) => Ordered(crew~, order~)
+              Refitting(refit~) => Refitting(refit~)
+              Signed | Leaving(_) => panic()
+            },
+            false,
+          )
+          { ..s, officers: acted(None), }
+        }
+      }
+    }
   }
 }
 

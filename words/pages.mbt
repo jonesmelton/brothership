@@ -147,7 +147,9 @@ fn page_of_entry(
     Departed | Began(_) | Docked(_) | Opened(_) | Met(_) | Missed(_) => Voyage
     Landed(..) | Asked(_) => Ship
     Promoted(crew~, ..) => if crew == you { You } else { Ship }
-    Took(crew~, ..)
+    Signed(crew~)
+    | Discharged(crew~)
+    | Took(crew~, ..)
     | Left(crew~)
     | Stood(crew~)
     | Finished(crew~)

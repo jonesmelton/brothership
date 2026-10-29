@@ -18,8 +18,14 @@ pub(all) enum Happening {
   Landed(refit~ : Refit, level~ : Int64)
   /// The ship changed what it asks for.
   Asked(post~ : Post?)
-  /// `crew` took `post`, by choice or by a standing order, joining if new.
+  /// `crew` signed on to the ship.
+  Signed(crew~ : String)
+  /// `crew` left the ship: at the dock, for leaving or for doing nothing
+  /// the whole voyage, or at once in port.
+  Discharged(crew~ : String)
+  /// `crew` took `post`, by choice or by a standing order.
   Took(crew~ : String, post~ : Post)
+  /// `crew` stood down from their post, staying aboard.
   Left(crew~ : String)
   /// `crew` stood a watch to its end.
   Stood(crew~ : String)
@@ -44,6 +50,19 @@ pub fn happenings(
   after : State,
 ) -> Array[Happening] {
   let out : Array[Happening] = []
+  // Who signed on and who left the ship.
+  let roster = () => {
+    for crew, _ in after.officers {
+      if !before.officers.contains(crew) {
+        out.push(Signed(crew~))
+      }
+    }
+    for crew, _ in before.officers {
+      if !after.officers.contains(crew) {
+        out.push(Discharged(crew~))
+      }
+    }
+  }
   match event {
     Spoke(line~, about~) => return [Happening::Spoke(line~, about~)]
     Promoted(crew~, rank~) => {
@@ -55,6 +74,7 @@ pub fn happenings(
     }
     Docked => {
       out.push(Docked(recruits=after.ship.recruits - before.ship.recruits))
+      roster()
       return out
     }
     _ => ()
@@ -95,6 +115,7 @@ pub fn happenings(
       if b.ask != a.ask {
         out.push(Asked(post=b.ask))
       }
+      roster()
       for crew, h in b.hands {
         if a.hands.get(crew).map(x => x.post) != Some(h.post) {
           out.push(Took(crew~, post=h.post))
@@ -115,7 +136,8 @@ pub fn happenings(
         }
       }
     }
-    _ => ()
+    (None, None) => roster()
+    (Some(_), None) => ()
   }
   out
 }

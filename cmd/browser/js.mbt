@@ -60,15 +60,6 @@ extern "js" fn store_hear(hear : String) -> Unit =
   #|(hear) => localStorage.setItem("brothership.hear", hear)
 
 ///|
-/// The ship this browser last boarded, or "".
-extern "js" fn stored_ship() -> String =
-  #|() => localStorage.getItem("brothership.ship") ?? ""
-
-///|
-extern "js" fn store_ship(ship : String) -> Unit =
-  #|(ship) => localStorage.setItem("brothership.ship", ship)
-
-///|
 /// Move focus to the element with `id`, if the page has one.
 extern "js" fn focus_id(id : String) -> Unit =
   #|(id) => document.getElementById(id)?.focus()

@@ -49,6 +49,19 @@ pub fn Receipt::snapshot(self : Receipt) -> Snapshot {
 /// stays in an HttpOnly cookie; the body carries only the public crew id.
 pub(all) struct Session {
   officer : String
+  /// The ship the officer is aboard; `None` until they sign on, and again
+  /// once discharged.
+  ship : String?
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// Where a ship in a `Listing` is, in Unix seconds.
+pub(all) enum Whereabouts {
+  /// In port, leaving at `departs`.
+  InPort(departs~ : Int64)
+  /// Underway, arriving at `arrives` if no one changes post, or arrived
+  /// if that is past; `None` if too far off to forecast.
+  Underway(arrives~ : Int64?)
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
@@ -57,6 +70,11 @@ pub(all) struct Listing {
   id : String
   /// The profile's name, which is the ship's name in English.
   name : String
+  /// Crossings flown; `@ships.leg` names the worlds of the one in hand.
+  crossings : Int64
+  whereabouts : Whereabouts
+  /// Officers aboard.
+  officers : Int64
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|

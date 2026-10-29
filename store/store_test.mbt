@@ -56,7 +56,8 @@ async test "commissioning puts each ship in service once" {
 async test "propose ticks, validates, persists, and lets the ship respond" {
   let store = open(":memory:")
   defer store.close()
-  let refused = store.propose("tigress", post(1, "ann", Drive), now=T0).unwrap()
+  let made : @core.Proposal = { id: 1, crew: "ann", intent: Made, }
+  let refused = store.propose("tigress", made, now=T0).unwrap()
   debug_inspect(refused is Refused(reason=NotUnderway(_), ..), content="true")
   // The refusal still wrote the ship's first tick.
   inspect(snap(store, "tigress").state.at, content="1800000000")
@@ -151,13 +152,18 @@ fn kinds(entries : Array[@core.Entry]) -> Array[@core.Happening] {
 async test "the story tells what happened, after a given seq" {
   let store = open(":memory:")
   defer store.close()
-  ignore(store.propose("tigress", post(1, "ann", Drive), now=T0))
+  store.advance("tigress", now=T0)
   ignore(store.propose("tigress", post(2, "ann", Drive), now=T0 + 600))
   let story = store.story("tigress", after=0).unwrap()
   debug_inspect(
     kinds(story),
     content=(
-      #|[Departed, Asked(post=Some(Drive)), Took(crew="ann", post=Drive)]
+      #|[
+      #|  Departed,
+      #|  Asked(post=Some(Drive)),
+      #|  Signed(crew="ann"),
+      #|  Took(crew="ann", post=Drive),
+      #|]
     ),
   )
   let first = story[0].seq
@@ -244,7 +250,7 @@ async test "a promotion row replays and joins the story" {
       #|    drive: 194952,
       #|    hull: 0,
       #|    craft: 0,
-      #|    regard: 215844,
+      #|    regard: 188284,
       #|    work: 0,
       #|    watches_stood: 0,
       #|    watches_broken: 0,
@@ -263,4 +269,42 @@ async test "a promotion row replays and joins the story" {
   defer reopened.close()
   inspect(snap(reopened, "tigress") == snapshot, content="true")
   assert_eq(reopened.story("tigress", after=0), Some(story))
+}
+
+///|
+async test "an officer serves on one ship at a time" {
+  let store = open(":memory:")
+  defer store.close()
+  let sign : @core.Proposal = { id: 1, crew: "ann", intent: Signed, }
+  let receipt = store.propose("tigress", sign, now=T0).unwrap()
+  inspect(receipt is Accepted(_), content="true")
+  debug_inspect(store.aboard("ann"), content="Some(\"tigress\")")
+  debug_inspect(store.aboard("bo"), content="None")
+  let refused = store.propose("flea", { ..sign, id: 2, }, now=T0).unwrap()
+  debug_inspect(
+    refused is Refused(reason=AboardAnother(ship="tigress"), ..),
+    content="true",
+  )
+  inspect(refused.snapshot() == snap(store, "flea"), content="true")
+  let posted = store.propose("flea", post(3, "ann", Drive), now=T0).unwrap()
+  debug_inspect(
+    posted is Refused(reason=AboardAnother(ship="tigress"), ..),
+    content="true",
+  )
+  // Once discharged, the officer can sign on elsewhere.
+  let leave : @core.Proposal = {
+    id: 4,
+    crew: "ann",
+    intent: Leaving(leaving=true),
+  }
+  inspect(
+    store.propose("tigress", leave, now=T0).unwrap() is Accepted(_),
+    content="true",
+  )
+  debug_inspect(store.aboard("ann"), content="None")
+  inspect(
+    store.propose("flea", { ..sign, id: 5, }, now=T0).unwrap() is Accepted(_),
+    content="true",
+  )
+  debug_inspect(store.aboard("ann"), content="Some(\"flea\")")
 }

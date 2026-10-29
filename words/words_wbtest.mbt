@@ -81,7 +81,29 @@ test "a voyage from port to its first moments, in sentences" {
   debug_inspect(
     you_sentences(s, "ann"),
     content=(
-      #|["You join the crew when the ship departs."]
+      #|["You are not aboard."]
+    ),
+  )
+  let s = s.apply(Crew(crew="ann", intent=Signed)) catch { _ => panic() }
+  debug_inspect(
+    you_sentences(s, "ann"),
+    content=(
+      #|["You have no post. Choose one to take when the ship departs."]
+    ),
+  )
+  debug_inspect(
+    leaving_sentences(s, "ann"),
+    content=(
+      #|["You may leave the ship before it departs, and choose another."]
+    ),
+  )
+  let s = s.apply(Crew(crew="ann", intent=Posted(post=Craft))) catch {
+    _ => panic()
+  }
+  debug_inspect(
+    you_sentences(s, "ann"),
+    content=(
+      #|["You go to your craft when the ship departs."]
     ),
   )
   let (_, sea) = p.due(s, 1_800_000_600, officer=_ => true)
@@ -301,6 +323,81 @@ test "a promotion is told in full and announced" {
     [page_of(e, you="0", story=[e]), page_of(e, you="1", story=[e])],
     content=(
       #|[You, Ship]
+    ),
+  )
+}
+
+///|
+test "a listing in one sentence" {
+  let at = (whereabouts : @core.Whereabouts, crossings : Int64) => {
+    listing_sentence(
+      { id: "x", name: "x", crossings, whereabouts, officers: 2, },
+      now=1000,
+    )
+  }
+  inspect(
+    at(InPort(departs=1300), 0),
+    content="In port at Kerala, leaving for Occitan in about 5 minutes. 2 officers aboard.",
+  )
+  inspect(
+    at(Underway(arrives=Some(1000 + 7 * 3600)), 1),
+    content="Between Occitan and Tigray, arriving in about 6 hours. 2 officers aboard.",
+  )
+  inspect(
+    at(Underway(arrives=Some(900)), 1),
+    content="Arrived at Tigray, docking. 2 officers aboard.",
+  )
+  inspect(
+    at(Underway(arrives=None), 1),
+    content="Between Occitan and Tigray. 2 officers aboard.",
+  )
+  inspect(
+    listing_sentence(
+      {
+        id: "x",
+        name: "x",
+        crossings: 0,
+        whereabouts: InPort(departs=0),
+        officers: 0,
+      },
+      now=1000,
+    ),
+    content="In port at Kerala, leaving for Occitan any moment. Nobody aboard yet.",
+  )
+}
+
+///|
+test "leaving is after the voyage, and standing down is not leaving" {
+  let p = @ships.profiles()[1]
+  let s = @core.State::initial(p.ship(seed=1), profile=p.name).apply(
+    Tick(at=1_800_000_000),
+  ) catch {
+    _ => panic()
+  }
+  let (_, s) = p.due(s, 1_800_000_600, officer=_ => true)
+  let s = s.apply(Crew(crew="ann", intent=Posted(post=Drive))) catch {
+    _ => panic()
+  }
+  debug_inspect(
+    leaving_sentences(s, "ann"),
+    content=(
+      #|["You are aboard until the ship docks at Occitan, and may leave then."]
+    ),
+  )
+  let s = s.apply(Crew(crew="ann", intent=Left)) catch { _ => panic() }
+  debug_inspect(
+    you_sentences(s, "ann"),
+    content=(
+      #|["You are standing down. Take a post to work."]
+    ),
+  )
+  let s = s.apply(Crew(crew="ann", intent=Leaving(leaving=true))) catch {
+    _ => panic()
+  }
+  debug_inspect(
+    leaving_sentences(s, "ann"),
+    content=(
+      #|["You leave the ship when it docks at Occitan, and choose another then."]
     ),
   )
 }

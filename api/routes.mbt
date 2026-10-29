@@ -33,7 +33,7 @@ pub fn routes(
           (officer, Some(token))
         }
       }
-      let body : @core.Session = { officer, }
+      let body : @core.Session = { officer, ship: store.aboard(officer), }
       let headers = match token {
         None => [("Cache-Control", "no-store")]
         Some(token) =>
@@ -69,7 +69,7 @@ pub fn routes(
     ctx.get("/api/ships", (_req, res) => {
       let listings : Array[@core.Listing] = store
         .ships()
-        .map(id => { id, name: store.snapshot(id).unwrap().state.profile, })
+        .map(id => @ships.listing(id, store.snapshot(id).unwrap().state))
       res.send_json(Json(listings))
     })
     ctx.get("/api/ships/:id/snapshot", (req, res) => {

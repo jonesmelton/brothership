@@ -87,6 +87,8 @@ pub(all) suberror Rejected {
   NotArrived(event~ : Event)
   Crossing(reason~ : CrossingRejected)
   NotFirst(event~ : Event)
+  NotSigned(crew~ : String)
+  AboardAnother(ship~ : String)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Types and methods
@@ -203,6 +205,8 @@ pub(all) enum Happening {
   Missed(hazard~ : Hazard)
   Landed(refit~ : Refit, level~ : Int64)
   Asked(post~ : Post?)
+  Signed(crew~ : String)
+  Discharged(crew~ : String)
   Took(crew~ : String, post~ : Post)
   Left(crew~ : String)
   Stood(crew~ : String)
@@ -220,8 +224,10 @@ pub(all) enum Hazard {
 pub fn Hazard::post(Self) -> Post
 
 pub(all) enum Intent {
+  Signed
   Posted(post~ : Post)
   Left
+  Leaving(leaving~ : Bool)
   Made
   Crafted(craft~ : Craft)
   Watched(ticks~ : Int64)
@@ -237,12 +243,21 @@ pub(all) enum Leg {
 pub(all) struct Listing {
   id : String
   name : String
+  crossings : Int64
+  whereabouts : Whereabouts
+  officers : Int64
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Moment {
   phase : Phase
   demands : Array[Status]
   band : Int64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Officer {
+  post : Post?
+  leaving : Bool
+  active : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct Optimistic {
@@ -322,6 +337,7 @@ pub(all) enum Refit {
 
 pub(all) struct Session {
   officer : String
+  ship : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Ship {
@@ -347,6 +363,7 @@ pub(all) struct State {
   profile : String
   ship : Ship
   leg : Leg
+  officers : Map[String, Officer]
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn State::apply(Self, Event) -> Self raise Rejected
 pub fn State::commission(Event) -> Self raise Rejected
@@ -396,6 +413,11 @@ pub fn Values::weight(Self, Post) -> Int64
 pub(all) struct Watch {
   from : Int64
   until : Int64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum Whereabouts {
+  InPort(departs~ : Int64)
+  Underway(arrives~ : Int64?)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases

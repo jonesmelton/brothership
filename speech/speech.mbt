@@ -59,6 +59,8 @@ fn weight(h : @core.Happening) -> Int32? {
     Landed(..) | Made(..) => Some(2)
     Docked(_)
     | Asked(_)
+    | Signed(_)
+    | Discharged(_)
     | Took(..)
     | Left(_)
     | Stood(_)

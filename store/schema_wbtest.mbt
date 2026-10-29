@@ -7,7 +7,7 @@ async test "a v1 log is kept aside as event_legacy" {
     conn, "insert into event (body) values ('[\"Elapsed\",{\"ticks\":\"1\"}]')",
   )
   migrate(conn)
-  inspect(query_int(conn, "pragma user_version"), content="6")
+  inspect(query_int(conn, "pragma user_version"), content="8")
   inspect(query_int(conn, "select count(*) from event_legacy"), content="1")
   inspect(query_int(conn, "select count(*) from event"), content="0")
   conn.close()
@@ -25,9 +25,33 @@ async test "a log from before banking is kept aside as event_before_banking" {
     conn, "insert into session (token, officer, created_at) values ('t', 'o', 0)",
   )
   migrate(conn)
-  inspect(query_int(conn, "pragma user_version"), content="6")
+  inspect(query_int(conn, "pragma user_version"), content="8")
   inspect(
     query_int(conn, "select count(*) from event_before_banking"),
+    content="1",
+  )
+  inspect(query_int(conn, "select count(*) from event"), content="0")
+  inspect(query_int(conn, "select count(*) from session"), content="1")
+  conn.close()
+}
+
+///|
+async test "a log from before officers is kept aside as event_before_officers" {
+  let conn = @sqlite3.Connection::open_async(":memory:")
+  for i in 0..<6 {
+    exec(conn, migrations[i])
+  }
+  exec(conn, "pragma user_version = 6")
+  exec(
+    conn, "insert into event (ship, body) values ('tigress', '[\"Docked\"]')",
+  )
+  exec(
+    conn, "insert into session (token, officer, created_at) values ('t', 'o', 0)",
+  )
+  migrate(conn)
+  inspect(query_int(conn, "pragma user_version"), content="8")
+  inspect(
+    query_int(conn, "select count(*) from event_before_officers"),
     content="1",
   )
   inspect(query_int(conn, "select count(*) from event"), content="0")

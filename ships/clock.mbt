@@ -14,6 +14,23 @@ pub fn arrived_at(state : @core.State) -> Int64? {
 }
 
 ///|
+/// The ship `id` in the fleet's list, as it is in `state`.
+pub fn listing(id : String, state : @core.State) -> @core.Listing {
+  let whereabouts : @core.Whereabouts = match state.leg {
+    InPort(since~) => InPort(departs=since + PORT_STAY)
+    Underway(crossing=c, ..) =>
+      Underway(arrives=c.forecast().map(at => state.at + at - c.t))
+  }
+  {
+    id,
+    name: state.profile,
+    crossings: state.ship.crossings,
+    whereabouts,
+    officers: state.officers.length().to_int64(),
+  }
+}
+
+///|
 /// The ship's own events at `now`, in Unix seconds, applied in order to
 /// `state`: the tick, the promotions an arrived crossing has earned (of the
 /// hands for which `officer` holds) and then docking, departure for

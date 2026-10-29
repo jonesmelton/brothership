@@ -44,6 +44,26 @@ fn soon_words(seconds : Int64) -> String {
 }
 
 ///|
+/// A ship in the list to choose from, at `now` in Unix seconds: where it is
+/// and who is aboard.
+pub fn listing_sentence(l : @core.Listing, now~ : Int64) -> String {
+  let (from, to) = @ships.leg(l.crossings)
+  let where_ = match l.whereabouts {
+    InPort(departs~) =>
+      "In port at \{from.name}, leaving for \{to.name} \{soon_words(departs - now)}."
+    Underway(arrives=Some(at)) if at <= now => "Arrived at \{to.name}, docking."
+    Underway(arrives=Some(at)) =>
+      "Between \{from.name} and \{to.name}, arriving \{in_words(at - now)}."
+    Underway(arrives=None) => "Between \{from.name} and \{to.name}."
+  }
+  let aboard = match l.officers {
+    0L => "Nobody aboard yet."
+    n => "\{plural(n, "officer", "officers")} aboard."
+  }
+  "\{where_} \{aboard}"
+}
+
+///|
 fn clamp_rank(rank : Int64) -> Int32 {
   rank.max(0L).min(@core.COMMANDER).to_int()
 }
@@ -262,13 +282,34 @@ fn demand_sentence(d : @core.Demand) -> String {
 }
 
 ///|
+/// When `crew` may leave the ship, in the second person; nothing if not
+/// aboard.
+pub fn leaving_sentences(s : @core.State, crew : String) -> Array[String] {
+  guard s.officers.get(crew) is Some(officer) else { [] }
+  let to = @ships.leg(s.ship.crossings).1.name
+  match (s.leg, officer.leaving) {
+    (InPort(_), _) =>
+      ["You may leave the ship before it departs, and choose another."]
+    (Underway(_), true) =>
+      ["You leave the ship when it docks at \{to}, and choose another then."]
+    (Underway(_), false) =>
+      ["You are aboard until the ship docks at \{to}, and may leave then."]
+  }
+}
+
+///|
 /// Where `crew` stands, in the second person.
 pub fn you_sentences(s : @core.State, crew : String) -> Array[String] {
+  guard s.officers.get(crew) is Some(officer) else { ["You are not aboard."] }
   guard s.crossing() is Some(c) else {
-    ["You join the crew when the ship departs."]
+    match officer.post {
+      Some(Craft) => ["You go to your craft when the ship departs."]
+      Some(p) => ["You take \{post_name(p)} when the ship departs."]
+      None => ["You have no post. Choose one to take when the ship departs."]
+    }
   }
   guard c.hands.get(crew) is Some(h) else {
-    ["You are not aboard this crossing. Take a post to join."]
+    ["You are standing down. Take a post to work."]
   }
   let on = match h.post {
     Craft => "You are at your craft, \{craft_name(h.craft)}"
@@ -318,8 +359,13 @@ pub fn priority(
       Announce
     // Your own making is announced by its effect sentence already.
     Made(_) => Quiet
-    Stood(crew~) | Finished(crew~) => if crew == you { Announce } else { Quiet }
-    Asked(_) | Took(..) | Left(_) => Quiet
+    Stood(crew~) | Finished(crew~) | Discharged(crew~) =>
+      if crew == you {
+        Announce
+      } else {
+        Quiet
+      }
+    Asked(_) | Signed(_) | Took(..) | Left(_) => Quiet
     Promoted(..) => Announce
     Spoke(about~, ..) =>
       match story.iter().find_first(x => x.seq == about) {
@@ -351,7 +397,9 @@ pub fn told(h : @core.Happening, you~ : String, ship~ : String) -> String {
     Asked(post=None) => "The ship stopped asking for hands."
     Took(crew~, post=Craft) => "\{who(crew)} went to crafts."
     Took(crew~, post~) => "\{who(crew)} took \{post_name(post)}."
-    Left(crew~) => "\{who(crew)} left the crew."
+    Signed(crew~) => "\{who(crew)} signed on."
+    Discharged(crew~) => "\{who(crew)} left the ship."
+    Left(crew~) => "\{who(crew)} stood down."
     Stood(crew~) =>
       if crew == you {
         "You stood your watch to its end."
