@@ -147,12 +147,11 @@ fn page_of_entry(
     Departed | Began(_) | Docked(_) | Opened(_) | Met(_) | Missed(_) => Voyage
     Landed(..) | Asked(_) => Ship
     Promoted(crew~, ..) => if crew == you { You } else { Ship }
-    Took(crew~, ..) | Left(crew~) | Stood(crew~) | Finished(crew~) =>
-      if crew == you {
-        You
-      } else {
-        Ship
-      }
+    Took(crew~, ..)
+    | Left(crew~)
+    | Stood(crew~)
+    | Finished(crew~)
+    | Made(crew~, ..) => if crew == you { You } else { Ship }
     Spoke(about~, ..) =>
       if depth >= 8 {
         Ship
@@ -179,6 +178,19 @@ pub fn effect(
   guard after.crossing() is Some(a) else { return [] }
   let b = before.crossing()
   let lines : Array[String] = []
+  let made = match b {
+    Some(bc) =>
+      match (bc.hands.get(you), a.hands.get(you)) {
+        (Some(x), Some(y)) if x.banked > 0L && y.banked == 0L => {
+          let percent = @core.craft_percent(bc.ship.seed, you, bc.t)
+          Some(
+            "You made \{crew_hours_words(x.banked * percent / 100L)} of work at \{percent}%.",
+          )
+        }
+        _ => None
+      }
+    None => None
+  }
   let was_arrival = match b {
     Some(c) => c.forecast()
     None => None
@@ -237,11 +249,14 @@ pub fn effect(
           )
         }
       }
-      if lines.is_empty() {
+      if lines.is_empty() && made is None {
         lines.push("No change to arrival.")
       }
     }
     None => ()
+  }
+  if made is Some(line) {
+    lines.insert(0, line)
   }
   if lines.length() > 2 {
     lines[0:2].to_owned()
@@ -337,12 +352,17 @@ pub fn earning_sentences(s : @core.State, you~ : String) -> Array[String] {
       )
     }
   }
+  if h.banked > 0L {
+    lines.push(
+      "Banked \{crew_hours_words(h.banked)} of \{craft_name(h.craft)}. Make it now for \{@core.MAKE_MIN}% to \{@core.MAKE_MAX}% of it.",
+    )
+  }
   if h.post == Craft && h.craft == Artist {
     let units = record.carry + tally.work
     let crew_hour = @core.HOUR * @core.CRAFT_UNIT
     let works = units / @core.WORK_SIZE
     lines.push(
-      "Work \{record.works + works + 1L}: \{tenths_words(units % @core.WORK_SIZE * 10L / crew_hour)} of \{@core.WORK_SIZE / crew_hour} crew-hours.",
+      "Work \{record.works + works + 1L}: \{tenths_words(units % @core.WORK_SIZE * 10L / crew_hour)} of \{@core.WORK_SIZE / crew_hour} crew-hours made.",
     )
   }
   let served = c.served(you)
@@ -442,24 +462,17 @@ fn refit_level_sentences(fit : @core.Fit) -> Array[String] {
 }
 
 ///|
-/// The refit under way, its progress, and how long it has left at `rate`.
-fn refit_under_way(fit : @core.Fit, rate : Int64) -> Array[String] {
+/// The refit under way and its progress. Engineers add to it only when they
+/// make their banked work.
+fn refit_under_way(fit : @core.Fit) -> Array[String] {
   match fit.refit {
     None => []
     Some(refit) => {
       let level = fit.level(refit) + 1L
-      let cost = fit.cost(refit)
-      let done = pct(fit.progress, cost)
-      if rate > 0L {
-        let left = (cost - fit.progress).max(0L)
-        [
-          "\{capitalized(refit_name(refit))} to level \{level}: \{done}% built, \{about(left * 3600L / rate)} to go at this rate.",
-        ]
-      } else {
-        [
-          "\{capitalized(refit_name(refit))} to level \{level}: \{done}% built, with no engineer at work.",
-        ]
-      }
+      let done = pct(fit.progress, fit.cost(refit))
+      [
+        "\{capitalized(refit_name(refit))} to level \{level}: \{done}% built. Engineers add to it when they make their banked work.",
+      ]
     }
   }
 }
@@ -502,7 +515,7 @@ pub fn ship_sentences(s : @core.State) -> Array[String] {
       for line in refit_level_sentences(c.fit) {
         lines.push(line)
       }
-      for line in refit_under_way(c.fit, trend.refit) {
+      for line in refit_under_way(c.fit) {
         lines.push(line)
       }
       for line in recruit_sentences(s.ship) {
@@ -514,7 +527,7 @@ pub fn ship_sentences(s : @core.State) -> Array[String] {
       for line in refit_level_sentences(s.ship.fit) {
         lines.push(line)
       }
-      for line in refit_under_way(s.ship.fit, 0L) {
+      for line in refit_under_way(s.ship.fit) {
         lines.push(line)
       }
       for line in recruit_sentences(s.ship) {

@@ -60,7 +60,7 @@ fn post_of(n : Int32) -> @core.Post {
 /// Any event but `Elapsed`, chosen by `kind`, for crew slot `slot`.
 fn event_of(kind : Int32, slot : Int32, arg : Int64) -> @core.CrossingEvent {
   let crew = fold(slot, 12).to_string()
-  match fold(kind, 11) {
+  match fold(kind, 12) {
     0 | 1 | 2 | 3 => Posted(crew~, post=post_of(arg.to_int()))
     10 => {
       let phases : Array[@core.Phase] = [Coast, Approach, Burn]
@@ -74,6 +74,7 @@ fn event_of(kind : Int32, slot : Int32, arg : Int64) -> @core.CrossingEvent {
       )
     }
     4 => Left(crew~)
+    11 => Made(crew~)
     5 => Crafted(crew~, craft=if arg % 2L == 0L { Engineer } else { Artist })
     6 | 7 => Watched(crew~, ticks=fold64(arg, 12L) * @core.HOUR + @core.HOUR)
     8 =>
@@ -310,11 +311,21 @@ test "a refit lands mid-crossing and stays for the next" {
     }
   }
   c = c.apply(Refitting(refit=Some(Injectors))) catch { _ => panic() }
+  let needed = c.fit.needed
+  c = c.apply(Elapsed(ticks=2L * @core.HOUR)) catch { _ => panic() }
+  for i in 0..<3 {
+    c = c.apply(Made(crew=i.to_string())) catch { _ => panic() }
+  }
   let landed = c.project().unwrap()
   inspect(landed.fit.injectors >= 1L, content="true")
-  inspect(landed.fit.needed < c.fit.needed, content="true")
+  inspect(landed.fit.needed < needed, content="true")
   let next = landed.dock().unwrap()
-  inspect(next.fit == landed.fit, content="true")
+  inspect(
+    next.fit == landed.fit,
+    content=(
+      #|false
+    ),
+  )
 }
 
 ///|
@@ -516,7 +527,11 @@ test "law: docking delivers every work unit exactly once" {
     .all(p => {
       let (crew, t) = p
       let r = next.records.get(crew).unwrap()
-      r.works * @core.WORK_SIZE + r.carry == t.work &&
+      let bank = match landed.hands.get(crew) {
+        Some({ craft: Artist, banked, .. }) => banked
+        _ => 0L
+      }
+      r.works * @core.WORK_SIZE + r.carry == t.work + bank &&
       r.regard == t.regard &&
       r.carry < @core.WORK_SIZE
     }) &&

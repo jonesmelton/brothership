@@ -121,6 +121,8 @@ test "happenings in sentences, from where the player stands" {
     Took(crew="bo", post=Craft),
     Stood(crew="bo"),
     Finished(crew="ann"),
+    Made(crew="ann", units=3 * 57600 + 100, percent=140),
+    Made(crew="bo", units=100, percent=100),
     Spoke(line="Who will sit with me?", about=4),
   ]
   debug_inspect(
@@ -139,6 +141,8 @@ test "happenings in sentences, from where the player stands" {
       #|  "A hand went to crafts.",
       #|  "A hand stood a watch to its end.",
       #|  "You finished a work.",
+      #|  "You made 3 crew-hours of work at 140%.",
+      #|  "A hand made under a crew-hour of work at 100%.",
       #|  "The Tigress: Who will sit with me?",
       #|]
     ),
@@ -151,13 +155,15 @@ test "a demand interrupts, crew moves are quiet, and a line takes its cause's pr
     { seq: 4, at: 0, happening: Opened(hazard=Breach), },
     { seq: 5, at: 0, happening: Took(crew="bo", post=Hull), },
     { seq: 6, at: 0, happening: Finished(crew="ann"), },
+    { seq: 9, at: 0, happening: Made(crew="ann", units=1, percent=100), },
+    { seq: 10, at: 0, happening: Made(crew="bo", units=1, percent=100), },
     { seq: 7, at: 0, happening: Spoke(line="Hands to the hull!", about=4), },
     { seq: 8, at: 0, happening: Spoke(line="Welcome.", about=5), },
   ]
   debug_inspect(
     story.map(e => priority(e, you="ann", story~)),
     content=(
-      #|[Interrupt, Quiet, Announce, Interrupt, Announce]
+      #|[Interrupt, Quiet, Announce, Announce, Quiet, Interrupt, Announce]
     ),
   )
 }

@@ -19,6 +19,7 @@ fn as_event(e : @core.CrossingEvent) -> @core.Event {
     Elapsed(_) => panic()
     Posted(crew~, post~) => Crew(crew~, intent=Posted(post~))
     Left(crew~) => Crew(crew~, intent=Left)
+    Made(crew~) => Crew(crew~, intent=Made)
     Crafted(crew~, craft~) => Crew(crew~, intent=Crafted(craft~))
     Watched(crew~, ticks~) => Crew(crew~, intent=Watched(ticks~))
     Ordered(crew~, order~) => Crew(crew~, intent=Ordered(order~))

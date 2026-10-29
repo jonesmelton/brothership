@@ -267,6 +267,9 @@ pub fn Scenario::fly(self : Scenario, ship : @core.Ship, seed : Int64) -> Run {
           Crafted(crew~, craft=actor.craft),
         )
       }
+      if c.hands.get(crew) is Some({ post: Craft, banked, .. }) && banked > 0L {
+        c = apply(c, Made(crew~))
+      }
       let watch = actor.watch()
       let roll = draw(seed, i, rounds[i], 1)
       let options = posts.map(p => {

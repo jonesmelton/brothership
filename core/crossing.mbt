@@ -81,6 +81,9 @@ pub(all) struct Hand {
   /// A standing order: the post to take when a phase begins. A watch in
   /// progress carries over to the new post.
   order : Order?
+  /// Work units accrued at the craft post and not yet made. See
+  /// `CrossingEvent::Made`.
+  banked : Int64
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
@@ -161,6 +164,9 @@ pub(all) enum CrossingEvent {
   Asked(post~ : Post?)
   /// The ship promotes `crew` to `rank`, one step, once arrived.
   Promoted(crew~ : String, rank~ : Int64)
+  /// `crew` makes the work they have banked, at 100 to 150 percent of it,
+  /// into their current craft.
+  Made(crew~ : String)
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
@@ -174,6 +180,8 @@ pub(all) suberror CrossingRejected {
   BadPromotion(crew~ : String, rank~ : Int64)
   /// Orders are for a phase still to come.
   BadOrder(phase~ : Phase)
+  /// There is no banked work to make.
+  NothingBanked(crew~ : String)
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
@@ -317,20 +325,6 @@ fn Crossing::rates(self : Crossing) -> (Int64, Int64) {
 }
 
 ///|
-/// Refit progress per tick from the engineers at work.
-fn Crossing::refit_rate(self : Crossing) -> Int64 {
-  self.hands
-  .values()
-  .fold(init=0L, (n, h) => {
-    if h.craft == Engineer {
-      n + self.craft_rate(h)
-    } else {
-      n
-    }
-  })
-}
-
-///|
 /// Whether a post's hours do anything now. Regard counts only these: the
 /// drive while it fires, the hull while it is short of full or a breach is
 /// open, and any craft.
@@ -393,14 +387,6 @@ pub fn Crossing::next_boundary(self : Crossing) -> Int64 {
       next = next.min(w.until - self.t)
     }
   }
-  if self.fit.refit is Some(r) {
-    let rate = self.refit_rate()
-    if rate > 0L {
-      next = next.min(
-        @math.ticks_to_empty(self.fit.cost(r) - self.fit.progress, rate),
-      )
-    }
-  }
   next.min(@math.MAX_TICKS)
 }
 
@@ -409,6 +395,7 @@ pub fn Crossing::next_boundary(self : Crossing) -> Int64 {
 fn Crossing::flow(self : Crossing, step : Int64) -> Crossing {
   let (rate, net) = self.rates()
   let tallies = self.tallies.copy()
+  let hands = self.hands.copy()
   for crew, h in self.hands {
     let q = h.quarters() * step
     let t = tallies.get(crew).unwrap_or(no_tally)
@@ -417,12 +404,13 @@ fn Crossing::flow(self : Crossing, step : Int64) -> Crossing {
       Hull => { ..t, hull: t.hull + q, }
       Craft => { ..t, craft: t.craft + q, }
     }
-    let work = if h.craft == Artist { self.craft_rate(h) * step } else { 0L }
     tallies[crew] = {
       ..t,
       regard: t.regard + self.regard_rate(h) * step,
-      work: t.work + work,
       served: t.served + step,
+    }
+    if h.post == Craft {
+      hands[crew] = { ..h, banked: h.banked + self.craft_rate(h) * step, }
     }
   }
   let demands = self.demands.map(d => {
@@ -434,7 +422,7 @@ fn Crossing::flow(self : Crossing, step : Int64) -> Crossing {
     t: self.t + step,
     left: @math.deplete(self.left, rate, step),
     hull: @math.settle(self.hull, net, step, HULL_FULL),
-    fit: { ..self.fit, progress: self.fit.progress + self.refit_rate() * step, },
+    hands,
     tallies,
     demands,
   }
@@ -619,6 +607,62 @@ fn Crossing::with_hand(self : Crossing, crew : String, h : Hand) -> Crossing {
 }
 
 ///|
+/// Lowest and highest percent of banked work a making can yield.
+pub const MAKE_MIN : Int64 = 100L
+
+///|
+pub const MAKE_MAX : Int64 = 150L
+
+///|
+/// The percent of their bank a crew member gets for making at tick `t`:
+/// `MAKE_MIN` to `MAKE_MAX`, fixed by the ship's `seed`, the crew id and `t`.
+/// An FNV-1a hash over `Int64` words and the id's UTF-16 code units, so js
+/// and native agree.
+pub fn craft_percent(seed : Int64, crew : String, t : Int64) -> Int64 {
+  let prime = 0x100000001b3L
+  let mut h = -3750763034362895579L
+  let mix = (word : Int64) => {
+    for i in 0..<8 {
+      h = (h ^ ((word >> (i * 8)) & 0xffL)) * prime
+    }
+  }
+  mix(seed)
+  mix(t)
+  for i in 0..<crew.length() {
+    h = (h ^ crew.code_unit_at(i).to_int64()) * prime
+  }
+  h = h ^ (h >> 32)
+  h = h * prime
+  h = h ^ (h >> 29)
+  MAKE_MIN + (h & 0x7fffffffL) % (MAKE_MAX - MAKE_MIN + 1L)
+}
+
+///|
+/// Make `crew`'s banked work at `percent` of it, into their current craft: an
+/// artist's work, or the engineers' refit progress. Does nothing if nothing
+/// is banked. Not settled; callers settle or go on to.
+fn Crossing::make(self : Crossing, crew : String, percent : Int64) -> Crossing {
+  guard self.hands.get(crew) is Some(h) && h.banked > 0L else { self }
+  let units = h.banked * percent / 100L
+  let hands = self.hands.copy()
+  hands[crew] = { ..h, banked: 0, }
+  match h.craft {
+    Artist => {
+      let tallies = self.tallies.copy()
+      let t = tallies.get(crew).unwrap_or(no_tally)
+      tallies[crew] = { ..t, work: t.work + units, }
+      { ..self, hands, tallies, }
+    }
+    Engineer =>
+      {
+        ..self,
+        hands,
+        fit: { ..self.fit, progress: self.fit.progress + units, },
+      }
+  }
+}
+
+///|
 pub fn Crossing::apply(
   self : Crossing,
   event : CrossingEvent,
@@ -642,11 +686,12 @@ pub fn Crossing::apply(
             rank: self.ship.rank(crew),
             watch: None,
             order: None,
+            banked: 0,
           })
       }
     Left(crew~) => {
       let h = self.hand(crew)
-      let c = self.break_watch(crew, h)
+      let c = self.make(crew, 100L).break_watch(crew, h)
       let hands = c.hands.copy()
       hands.remove(crew)
       { ..c, hands, }
@@ -676,6 +721,11 @@ pub fn Crossing::apply(
         raise Unbuildable(refit=r)
       }
       { ..self, fit: { ..self.fit, refit, }, }
+    }
+    Made(crew~) => {
+      let h = self.hand(crew)
+      guard h.banked > 0L else { raise NothingBanked(crew~) }
+      self.make(crew, craft_percent(self.ship.seed, crew, self.t))
     }
     Asked(post~) => { ..self, ask: post, }
     Promoted(crew~, rank~) => {
@@ -736,6 +786,11 @@ pub fn Crossing::forecast(self : Crossing) -> Int64? {
 /// repairs the hull, and refits stay fitted.
 pub fn Crossing::dock(self : Crossing) -> Ship? {
   guard self.phase == Arrived else { None }
+  let mut c = self
+  for crew, _ in self.hands {
+    c = c.make(crew, 100L)
+  }
+  let self = c.settle()
   let ship = self.ship
   let records = ship.records.copy()
   let mut delivered = 0L

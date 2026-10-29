@@ -29,6 +29,17 @@ let migrations : Array[String] = [
     #|  created_at integer not null
     #|) strict
   ),
+  // Banking changed when refits land, so a log from before it can hold a
+  // `Docked` ahead of the replayed arrival. Kept aside, not dropped.
+  "alter table event rename to event_before_banking",
+  (
+    #|create table event (
+    #|  seq         integer primary key,
+    #|  ship        text    not null,
+    #|  body        text    not null check (json_valid(body)),
+    #|  recorded_at integer not null default (unixepoch())
+    #|) strict
+  ),
 ]
 
 ///|

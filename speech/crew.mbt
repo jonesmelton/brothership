@@ -104,6 +104,8 @@ pub fn recount(
     Left(crew~) => "\{who(crew)} left the crew."
     Stood(crew~) => "\{who(crew)} stood a watch to its end."
     Finished(crew~) => "\{who(crew)} finished a work."
+    Made(crew~, units~, percent~) =>
+      "\{who(crew)} made \{@words.crew_hours_words(units)} of work at \{percent}%."
     Promoted(crew~, rank~, ..) =>
       "You promoted \{who(crew)} to \{@words.rank_name(rank)}."
     Asked(post=Some(post)) =>

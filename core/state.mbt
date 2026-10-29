@@ -5,6 +5,8 @@ pub(all) enum Intent {
   /// Takes a post, joining the crew if not aboard.
   Posted(post~ : Post)
   Left
+  /// Makes the work banked at the craft post, for 100 to 150 percent of it.
+  Made
   Crafted(craft~ : Craft)
   /// Stands a watch on the current post for `ticks`.
   Watched(ticks~ : Int64)
@@ -170,6 +172,7 @@ pub fn State::apply(self : State, event : Event) -> State raise Rejected {
         match intent {
           Posted(post~) => Posted(crew~, post~)
           Left => Left(crew~)
+          Made => Made(crew~)
           Crafted(craft~) => Crafted(crew~, craft~)
           Watched(ticks~) => Watched(crew~, ticks~)
           Ordered(order~) => Ordered(crew~, order~)

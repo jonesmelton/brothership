@@ -66,3 +66,48 @@ test "a ship's line is a happening and changes nothing else" {
     ),
   )
 }
+
+///|
+test "making banked work is told, and finishing and landing follow from it" {
+  let start = @core.State::initial(ship(), profile="test").apply(
+    Tick(at=DEPART_AT),
+  ) catch {
+    _ => panic()
+  }
+  let (_, s) = told(start, [
+    Departed(plan=plan20()),
+    Crew(crew="ann", intent=Posted(post=Craft)),
+    Crew(crew="ann", intent=Crafted(craft=Artist)),
+    Crew(crew="bo", intent=Posted(post=Craft)),
+    Crew(crew="bo", intent=Crafted(craft=Engineer)),
+    Crew(crew="cy", intent=Posted(post=Craft)),
+    Crew(crew="cy", intent=Crafted(craft=Engineer)),
+    Refitting(refit=Some(Baffles)),
+    Tick(at=DEPART_AT + 7 * 3600),
+  ])
+  let (said, _) = told(s, [
+    Crew(crew="ann", intent=Made),
+    Crew(crew="bo", intent=Made),
+    Crew(crew="cy", intent=Made),
+  ])
+  debug_inspect(
+    said,
+    content=(
+      #|[
+      #|  Made(crew="ann", units=520128, percent=129),
+      #|  Finished(crew="ann"),
+      #|  Made(crew="bo", units=554400, percent=110),
+      #|  Landed(refit=Baffles, level=1),
+      #|  Made(crew="cy", units=554400, percent=110),
+      #|  Landed(refit=Baffles, level=2),
+      #|]
+    ),
+  )
+  let (left, _) = told(s, [Crew(crew="ann", intent=Left)])
+  debug_inspect(
+    left,
+    content=(
+      #|[Left(crew="ann"), Finished(crew="ann")]
+    ),
+  )
+}

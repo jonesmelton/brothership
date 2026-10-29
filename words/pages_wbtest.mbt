@@ -319,7 +319,8 @@ test "what an artist earns" {
     content=(
       #|[
       #|  "4 hours of regard this crossing, earning 2 an hour.",
-      #|  "Work 1: 2 of 6 crew-hours.",
+      #|  "Banked 2 crew-hours of art. Make it now for 100% to 150% of it.",
+      #|  "Work 1: 0 of 6 crew-hours made.",
       #|  "Served 2 hours aboard this ship.",
       #|  "The ship can promote an ensign after 6 hours aboard: 4 hours to go.",
       #|]
@@ -330,7 +331,7 @@ test "what an artist earns" {
     content=(
       #|[
       #|  "No regard yet this crossing, earning 2 an hour.",
-      #|  "Work 1: 0 of 6 crew-hours.",
+      #|  "Work 1: 0 of 6 crew-hours made.",
       #|  "Served 0 hours aboard this ship.",
       #|  "The ship can promote an ensign after 6 hours aboard: 6 hours to go.",
       #|]
@@ -382,7 +383,7 @@ test "the ship page in port and under way" {
     content=(
       #|[
       #|  "Hull at 97%, wearing about 2.9% an hour.",
-      #|  "Plating to level 1: 0% built, with no engineer at work.",
+      #|  "Plating to level 1: 0% built. Engineers add to it when they make their banked work.",
       #|  "Recruits: 0 of 6.",
       #|  "0 of 3 works toward the next recruit.",
       #|]
@@ -393,7 +394,7 @@ test "the ship page in port and under way" {
     content=(
       #|[
       #|  "Hull at 100%.",
-      #|  "Plating to level 1: 0% built, with no engineer at work.",
+      #|  "Plating to level 1: 0% built. Engineers add to it when they make their banked work.",
       #|  "Recruits: 0 of 6.",
       #|  "0 of 3 works toward the next recruit.",
       #|]
@@ -417,7 +418,7 @@ test "the ship page with a refit under way" {
     content=(
       #|[
       #|  "Hull at 99%, wearing about 1% an hour.",
-      #|  "Baffles to level 1: 50% built, about an hour to go at this rate.",
+      #|  "Baffles to level 1: 0% built. Engineers add to it when they make their banked work.",
       #|  "Recruits: 0 of 6.",
       #|  "0 of 3 works toward the next recruit.",
       #|]
@@ -780,6 +781,33 @@ test "time served and the next promotion are stated honestly" {
     last2(sea(posts=[Drive], records=record(0, Some(4L))))[1],
     content=(
       #|"You hold the highest rank."
+    ),
+  )
+}
+
+///|
+test "what an engineer has banked, and what making it said" {
+  let mut s = sea(posts=[Craft], ticks=4L * 3600L)
+  s = s.apply(@core.Crew(crew="0", intent=@core.Crafted(craft=@core.Engineer))) catch {
+    _ => s
+  }
+  debug_inspect(
+    earning_sentences(s, you="0")[1],
+    content=(
+      #|"Banked 4 crew-hours of engineering. Make it now for 100% to 150% of it."
+    ),
+  )
+  let made = s.apply(@core.Crew(crew="0", intent=@core.Made)) catch { _ => s }
+  debug_inspect(
+    effect(s, made, you="0"),
+    content=(
+      #|["You made 4 crew-hours of work at 124%."]
+    ),
+  )
+  debug_inspect(
+    earning_sentences(made, you="0").filter(l => l.contains("anked")),
+    content=(
+      #|[]
     ),
   )
 }

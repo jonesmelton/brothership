@@ -31,6 +31,10 @@ pub const LIEUTENANT_COMMANDER : Int64 = 3
 
 pub const LIEUTENANT_JUNIOR : Int64 = 1
 
+pub const MAKE_MAX : Int64 = 150
+
+pub const MAKE_MIN : Int64 = 100
+
 pub const MAX_BOUNDARIES : Int32 = 4096
 
 pub const MAX_LEVEL : Int64 = 3
@@ -55,6 +59,8 @@ pub const WORK_SIZE : Int64 = 345_600
 
 pub fn band_of(Int64) -> Int64
 
+pub fn craft_percent(Int64, String, Int64) -> Int64
+
 pub fn demands_for(Plan, Int64, Int64) -> Array[Demand]
 
 pub fn happenings(State, Event, State) -> Array[Happening]
@@ -72,6 +78,7 @@ pub(all) suberror CrossingRejected {
   Unbuildable(refit~ : Refit)
   BadPromotion(crew~ : String, rank~ : Int64)
   BadOrder(phase~ : Phase)
+  NothingBanked(crew~ : String)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) suberror Rejected {
@@ -130,6 +137,7 @@ pub(all) enum CrossingEvent {
   Refitting(refit~ : Refit?)
   Asked(post~ : Post?)
   Promoted(crew~ : String, rank~ : Int64)
+  Made(crew~ : String)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Demand {
@@ -181,6 +189,7 @@ pub(all) struct Hand {
   rank : Int64
   watch : Watch?
   order : Order?
+  banked : Int64
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn Hand::quarters(Self) -> Int64
 
@@ -197,6 +206,7 @@ pub(all) enum Happening {
   Left(crew~ : String)
   Stood(crew~ : String)
   Finished(crew~ : String)
+  Made(crew~ : String, units~ : Int64, percent~ : Int64)
   Promoted(crew~ : String, rank~ : Int64, tally~ : Tally)
   Spoke(line~ : String, about~ : Int64)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
@@ -211,6 +221,7 @@ pub fn Hazard::post(Self) -> Post
 pub(all) enum Intent {
   Posted(post~ : Post)
   Left
+  Made
   Crafted(craft~ : Craft)
   Watched(ticks~ : Int64)
   Ordered(order~ : Order?)
