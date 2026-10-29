@@ -94,6 +94,10 @@ body {
 
 `font-synthesis: none` is what keeps a missing small-cap or italic from being faked. `font-variant-caps: all-small-caps` uses `smcp` and `c2sc`; with synthesis off, a font that lacks the feature will not get a synthetic one. Check `smcp` and `c2sc` in the build you ship.
 
+## Legible type
+
+The Type setting on the Ship page replaces both Latin faces with Atkinson Hyperlegible Next (Braille Institute, OFL, variable weight 200 to 800, roman and italic), subset to the same Latin range by `scripts/fonts.mbtx`. The stylesheet sets `data-face="legible"` on the root, which redefines `--font-display` and `--font-ui`. `--font-han` is untouched, so hanzi keep Noto Serif CJK TC. The font has `tnum`, `pnum`, `case` and `frac` but no `smcp`, `c2sc`, `onum`, `lnum` or `zero`, so small-caps labels display in lowercase and figures are lining without a slashed zero. The two files, 40 KB and 44 KB, are not preloaded and download only when the choice is made.
+
 ## Chinese
 
 The game uses Traditional Chinese (Hant) for the hanzi. Keep one script across conventional names, star names, and any other displayed hanzi; do not mix. A Simplified release is a full migration, not a per-string choice. The star names use 陰, and the cast entries use 顧大嫂, 林沖, 宋江. [`pennants.tsv`](../content/cast/pennants.tsv) once mixed scripts (13 rows written from `name_zh` instead of `name_hant`); [`scripts/pennants.mbtx`](../scripts/pennants.mbtx) now reads `name_hant` and validates that every conventional name there matches, so the file stays Traditional. A Traditional Chinese font will render a Simplified codepoint as Simplified, so no font choice fixes this; the source column does.
@@ -138,6 +142,7 @@ Fallback stack: `"Noto Serif CJK TC", "Songti TC", "PMingLiU", serif`. Test with
 
 - [EB Garamond](https://github.com/octaviopardo/EBGaramond12)
 - [Fira Sans](https://github.com/mozilla/Fira)
+- [Atkinson Hyperlegible Next](https://github.com/googlefonts/atkinson-hyperlegible-next)
 - [Source Serif](https://github.com/adobe-fonts/source-serif)
 - [Source Han Serif](https://github.com/adobe-fonts/source-han-serif)
 - [Noto CJK](https://github.com/notofonts/noto-cjk)

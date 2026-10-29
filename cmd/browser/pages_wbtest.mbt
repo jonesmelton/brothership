@@ -79,16 +79,21 @@ test "going to a page marks it read and drops the last effect" {
 ///|
 test "an effect is kept and spoken, unless the player wants silence" {
   let lines = ["Breach will be met.", "Regard rises."]
-  let said = aboard().with_effect(lines)
+  let (said, _) = aboard().with_effect(lines)
   assert_eq(said.effect, lines)
   assert_eq(said.said.polite, "Breach will be met. Regard rises.")
   assert_eq(said.said.count, 1)
-  let quiet = { ..aboard(), hear: Nothing, }.with_effect(lines)
+  let (quiet, _) = { ..aboard(), hear: Nothing, }.with_effect(lines)
+  let (native, _) = { ..aboard(), notify: true, }.with_effect(lines)
+  assert_eq(native.said.polite, "")
+  assert_eq(native.said.count, 0)
   assert_eq(quiet.effect, lines)
   assert_eq(quiet.said.polite, "")
   assert_eq(quiet.said.count, 0)
   // The next proposal replaces it.
-  assert_eq(said.with_effect(["Nothing changed."]).effect, ["Nothing changed."])
+  assert_eq(said.with_effect(["Nothing changed."]).0.effect, [
+    "Nothing changed.",
+  ])
 }
 
 ///|

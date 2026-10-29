@@ -148,13 +148,16 @@ fn Model::goto(self : Model, page : @words.Page) -> Model {
 ///|
 /// What the last choice changed, kept for the You page and spoken politely
 /// unless the player wants nothing read aloud. The next choice replaces it.
-fn Model::with_effect(self : Model, lines : Array[String]) -> Model {
-  let said = if self.hear == Nothing || lines.is_empty() {
-    self.said
+fn Model::with_effect(
+  self : Model,
+  lines : Array[String],
+) -> (Model, @rabbita.Cmd) {
+  let kept = { ..self, effect: lines, }
+  if self.hear == Nothing {
+    (kept, @rabbita.none)
   } else {
-    { polite: lines.join(" "), assertive: "", count: self.said.count + 1, }
+    kept.say(polite=lines.join(" "), assertive="")
   }
-  { ..self, effect: lines, said, }
 }
 
 ///|

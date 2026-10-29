@@ -76,3 +76,75 @@ extern "js" fn focus_id(id : String) -> Unit =
 ///|
 extern "js" fn set_document_title(title : String) -> Unit =
   #|(title) => { document.title = title; }
+
+///|
+/// What the player wants played on happenings, as `Sounds::name` gives it,
+/// or "".
+extern "js" fn stored_sounds() -> String =
+  #|() => localStorage.getItem("brothership.sounds") ?? ""
+
+///|
+extern "js" fn store_sounds(sounds : String) -> Unit =
+  #|(sounds) => localStorage.setItem("brothership.sounds", sounds)
+
+///|
+/// The typeface chosen, as `Face::name` gives it, or "".
+extern "js" fn stored_face() -> String =
+  #|() => localStorage.getItem("brothership.face") ?? ""
+
+///|
+extern "js" fn store_face(face : String) -> Unit =
+  #|(face) => localStorage.setItem("brothership.face", face)
+
+///|
+/// Set the page's typeface; the stylesheet keys on `data-face`.
+extern "js" fn set_face(face : String) -> Unit =
+  #|(face) => { document.documentElement.dataset.face = face; }
+
+///|
+/// Whether the browser has `document.ariaNotify`.
+extern "js" fn has_aria_notify() -> Bool =
+  #|() => typeof document.ariaNotify === "function"
+
+///|
+/// Speak `text` through the screen reader; `priority` is "normal" or "high".
+extern "js" fn aria_notify(text : String, priority : String) -> Unit =
+  #|(text, priority) => document.ariaNotify(text, { priority })
+
+///|
+/// Make the audio context, which a browser allows only after a gesture: now
+/// if the page has been touched lately, otherwise at the next one.
+extern "js" fn arm_sound() -> Unit =
+  #|() => {
+  #|  const make = () => {
+  #|    const C = window.AudioContext || window.webkitAudioContext;
+  #|    if (!C) return;
+  #|    window.__tones ??= new C();
+  #|    if (window.__tones.state === "suspended") window.__tones.resume();
+  #|  };
+  #|  if (window.__tones || navigator.userActivation?.isActive) make();
+  #|  else for (const e of ["pointerdown", "keydown"]) addEventListener(e, make, { once: true });
+  #|}
+
+///|
+/// Play a sine note on the armed context, with a 10 ms attack and a fade to
+/// silence; does nothing before `arm_sound` has made it.
+extern "js" fn play_note(
+  hz : Double,
+  at_ms : Double,
+  ms : Double,
+  gain : Double,
+) -> Unit =
+  #|(hz, at_ms, ms, gain) => {
+  #|  const c = window.__tones;
+  #|  if (!c || c.state !== "running") return;
+  #|  const t = c.currentTime + at_ms / 1000, end = t + ms / 1000;
+  #|  const o = c.createOscillator(), g = c.createGain();
+  #|  o.frequency.value = hz;
+  #|  g.gain.setValueAtTime(0.0001, t);
+  #|  g.gain.linearRampToValueAtTime(gain, t + 0.01);
+  #|  g.gain.exponentialRampToValueAtTime(0.0001, end);
+  #|  o.connect(g).connect(c.destination);
+  #|  o.start(t);
+  #|  o.stop(end + 0.02);
+  #|}

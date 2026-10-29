@@ -86,3 +86,11 @@ We may not have a blind playtester during the event. Testing is done by a sighte
 It does not reliably catch what daily screen reader users would notice: experienced users listen at much higher speech rates, have different tolerance for verbosity, navigate faster and by different routes, and are quicker to notice repetition. We correct for this by erring towards brevity and by following established conventions rather than inventing interaction patterns. After the event, we'll ask for feedback from blind players directly, such as the AudioGames.net community.
 
 Known risk: live region announcements in Safari on iOS are unreliable. They can be dropped, cut off, or queued badly when several arrive together. The announcement system is the core of the game for screen reader players, so it gets tested on a real device first, before the game is built around it.
+
+`document.ariaNotify(text, { priority })` is the mitigation. It has been Baseline since September 2026 (Chrome 141, Firefox 150, Safari on iOS 27) and queues speech after the current utterance (`normal`) or interrupts it (`high`), without depending on a DOM mutation being noticed. The client uses it where it exists, mapping interrupt to `high` and announce to `normal`, and sends each batch as one string because some screen readers speak only the most recent call. Where it does not exist, the client falls back to the two live regions, and never uses both for the same text. The risk stands for those browsers, and for how each screen reader treats a `high` call, which has not been tested on a device.
+
+## optional sounds and type
+
+Sounds are off by default and never required. When the player turns them on in Settings, a short tone marks each happening that is read aloud: a tone for an announcement, a two-note figure for an interrupt, a softer one for a ship's line. The sentence is still in the log and in the announcement. No cue plays for what the read-aloud setting leaves out. The audio context starts after a gesture, and each cue stays under 400 ms and 0.2 gain.
+
+The Type setting switches every Latin face to Atkinson Hyperlegible Next, for readers who find the book faces hard to read. The default is the book voice.
