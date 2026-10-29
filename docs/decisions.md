@@ -172,3 +172,14 @@ Why: an always-fixed bar eats the space left at 400% zoom, which
 `docs/accessibility.md` rules out.
 Revisit if: the bar needs to stay fixed at every size, or 34em hides it on
 common phones in landscape.
+
+## 2026-10-29 · officers stay aboard through port; one ship at a time
+`State.officers` holds the officers aboard across port stays; `Departed`
+seats them at their post and `Docked` discharges those leaving or idle since
+the last dock. The store, not `State::apply`, refuses an officer aboard
+another ship.
+Why: onboarding needs "aboard" to be a server fact that survives port; the
+per-ship log can't see other ships, and a second record outside the logs
+would drift from them.
+Revisit if: ships move to separate servers (then the one-ship rule needs a
+shared index), or idle discharge drops officers who were playing.

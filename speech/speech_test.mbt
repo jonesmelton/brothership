@@ -327,3 +327,60 @@ async test "the speaker waits while the mind decides, then hears its thoughts" {
   inspect(calls.val, content="2")
   assert_true(seen.val.contains("You thought: mend first."))
 }
+
+///|
+test "a new officer is greeted, even inside the quiet window" {
+  let story = [
+    entry(5, T0 + 60, Met(hazard=Flare)),
+    entry(6, T0 + 60, Signed(crew="officer-9f3a")),
+  ]
+  debug_inspect(
+    @speech.worth(story, quiet_until=T0 + 900).map(e => e.seq),
+    content="Some(6)",
+  )
+  debug_inspect(
+    @speech.worth(
+      [entry(6, T0, Discharged(crew="officer-9f3a"))],
+      quiet_until=0,
+    ),
+    content="None",
+  )
+}
+
+///|
+async test "a greeting prompt says whether the ship knows the officer, and no id" {
+  let store = departed()
+  defer store.close()
+  let state = store.snapshot("tigress").unwrap().state
+  let signed = entry(9, T0 + 900, Signed(crew="officer-9f3a"))
+  let call = speech().call(voice(), state, [signed], signed)
+  assert_false(call.user.contains("officer-9f3a"))
+  let head = call.user.split("# where you are").next().unwrap().to_owned()
+  debug_inspect(
+    head,
+    content=(
+      #|"# what just happened\n\nA hand signed on.\n\n# the officer signing on\n\nThey are new to you: an ensign you know nothing of yet. Welcome them aboard. You have no name for them, so do not invent one or anything else about them.\n\n"
+    ),
+  )
+  let known = {
+    ..state,
+    ship: {
+      ..state.ship,
+      records: {
+        "officer-9f3a": {
+          regard: 0,
+          works: 0,
+          carry: 0,
+          rank: Some(1),
+          served: 0,
+        },
+      },
+    },
+  }
+  let call = speech().call(voice(), known, [signed], signed)
+  assert_true(
+    call.user.contains(
+      "They have served aboard you before, and hold the rank of lieutenant junior grade.",
+    ),
+  )
+}

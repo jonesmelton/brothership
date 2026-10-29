@@ -21,6 +21,16 @@ You have no name or handle for them: speak of them by what they did.
 {% endif %}
 
 {% endif %}
+{% if newcomer %}
+# the officer signing on
+
+{% if newcomer.returning %}
+They have served aboard you before, and hold the rank of {{ newcomer.rank }}. Welcome them back. You have no name for them, so do not invent one or anything else about them.
+{% else %}
+They are new to you: an ensign you know nothing of yet. Welcome them aboard. You have no name for them, so do not invent one or anything else about them.
+{% endif %}
+
+{% endif %}
 # where you are
 
 {% for line in readout %}

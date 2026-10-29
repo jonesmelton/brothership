@@ -44,7 +44,8 @@ const MAX_WORDS : Int32 = 60
 
 ///|
 /// How long after a line the ship keeps quiet about anything but a
-/// departure, an arrival or a new demand, in seconds.
+/// departure, an arrival, a promotion, a new demand or a new officer, in
+/// seconds.
 pub const QUIET : Int64 = 900
 
 ///|
@@ -53,13 +54,12 @@ fn weight(h : @core.Happening) -> Int32? {
   match h {
     Opened(_) => Some(7)
     Missed(_) | Promoted(..) => Some(6)
-    Began(phase=Arrived) | Departed => Some(5)
+    Began(phase=Arrived) | Departed | Signed(_) => Some(5)
     Began(_) => Some(4)
     Met(_) => Some(3)
     Landed(..) | Made(..) => Some(2)
     Docked(_)
     | Asked(_)
-    | Signed(_)
     | Discharged(_)
     | Took(..)
     | Left(_)
@@ -71,9 +71,10 @@ fn weight(h : @core.Happening) -> Int32? {
 
 ///|
 /// Spoken even within `QUIET` of the last line. A promotion lands with the
-/// arrival, which is urgent anyway, and must not be lost to the quiet.
+/// arrival, which is urgent anyway, and must not be lost to the quiet. A
+/// new officer is greeted when they come aboard or not at all.
 fn urgent(h : @core.Happening) -> Bool {
-  h is (Opened(_) | Departed | Began(phase=Arrived) | Promoted(..))
+  h is (Opened(_) | Departed | Began(phase=Arrived) | Promoted(..) | Signed(_))
 }
 
 ///|
@@ -222,9 +223,20 @@ pub fn Speech::call(
     Promoted(crew~, rank~, tally~) => officer_facts(state, crew, rank, tally)
     _ => Json::null()
   }
+  // What the ship knows of an officer signing on: only whether it has
+  // carried them before, and their rank if so.
+  let newcomer : Json = match about.happening {
+    Signed(crew~) =>
+      {
+        "returning": Json(state.ship.records.contains(crew)),
+        "rank": Json(@words.rank_name(state.rank(crew))),
+      }
+    _ => Json::null()
+  }
   let user = self.prompts.render("user", {
     "happening": Json(@words.told(about.happening, you="", ship~)),
     "officer": officer,
+    "newcomer": newcomer,
     "readout": Json(@words.where_sentences(state)),
     "roster": Json(roster(state, story)),
     "recent": Json(recent),

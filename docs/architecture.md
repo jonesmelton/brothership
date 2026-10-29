@@ -198,7 +198,8 @@ it with `GATE_MODEL`, and appends `Spoke(line, about)` through
 a line that opens like, or reuses most of the words of, one of the ship's
 last five is dropped (`@speech.repeats`). A failed, blocked, passed or
 repeated line leaves nothing. After a line the ship keeps quiet for 15
-minutes except for departures, arrivals, promotions and new demands. The
+minutes except for departures, arrivals, promotions, new demands and new
+officers, whom it greets knowing only whether it has carried them before. The
 speaker waits while the mind is deciding, so a line can speak to the
 choice. The runtime image copies `content/` for this.
 
