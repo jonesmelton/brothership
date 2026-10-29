@@ -329,5 +329,7 @@ fn reckoning_section(s : @core.State) -> @rabbita.Html {
     }
     None => [map_figure(s), figures("Next leg", @words.next_leg_rows(s))]
   }
-  @html.section([@html.h3("Reckoning"), ..body])
+  @html.section([
+    @html.details([@html.summary("Instruments and reckoning"), ..body]),
+  ])
 }

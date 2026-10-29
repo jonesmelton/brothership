@@ -242,6 +242,122 @@ pub fn where_sentences(s : @core.State) -> Array[String] {
 }
 
 ///|
+/// The Voyage page's opening readout, in the order of a shipping forecast:
+/// phase, arrival, hull, drive. Empty in port, where `where_sentences`
+/// already opens with the news.
+pub fn readout(s : @core.State) -> String {
+  guard s.crossing() is Some(c) else { "" }
+  let to = @ships.leg(s.ship.crossings).1.name
+  let hull = "Hull \{pct(c.hull, @core.HULL_FULL)}%."
+  guard c.phase != Arrived else { "Arrived at \{to}. Docking. \{hull}" }
+  let phase = match c.phase {
+    Burn => "Burn."
+    Coast => "Coast."
+    Approach | Arrived => "Approach."
+  }
+  let arrival = match c.forecast() {
+    Some(at) => "\{to} \{in_words(at - c.t)}."
+    None => "\{to} too far off to forecast."
+  }
+  let drive = if c.firing() {
+    " Drive \{pct(c.setting(), @math.SETTING_FULL)}%, \{c.count(Drive)} of \{c.fit.needed} hands."
+  } else {
+    ""
+  }
+  "\{phase} \{arrival} \{hull}\{drive}"
+}
+
+///|
+/// What `where_sentences` says that `readout` does not: the distance, the
+/// turn, who is where and the open demands. In port, all of it.
+pub fn where_rest(s : @core.State) -> Array[String] {
+  guard s.crossing() is Some(c) else { return where_sentences(s) }
+  guard c.phase != Arrived else { [] }
+  let hands = if c.hands.is_empty() {
+    "Nobody is on a post yet."
+  } else {
+    "\{plural(c.count(Drive), "hand", "hands")} on the drive, \{c.count(Hull)} on the hull, \{c.count(Craft)} at crafts."
+  }
+  [
+    ..reckoning_sentences(c, s.ship.crossings),
+    ..turn_sentence(c),
+    hands,
+    ..c.demands.filter(d => d.status == Open).map(demand_sentence),
+  ]
+}
+
+///|
+/// What `crew` taking `post` would change, in a few words for a control's
+/// label, found by applying the post to a copy of the crossing. Empty when
+/// `crew` already holds the post, the crossing is over, or nothing changes.
+pub fn post_effect(
+  c : @core.Crossing,
+  crew : String,
+  post : @core.Post,
+) -> String {
+  guard c.phase != Arrived && c.hands.get(crew).map(h => h.post) != Some(post) else {
+    ""
+  }
+  let after = try c.apply(Posted(crew~, post~)) catch {
+    _ => return ""
+  } noraise {
+    after => after
+  }
+  match post {
+    Drive =>
+      match (c.forecast(), after.forecast()) {
+        (Some(now), Some(then)) => {
+          let gap = (now - then).abs()
+          if gap < 1800L {
+            "arrival about the same"
+          } else if then < now {
+            "arrive \{about(gap)} sooner"
+          } else {
+            "arrive \{about(gap)} later"
+          }
+        }
+        _ => ""
+      }
+    Hull => {
+      let was = c.trend(crew).hull
+      let will = after.trend(crew).hull
+      if will == was {
+        "hull unchanged"
+      } else if will >= 0L {
+        if was < 0L {
+          "hull stops wearing"
+        } else {
+          "hull mends faster"
+        }
+      } else if was >= 0L {
+        "hull starts to wear"
+      } else {
+        let change = (was - will).abs() * 100L / was.abs()
+        if will > was {
+          "hull wear down \{change}%"
+        } else {
+          "hull wear up \{change}%"
+        }
+      }
+    }
+    Craft => {
+      let banked = (k : @core.Crossing) => {
+        try k.apply(Elapsed(ticks=@core.HOUR)) catch {
+          _ => 0L
+        } noraise {
+          next => next.hands.get(crew).map(h => h.banked).unwrap_or(0L)
+        }
+      }
+      if banked(after) > banked(c) {
+        "banks work for your craft"
+      } else {
+        ""
+      }
+    }
+  }
+}
+
+///|
 pub fn ask_sentence(c : @core.Crossing) -> Array[String] {
   match c.ask {
     Some(post) => ["The ship asks for hands on \{post_name(post)}."]

@@ -304,3 +304,102 @@ test "a promotion is told in full and announced" {
     ),
   )
 }
+
+///|
+test "the readout is the shipping forecast, front-loaded" {
+  debug_inspect(
+    readout(sea()),
+    content=(
+      #|"Burn. Occitan in about 18 hours. Hull 100%. Drive 35%, 0 of 5 hands."
+    ),
+  )
+  debug_inspect(
+    readout(sea(posts=[Drive, Hull])),
+    content=(
+      #|"Burn. Occitan in about 15 hours. Hull 100%. Drive 58%, 1 of 5 hands."
+    ),
+  )
+  debug_inspect(
+    readout(sea(posts=[Drive], ticks=7 * 3600L)),
+    content=(
+      #|"Coast. Occitan in about 6 hours. Hull 46%."
+    ),
+  )
+}
+
+///|
+test "what the page adds to the readout leaves out what it says" {
+  for line in where_rest(sea(posts=[Drive, Hull])) {
+    assert_false(line.contains("Hull at"))
+    assert_false(line.contains("Arriving"))
+  }
+}
+
+///|
+test "a post says what it would change, and nothing for the one held" {
+  guard sea(posts=[Drive, Hull]).crossing() is Some(c) else { panic() }
+  let effects = (crew : String) => {
+    let posts : Array[@core.Post] = [Drive, Hull, Craft]
+    posts.map(p => post_effect(c, crew, p))
+  }
+  debug_inspect(
+    effects("0"),
+    content=(
+      #|["", "hull unchanged", "banks work for your craft"]
+    ),
+  )
+  debug_inspect(
+    effects("1"),
+    content=(
+      #|["arrive about 2 hours sooner", "", "banks work for your craft"]
+    ),
+  )
+  debug_inspect(
+    effects("nobody"),
+    content=(
+      #|[
+      #|  "arrive about 2 hours sooner",
+      #|  "hull unchanged",
+      #|  "banks work for your craft",
+      #|]
+    ),
+  )
+}
+
+///|
+test "a post's effect on a worn hull" {
+  guard sea(posts=[Drive, Hull, Craft]).crossing() is Some(c) else { panic() }
+  let worn = { ..c, hull: 500_000_000L, band: 1L, }
+  let posts : Array[@core.Post] = [Drive, Hull, Craft]
+  debug_inspect(
+    ["0", "1", "2"].map(crew => posts.map(p => post_effect(worn, crew, p))),
+    content=(
+      #|[
+      #|  ["", "hull mends faster", "banks work for your craft"],
+      #|  ["arrival about the same", "", "banks work for your craft"],
+      #|  ["arrive about 2 hours sooner", "hull mends faster", ""],
+      #|]
+    ),
+  )
+}
+
+///|
+test "a post's effect on a hull that wears" {
+  guard sea(posts=[Drive, Drive, Drive, Drive, Drive]).crossing() is Some(c) else {
+    panic()
+  }
+  let worn = { ..c, hull: 500_000_000L, band: 1L, }
+  let posts : Array[@core.Post] = [Drive, Hull]
+  debug_inspect(
+    posts.map(p => post_effect(worn, "0", p)) +
+    posts.map(p => post_effect(worn, "9", p)),
+    content=(
+      #|[
+      #|  "",
+      #|  "hull stops wearing",
+      #|  "arrival about the same",
+      #|  "hull stops wearing",
+      #|]
+    ),
+  )
+}

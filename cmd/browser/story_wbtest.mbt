@@ -96,3 +96,15 @@ test "while you were away covers the absence, not this visit" {
     ),
   )
 }
+
+///|
+test "the stage holds the latest line, and nothing before the first" {
+  let entries = [
+    entry(1, Spoke(line="Hands to the hull!", about=0)),
+    entry(2, Began(phase=Coast)),
+    entry(3, Spoke(line="Coasting, then.", about=2)),
+    entry(4, Took(crew="cy", post=Drive)),
+  ]
+  assert_eq(latest_line(entries), Some("Coasting, then."))
+  assert_eq(latest_line(entries[1:2].to_owned()), None)
+}

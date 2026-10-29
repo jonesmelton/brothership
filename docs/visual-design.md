@@ -61,7 +61,7 @@ Small caps are always `all-small-caps` from the font (`smcp`, `c2sc`), with `fon
 - One column at every width, `max-width: 36rem`, centered, with `1rem` side padding (`1.5rem` from 40rem wide). Desktop gets the phone layout with more margin, not a second layout.
 - Sections are separated by a `--rule` hairline and `2rem` of space, not boxes.
 - The game has three pages, You, Voyage and Ship, each with its own log, reached from the [bar of pages](#bar-of-pages). The masthead is on all of them. A page opens with its `h2`, which takes focus when the page changes; its sections are `h3`.
-- The vertical order of each page is fixed and never changes with state. You: rank, since you were here, your post, choices, log. Voyage: where the ship is, reckoning, demands, while you were away, log. Ship: the ship, while you were away, log, read aloud, other ships. A section with nothing to say says so in a sentence rather than disappearing.
+- The vertical order of each page is fixed and never changes with state. Every page opens, under the masthead, with [the ship says](#the-ship-says), then its own `h2`. You: rank, since you were here, your post, choices, log. Voyage: where the ship is, demands, the instruments and reckoning (collapsed), while you were away, log. Ship: the ship, while you were away, log, read aloud, other ships. A section with nothing to say says so in a sentence rather than disappearing.
 - The bar of pages is the only fixed element, and only on viewports at least 34em tall (see below). Otherwise the page is a plain scroll, and at 400% zoom it is.
 
 ## components
@@ -100,7 +100,11 @@ The compact form, for a label beside a crew member, is the abbreviation and insi
 
 ### ship's voice
 
-What the ship itself says, as opposed to telemetry about it: today the ask ("The ship asks for hands on the drive."), later the model's own lines. A `p class="voice"` in EB Garamond with a 2px `--accent` rule at its left. Model text goes here once it has passed the gate; while it is pending, the sentence that prompted it stands alone (see "model latency" in [architecture](architecture.md)).
+What the ship itself says, as opposed to telemetry about it: a gated line. A `p class="voice"` in EB Garamond with a 2px `--accent` rule at its left. In the log it is set at the size above; on the stage it is 1.75rem with a 3px rule. Model text appears here only once it has passed the gate (see "model latency" in [architecture](architecture.md)).
+
+### the ship says
+
+An `h2` section under the masthead of every page, before the page's own `h2`, with no rule above it and a fixed position. In order: the ship's latest line as ship's voice, the ship's current ask as a sentence ("The ship asks for hands on the drive."), and, while a line is being written or a choice weighed, the pending sentence in `--quiet` italic Garamond. With no line yet it says "The Tigress has not spoken yet." instead of disappearing. It is not a live region: a line is announced when it lands, by the announcement regions. The log still lists every line.
 
 ### bars
 
@@ -116,7 +120,7 @@ The track is a container query context. Below 13em wide, which is a narrow phone
 
 ### log
 
-The ship's story, newest first, the latest 20 entries: one `li` per happening, its sentence, then how long ago in `--quiet` at 0.875rem. A ship's line in the log is set as the ship's voice. Each page's log holds only its own happenings (`@words.page_of`). An entry newer than the last visit has a 4px `--accent` rule at its left; the away list says the same in words, so the rule is never the only signal. The list has no markers, so it carries `role="list"`, which Safari otherwise drops. While a line is being written, a `--quiet` italic Garamond sentence above the list says the ship is finding words; it is not a live region, since the line itself is announced when it lands.
+The ship's story, newest first, the latest 20 entries: one `li` per happening, its sentence, then how long ago in `--quiet` at 0.875rem. A ship's line in the log is set as the ship's voice. Each page's log holds only its own happenings (`@words.page_of`). An entry newer than the last visit has a 4px `--accent` rule at its left; the away list says the same in words, so the rule is never the only signal. The list has no markers, so it carries `role="list"`, which Safari otherwise drops. The pending sentence ("finding words", "weighing a choice") is on the stage, not in the log.
 
 On the Ship page, a choice group sets what is read aloud as it happens: everything, urgent only, or nothing.
 
@@ -135,13 +139,17 @@ Each choice group is a `fieldset` whose `legend` is a label. Controls are native
 - pressed (`aria-pressed="true"`): `--ink` fill, `--paper` text, weight 600;
 - hover: `--ink` border; focus: 3px `--accent` outline, offset 2px.
 
+The three post buttons carry a second line, `span.effect-note` at 0.875rem in `--quiet`, naming what taking that post would change, as `@words.post_effect` computes by applying the post to a copy of the crossing: "arrive about 2 hours sooner" for the drive, "hull stops wearing" for the hull, "banks work for your craft" for a craft. A visually hidden comma precedes it in the button's accessible name. The post already held shows none.
+
 ### ship register
 
 The ship list ("Choose a ship", "Other ships") is the same buttons, each carrying the ship's title on one line: pennant, conventional name (Medium, `aria-hidden`), epithet. The accessible name is the English title, as in the masthead.
 
 ### reckoning
 
-The crossing as the worlds see it, on the Voyage page under "Where the ship is". Built in `cmd/browser/reckoning.mbt` from `@ships.reckon` and `@words.reckoning_rows`; the physics and units follow research/liveship-travel-math.md, section 11.
+"Where the ship is" opens with the readout, a `p class="readout"` in the order of a shipping forecast: phase, arrival, hull, drive ("Burn. Occitan in about 12 hours. Hull 97%. Drive 58%, 1 of 5 hands."). The voyage track follows, then the sentences the readout leaves out. Demands come next.
+
+The crossing as the worlds see it follows the demands, in a native `details` that is collapsed by default, its `summary` "Instruments and reckoning". The summary is at least 2.75rem tall. Built in `cmd/browser/reckoning.mbt` from `@ships.reckon` and `@words.reckoning_rows`; the physics and units follow research/liveship-travel-math.md, section 11.
 
 Underway, in this order:
 

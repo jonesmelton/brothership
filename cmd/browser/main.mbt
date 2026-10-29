@@ -453,41 +453,90 @@ fn title(name : String) -> Array[@rabbita.Html] {
 }
 
 ///|
-/// Where the ship is, with the voyage track after the phase sentence and
-/// the ship's ask in its own voice.
+/// Where the ship is: the readout first, then the voyage track and what the
+/// readout leaves out. In port there is no readout and no track.
 fn where_section(s : @core.State) -> @rabbita.Html {
-  let lines = @words.where_sentences(s)
-  let ask = match s.crossing() {
-    Some(c) => @words.ask_sentence(c)
-    None => []
+  let readout = match @words.readout(s) {
+    "" => []
+    line => [@html.p(class="readout", line)]
   }
-  let body = []
-  for i, line in lines {
-    if ask.contains(line) {
-      body.push(@html.p(class="voice", line))
-    } else {
-      body.push(@html.p(line))
-    }
-    if i == 0 && s.crossing() is Some(c) && c.phase != Arrived {
-      body.push(track(c))
-    }
+  let drawn = match s.crossing() {
+    Some(c) if c.phase != Arrived => [track(c)]
+    _ => []
   }
-  @html.section([@html.h3("Where the ship is"), ..body])
+  @html.section(
+    [
+      @html.h3("Where the ship is"),
+      ..readout,
+      ..drawn,
+      ..sentences(@words.where_rest(s)),
+    ],
+  )
 }
 
 ///|
-/// A choice. `pressed` marks the one in force, as a toggle button.
+/// The ship on stage, under the masthead of every page: its latest line in
+/// its own voice, what it asks for, and that it is writing or weighing. Not
+/// a live region; a line is announced as it lands.
+fn stage_section(model : Model, s : @core.State) -> @rabbita.Html {
+  let ship = epithet(model)
+  let said = match latest_line(model.told.entries) {
+    Some(line) => @html.p(class="voice stage-voice", line)
+    None => @html.p("\{ship} has not spoken yet.")
+  }
+  let ask = match s.crossing() {
+    Some(c) if c.phase != Arrived => sentences(@words.ask_sentence(c))
+    _ => []
+  }
+  let pending = match model.told {
+    { speaking: true, .. } =>
+      [@html.p(class="pending", "\{ship} is finding words.")]
+    { thinking: true, .. } =>
+      [@html.p(class="pending", "\{ship} is weighing a choice.")]
+    _ => []
+  }
+  @html.section(
+    class="stage",
+    [@html.h2("The ship says"), said, ..ask, ..pending],
+  )
+}
+
+///|
+/// The ship's latest line in `entries`, oldest first.
+fn latest_line(entries : Array[@core.Entry]) -> String? {
+  for i = entries.length() - 1; i >= 0; i = i - 1 {
+    if entries[i].happening is Spoke(line~, ..) {
+      return Some(line)
+    }
+  }
+  None
+}
+
+///|
+/// A choice. `pressed` marks the one in force, as a toggle button. `effect`
+/// is a quieter second line saying what it would change; it is part of the
+/// button's name, after a comma.
 fn choice(
   emit : @rabbita.Emit[Msg],
   label : String,
   intent : @core.Intent,
   pressed? : Bool,
+  effect~ : String = "",
 ) -> @rabbita.Html {
   let attrs = match pressed {
     Some(p) => @html.Attrs::build().aria_pressed(p.to_string())
     None => @html.Attrs::build()
   }
-  @html.button(type_="button", on_click=emit(Propose(intent)), attrs~, label)
+  let text = if effect == "" {
+    [@html.text(label)]
+  } else {
+    [
+      @html.text(label),
+      @html.span(class="visually-hidden", ", "),
+      @html.span(class="effect-note", effect),
+    ]
+  }
+  @html.button(type_="button", on_click=emit(Propose(intent)), attrs~, text)
 }
 
 ///|
@@ -522,7 +571,13 @@ fn choices(
     "post",
     "Post",
     posts.map(p => {
-      choice(emit, @words.post_label(p), Posted(post=p), pressed=at == Some(p))
+      choice(
+        emit,
+        @words.post_label(p),
+        Posted(post=p),
+        pressed=at == Some(p),
+        effect=@words.post_effect(c, officer, p),
+      )
     }) +
     (if hand is Some(_) { [choice(emit, "Leave the crew", Left)] } else { [] }),
   )
@@ -684,6 +739,7 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
         Ship => ship_page(model, emit, s)
       }
       [
+        stage_section(model, s),
         @html.h2(
           class="page",
           id="page",
@@ -777,8 +833,8 @@ fn voyage_page(
   }
   [
     where_section(s),
-    reckoning_section(s),
     @html.section([@html.h3("Demands"), ..outlook]),
+    reckoning_section(s),
     away_section(model, Voyage, "While you were away", []),
     log_section(model, Voyage),
   ]
@@ -905,13 +961,6 @@ fn log_section(model : Model, page : @words.Page) -> @rabbita.Html {
         [@html.text(line), @html.text(" "), @html.span(class="when", when)],
       )
     })
-  let speaking = match (page, model.told) {
-    (Ship, { speaking: true, .. }) =>
-      [@html.p(class="pending", "\{ship} is finding words.")]
-    (Ship, { thinking: true, .. }) =>
-      [@html.p(class="pending", "\{ship} is weighing a choice.")]
-    _ => []
-  }
   let log = if items.is_empty() {
     [@html.p("Nothing yet.")]
   } else {
@@ -920,7 +969,7 @@ fn log_section(model : Model, page : @words.Page) -> @rabbita.Html {
       @html.ul(class="log", attrs=@html.Attrs::build().role("list"), items),
     ]
   }
-  @html.section([@html.h3("Log"), ..speaking, ..log])
+  @html.section([@html.h3("Log"), ..log])
 }
 
 ///|
