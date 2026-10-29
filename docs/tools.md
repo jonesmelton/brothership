@@ -32,6 +32,7 @@ The officers are the same in every run:
 | `departure` | an hour out of port |
 | `demand` | the crossing's first demand opens |
 | `coast` | the coast begins |
+| `ensigns` | six hours out, every officer an ensign; it chooses promotions underway |
 | `arrival` | the ship arrives; it chooses promotions instead of a turn |
 
 | flag | default | meaning |
@@ -41,7 +42,7 @@ The officers are the same in every run:
 | `--gate M` | `meta:muse-spark-1.3-contributor` | model that gates the line |
 | `--samples N` | 3 | choices sampled per ship and moment |
 | `--replay` | off | use only cached replies; a miss is an error |
-| scenario names | all four | which moments to run |
+| scenario names | all five | which moments to run |
 
 For each scenario it prints the readout and roster the model sees, then for
 each ship a tally of its choices (`the hull ×2, the drive ×1`), each
@@ -49,7 +50,7 @@ sample's private reason, and its line. The line follows the first sample's
 ask. A line the gate blocks, the model passes on, or that repeats is shown
 in parentheses with the reason. The last line is the estimated spend.
 
-All four scenarios on the contributor tier take about 10 minutes and cost a
+All five scenarios on the contributor tier take about 10 minutes and cost a
 few cents:
 
 ```sh

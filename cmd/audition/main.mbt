@@ -5,7 +5,7 @@
 //   moon run cmd/audition -- [--replay] [--mind M] [--writer M] [--gate M]
 //     [--samples N] [scenario ...]
 //
-// Scenarios: departure, demand, coast, arrival (default: all). Each is
+// Scenarios: departure, demand, coast, ensigns, arrival (default: all). Each is
 // flown by the Tigress with four scripted officers; only the character
 // changes. Replies are cached in .cache/llm, so a rerun is free.
 
@@ -127,6 +127,13 @@ let scenarios : Array[Scenario] = [
     stop: (_, story) => has(story, h => h is Began(phase=Coast)),
   },
   {
+    name: "ensigns",
+    about: "six hours out, every officer still an ensign; the ship may promote underway",
+    stop: (s, _) => {
+      s.crossing() is Some(c) && c.served("ann") >= @ships.ENSIGN_SERVICE
+    },
+  },
+  {
     name: "arrival",
     about: "arrived; the ship chooses whom to promote before docking",
     stop: (s, _) => @ships.arrived_at(s) is Some(_),
@@ -225,6 +232,7 @@ async fn main {
       .last()
       .unwrap_or(story.last().unwrap())
     let arrival = @ships.arrived_at(state) is Some(_)
+    let cycle = !arrival && @ships.bottom_heavy(c, officer=_ => true)
     let names = @speech.handles(c)
     for pair in voices {
       let (voice, values) = pair
@@ -234,7 +242,7 @@ async fn main {
       let thoughts = []
       for sample in 1..<=samples {
         try {
-          if arrival {
+          if arrival || cycle {
             let call = {
               ..prompts.muster(
                 voice,
@@ -243,7 +251,7 @@ async fn main {
                 state,
                 story,
                 thoughts=[],
-                arrived=true,
+                arrived=arrival,
               ),
               sample,
             }
