@@ -177,6 +177,9 @@ hours, and rank does not limit a watch. A hand on watch counts as 5 quarters
 instead of 4, on any post. A watch stood to its end earns an hour of regard
 for each hour stood. A post change before the end breaks it and costs two
 hours of regard for each hour already stood, never taking regard below zero.
+Arrival ends every watch, paid for the part stood, so a watch that would run
+past arrival costs nothing. A watch begun after arrival ends at once and
+counts for nothing.
 
 What the watch trades away is flexibility. A long watch on the drive that
 runs past turnover keeps a hand on a post the coast does not need, unless a

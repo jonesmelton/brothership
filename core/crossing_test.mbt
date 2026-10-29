@@ -263,6 +263,45 @@ test "a watch stood to its end pays; one broken costs" {
 }
 
 ///|
+test "arrival ends every watch and pays for the part stood" {
+  let c = crew([Drive, Drive, Drive, Drive])
+  let c = c.apply(Elapsed(ticks=arrival(c) - @core.HOUR)) catch { _ => panic() }
+  let c = c.apply(Watched(crew="0", ticks=2L * @core.HOUR)) catch {
+    _ => panic()
+  }
+  let before = c.tallies.get("0").unwrap().regard
+  let landed = c.project().unwrap()
+  let t = landed.tallies.get("0").unwrap()
+  debug_inspect(
+    (t.watches_stood, t.watches_broken, landed.hands.get("0").unwrap().watch),
+    content="(1, 0, None)",
+  )
+  let rate = landed.ship.values.weight(Drive) * @core.WATCH_HAND
+  inspect(
+    t.regard - before == @core.HOUR * (rate + @core.WATCH_BONUS),
+    content="true",
+  )
+  // Leaving before the ship docks breaks nothing.
+  let left = landed.apply(Left(crew="0")) catch { _ => panic() }
+  inspect(left.tallies.get("0").unwrap() == t, content="true")
+}
+
+///|
+test "a watch begun after arrival is dropped uncounted" {
+  let landed = crew([Drive]).project().unwrap()
+  let c = landed.apply(Watched(crew="0", ticks=@core.HOUR)) catch {
+    _ => panic()
+  }
+  debug_inspect(c.hands.get("0").unwrap().watch, content="None")
+  inspect(
+    c.tallies.get("0").unwrap() == landed.tallies.get("0").unwrap(),
+    content="true",
+  )
+  let c = c.apply(Posted(crew="0", post=Hull)) catch { _ => panic() }
+  inspect(c.tallies.get("0").unwrap().watches_broken, content="0")
+}
+
+///|
 test "a standing order takes its post when the phase begins" {
   let c = crew([Craft, Craft]).apply(
     Ordered(crew="0", order=Some({ phase: Approach, post: Drive, })),

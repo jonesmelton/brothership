@@ -462,16 +462,22 @@ fn Crossing::settle(self : Crossing) -> Crossing {
     c = { ..c, band, }
     changed = true
   }
-  if c.hands.values().any(h => h.watch is Some(w) && w.until <= c.t) {
+  // Arrival ends every watch, paid for the part stood. One begun after
+  // arrival stood nothing and is dropped uncounted.
+  let ends = (w : Watch) => w.until <= c.t || c.phase == Arrived
+  if c.hands.values().any(h => h.watch is Some(w) && ends(w)) {
     let hands = c.hands.copy()
     let tallies = c.tallies.copy()
     for crew, h in c.hands {
-      if h.watch is Some(w) && w.until <= c.t {
-        let t = tallies.get(crew).unwrap_or(no_tally)
-        tallies[crew] = {
-          ..t,
-          regard: t.regard + (w.until - w.from) * WATCH_BONUS,
-          watches_stood: t.watches_stood + 1L,
+      if h.watch is Some(w) && ends(w) {
+        let stood = w.until.min(c.t) - w.from
+        if stood > 0L {
+          let t = tallies.get(crew).unwrap_or(no_tally)
+          tallies[crew] = {
+            ..t,
+            regard: t.regard + stood * WATCH_BONUS,
+            watches_stood: t.watches_stood + 1L,
+          }
         }
         hands[crew] = { ..h, watch: None, }
       }
