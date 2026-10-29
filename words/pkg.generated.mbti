@@ -14,6 +14,8 @@ pub fn ago(Int64) -> String
 
 pub fn ask_sentence(@core.Crossing) -> Array[String]
 
+pub fn asks_answered(Array[@core.Entry]) -> Map[String, Int64]
+
 pub fn craft_label(@core.Craft) -> String
 
 pub fn craft_name(@core.Craft) -> String
@@ -31,6 +33,10 @@ pub fn hazard_name(@core.Hazard) -> String
 pub fn in_words(Int64) -> String
 
 pub fn instrument_rows(@core.State) -> Array[(String, String)]
+
+pub fn landfall_away(Array[@core.Entry], after~ : Int64, upto~ : Int64) -> Array[String]
+
+pub fn landfall_sentences(Array[@core.Entry], you~ : String, now~ : Int64) -> Array[String]
 
 pub fn next_leg_rows(@core.State) -> Array[(String, String)]
 

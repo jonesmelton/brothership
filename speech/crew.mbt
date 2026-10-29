@@ -34,17 +34,7 @@ pub fn this_crossing(story : Array[@core.Entry]) -> Array[@core.Entry] {
 /// How many times each crew member took the post the ship was asking for,
 /// after it asked, in `story`.
 pub fn answered(story : Array[@core.Entry]) -> Map[String, Int64] {
-  let out : Map[String, Int64] = Map([])
-  let mut ask : @core.Post? = None
-  for e in story {
-    match e.happening {
-      Asked(post~) => ask = post
-      Took(crew~, post~) if ask == Some(post) =>
-        out[crew] = out.get(crew).unwrap_or(0L) + 1L
-      _ => ()
-    }
-  }
-  out
+  @words.asks_answered(story)
 }
 
 ///|

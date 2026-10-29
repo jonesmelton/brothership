@@ -50,6 +50,8 @@ pub fn promotions(@core.Crossing, officer~ : (String) -> Bool) -> Array[(String,
 
 pub fn reckon(@core.Crossing) -> Reckoning
 
+pub fn span_of(@core.Plan) -> Double
+
 pub let worlds : Array[World]
 
 // Errors

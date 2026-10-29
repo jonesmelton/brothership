@@ -144,7 +144,7 @@ fn page_of_entry(
   depth : Int32,
 ) -> Page {
   match e.happening {
-    Departed | Began(_) | Docked(_) | Opened(_) | Met(_) | Missed(_) => Voyage
+    Departed | Began(_) | Docked(..) | Opened(_) | Met(_) | Missed(_) => Voyage
     Landed(..) | Asked(_) => Ship
     Promoted(crew~, ..) => if crew == you { You } else { Ship }
     Took(crew~, ..)

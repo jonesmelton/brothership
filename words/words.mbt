@@ -430,13 +430,14 @@ pub fn priority(
 ) -> Priority {
   match e.happening {
     Opened(_) => Interrupt
-    Departed | Began(_) | Docked(_) | Met(_) | Missed(_) | Landed(..) =>
+    Departed | Began(_) | Docked(..) | Met(_) | Missed(_) | Landed(..) =>
       Announce
     // Your own making is announced by its effect sentence already.
     Made(_) => Quiet
     Stood(crew~) | Finished(crew~) => if crew == you { Announce } else { Quiet }
     Asked(_) | Took(..) | Left(_) => Quiet
-    Promoted(..) => Announce
+    // The roll call is read on the Voyage page; speech announces your own.
+    Promoted(crew~, ..) => if crew == you { Announce } else { Quiet }
     Spoke(about~, ..) =>
       match story.iter().find_first(x => x.seq == about) {
         Some(x) if x.happening is Opened(_) => Interrupt
@@ -454,8 +455,8 @@ pub fn told(h : @core.Happening, you~ : String, ship~ : String) -> String {
     Departed => "The ship left port."
     Began(phase=Arrived) => "The ship arrived."
     Began(phase~) => "The \{phase_name(phase)} began."
-    Docked(recruits=0) => "The ship docked."
-    Docked(recruits~) =>
+    Docked(recruits=0, ..) => "The ship docked."
+    Docked(recruits~, ..) =>
       "The ship docked, and \{plural(recruits, "recruit", "recruits")} joined."
     Opened(hazard~) =>
       "\{hazard_name(hazard)} opened on \{post_name(hazard.post())}."

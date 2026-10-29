@@ -75,6 +75,16 @@ fn docked(posts~ : Array[@core.Post] = [], seed~ : Int64 = 1L) -> @core.State {
 }
 
 ///|
+fn no_landing() -> @core.Landing {
+  {
+    leg: 0,
+    aboard: 0,
+    works: 0,
+    plan: { burn: 0, coast: 0, eta_rate: 0, coast_rate: 0, },
+  }
+}
+
+///|
 test "the pages are named as their headings say" {
   debug_inspect(
     [You, Voyage, Ship].map(Page::name),
@@ -94,7 +104,7 @@ test "each happening has one page" {
     { seq: 5, at: 0, happening: Finished(crew="1"), },
     { seq: 6, at: 0, happening: Landed(refit=Baffles, level=1), },
     { seq: 7, at: 0, happening: Asked(post=None), },
-    { seq: 8, at: 0, happening: Docked(recruits=1), },
+    { seq: 8, at: 0, happening: Docked(recruits=1, landing=no_landing()), },
     { seq: 9, at: 0, happening: Spoke(line="Well rowed.", about=4), },
     { seq: 10, at: 0, happening: Spoke(line="Who goes there?", about=99), },
   ]
@@ -615,7 +625,7 @@ test "law: a spoken line follows the page of what it is about" {
         0 => Departed
         1 => Began(phase=Coast)
         2 => Began(phase=Arrived)
-        3 => Docked(recruits=fold32(k, 4).to_int64())
+        3 => Docked(recruits=fold32(k, 4).to_int64(), landing=no_landing())
         4 => Opened(hazard=Breach)
         5 => Met(hazard=Flare)
         6 => Missed(hazard=Salvage)

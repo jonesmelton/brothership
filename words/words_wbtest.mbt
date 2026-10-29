@@ -118,7 +118,7 @@ test "happenings in sentences, from where the player stands" {
     Departed,
     Began(phase=Coast),
     Began(phase=Arrived),
-    Docked(recruits=2),
+    Docked(recruits=2, landing=no_landing()),
     Opened(hazard=Breach),
     Missed(hazard=Flare),
     Landed(refit=Baffles, level=2),
@@ -294,7 +294,7 @@ test "a promotion is told in full and announced" {
   debug_inspect(
     [priority(e, you="0", story=[e]), priority(e, you="1", story=[e])],
     content=(
-      #|[Announce, Announce]
+      #|[Announce, Quiet]
     ),
   )
   debug_inspect(

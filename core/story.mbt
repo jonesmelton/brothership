@@ -3,6 +3,20 @@
 // the states either side of a row, not by reading the row.
 
 ///|
+/// What a crossing came to, told when the ship docks: the leg it flew, the
+/// ticks aboard until arrival, the works it delivered and the plan it flew,
+/// from which the years at the worlds follow.
+pub(all) struct Landing {
+  /// Crossings flown before this one: names the leg in the itinerary.
+  leg : Int64
+  /// Ticks aboard until arrival.
+  aboard : Int64
+  /// Works delivered across the crew.
+  works : Int64
+  plan : Plan
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
 /// Something a player would be told. Derived, never stored.
 pub(all) enum Happening {
   /// The ship left port.
@@ -10,7 +24,7 @@ pub(all) enum Happening {
   /// A phase began; `Arrived` is the arrival.
   Began(phase~ : Phase)
   /// The ship docked; `recruits` joined at this port.
-  Docked(recruits~ : Int64)
+  Docked(recruits~ : Int64, landing~ : Landing)
   Opened(hazard~ : Hazard)
   Met(hazard~ : Hazard)
   Missed(hazard~ : Hazard)
@@ -54,7 +68,24 @@ pub fn happenings(
       return [Promoted(crew~, rank~, tally~)]
     }
     Docked => {
-      out.push(Docked(recruits=after.ship.recruits - before.ship.recruits))
+      let (aboard, plan) = match before.crossing() {
+        Some(c) => (c.arrived_at.unwrap_or(c.t), c.plan)
+        None =>
+          (0L, Plan::{ burn: 0L, coast: 0L, eta_rate: 0L, coast_rate: 0L, })
+      }
+      let mut works = 0L
+      for crew, r in after.ship.records {
+        works += r.works -
+          before.ship.records.get(crew).map(x => x.works).unwrap_or(0L)
+      }
+      out.push(
+        Docked(recruits=after.ship.recruits - before.ship.recruits, landing={
+          leg: before.ship.crossings,
+          aboard,
+          works,
+          plan,
+        }),
+      )
       return out
     }
     _ => ()
