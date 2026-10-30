@@ -1,6 +1,7 @@
 ## more of the setting
 
-- Hard science fiction. Crossings between stars take years to centuries of ship time and longer at home. Distances, durations and accelerations are real orders of magnitude.
+- Hard science fiction. A crossing between stars takes hours aboard and years at home: a liveship holds a γ in the tens of thousands, so twenty light-years pass in half a day aboard and twenty years at the worlds. Distances, durations and accelerations are real orders of magnitude.
+- Between its burns a liveship coasts near the speed of light, and the thin gas and dust ahead strike its hull hard enough to wear it away. The faster it coasts, the harder they strike. Crew mend the hull as they go.
 - Each world is a star and its habitats: megastructures mostly, some planets, moons, hollowed asteroids. Life within a world is near-utopic.
 - A liveship is one soul: captain and hull together. It carries only data between worlds: culture, genetics, research, art, music.
 - Crew are volunteers. A soul may be invited to crew and never coerced; a ship may accept or refuse a candidate. Joining a ship means leaving home for good, since every light-year crossed is a year gone there.
