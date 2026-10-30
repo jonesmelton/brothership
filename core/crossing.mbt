@@ -735,7 +735,7 @@ pub fn Crossing::apply(
     }
     Ordered(crew~, order~) => {
       let h = self.hand(crew)
-      if order is Some(o) && (o.phase <= self.phase || o.phase == Arrived) {
+      if order is Some(o) && o.phase <= self.phase {
         raise BadOrder(phase=o.phase)
       }
       self.with_hand(crew, { ..h, order, })
@@ -822,8 +822,8 @@ pub fn Crossing::phase_ends(self : Crossing) -> Int64? {
 
 ///|
 /// Settle an arrived crossing into the ship that leaves port: regard and
-/// works go to each crew member's record, works bring recruits, the yard
-/// repairs the hull, and refits stay fitted.
+/// works go to each crew member's record, works bring recruits, and refits
+/// stay fitted. The yard mends the hull in port.
 pub fn Crossing::dock(self : Crossing) -> Ship? {
   guard self.phase == Arrived else { None }
   let mut c = self
@@ -857,7 +857,7 @@ pub fn Crossing::dock(self : Crossing) -> Ship? {
   Some({
     ..ship,
     fit: self.fit,
-    hull: (self.hull + PORT_REPAIR).min(HULL_FULL),
+    hull: self.hull,
     records,
     recruits,
     toward_recruit: toward % WORKS_PER_RECRUIT,

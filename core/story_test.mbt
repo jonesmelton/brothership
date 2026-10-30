@@ -45,7 +45,10 @@ test "a crossing told from departure to docking" {
     ),
   )
   let c = s.crossing().unwrap()
-  let (said, _) = told(s, [Tick(at=s.at + c.forecast().unwrap()), Docked])
+  let (said, _) = told(s, [
+    Tick(at=s.at + c.forecast().unwrap()),
+    Docked(stores=0),
+  ])
   debug_inspect(
     said,
     content=(
@@ -126,6 +129,22 @@ test "making banked work is told, and finishing and landing follow from it" {
     left,
     content=(
       #|[Left(crew="ann"), Finished(crew="ann")]
+    ),
+  )
+}
+
+///|
+test "a launch told: the ask, then the stores loaded" {
+  let (said, _) = told(loading(28_800, [Drive]), [
+    Asked(post=Some(Hull)),
+    Tick(at=DEPART_AT + 1800),
+    Tick(at=DEPART_AT + 3600),
+    Tick(at=DEPART_AT + 3700),
+  ])
+  debug_inspect(
+    said,
+    content=(
+      #|[Asked(post=Some(Hull)), Loaded]
     ),
   )
 }

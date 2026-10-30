@@ -118,3 +118,20 @@ test "resync is ignored while a proposal is in flight" {
   let stale = client.resync(interfere(departed(), 60))
   inspect(stale.confirmed() == departed(), content="true")
 }
+
+///|
+test "law: in port, one tick of n seconds equals n ticks of one" {
+  @qc.quick_check_fn((input : (Int64, Array[Int32], Int32, Int64)) => {
+    let (stores, picks, hull, n) = input
+    let posts : Array[@core.Post] = [Drive, Hull, Craft]
+    let posts = picks.map(p => posts[(p % 3).abs()])
+    let s = loading(fold64(stores, 50_000L), posts, hull=hull_of(hull))
+    let n = fold64(n, 3000L) + 1L
+    let whole = tick(s, n)
+    let mut split = s
+    for _ in 0L..<n {
+      split = tick(split, 1)
+    }
+    whole == split
+  })
+}

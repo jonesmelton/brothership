@@ -3,7 +3,7 @@
 fn dock(s : @core.State) -> @core.State {
   let c = crossing_of(s)
   let at = c.forecast().unwrap()
-  s.apply(Tick(at=s.at + at - c.t)).apply(Docked) catch {
+  s.apply(Tick(at=s.at + at - c.t)).apply(Docked(stores=0)) catch {
     _ => panic()
   }
 }
@@ -160,9 +160,9 @@ test "signing on and discharge are told" {
   let arrived = s.apply(Tick(at=s.at + c.forecast().unwrap() - c.t)) catch {
     _ => panic()
   }
-  let docked = arrived.apply(Docked) catch { _ => panic() }
+  let docked = arrived.apply(Docked(stores=0)) catch { _ => panic() }
   debug_inspect(
-    @core.happenings(arrived, Docked, docked),
+    @core.happenings(arrived, Docked(stores=0), docked),
     content=(
       #|[
       #|  Docked(
@@ -181,5 +181,16 @@ test "signing on and discharge are told" {
       #|  ),
       #|]
     ),
+  )
+}
+
+///|
+test "an order for arrival fires at arrival and carries into port" {
+  let s = depart(act(in_port(), "ann", Posted(post=Drive)))
+  let s = act(s, "ann", Ordered(order=Some({ phase: Arrived, post: Hull, })))
+  let s = dock(s)
+  debug_inspect(
+    s.officers.get("ann").map(o => o.post),
+    content="Some(Some(Hull))",
   )
 }
