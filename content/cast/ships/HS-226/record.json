@@ -1,0 +1,109 @@
+{
+  "entry": {
+    "stage": "entry",
+    "sample": 2,
+    "key": "ddff2e7a34b25de60571c6aeeba851f1eb69d5195a8940d1b5c980199beb3555",
+    "model": "meta:muse-wonder-1.0",
+    "max_tokens": 16000,
+    "reasoning_effort": "xhigh",
+    "inputs": {
+      "seed": "95731b87519a41bb94debad050a77f35d96c57bba1c5cbfb74e68c8bf3f63ddd",
+      "ships": "ac8b34d906d960f425d9221d8b8bb9b2cfd4b4933129e57cb90f7aae5a18dade"
+    },
+    "text_sha": "b4970b00766f93b348e2519b7687ba4448c5770de6a34dce78c873f8a06aad4e",
+    "problems": [],
+    "usage": {
+      "input": 1806,
+      "output": 14006,
+      "reasoning": 13337,
+      "cost_usd": 0.2844712
+    },
+    "finish": "stop",
+    "raw": null
+  },
+  "portrait": {
+    "stage": "portrait",
+    "sample": 2,
+    "key": "1d8ec1f132a5073e055232f467359df08523c449b00a531c8d898ba1edfda797",
+    "model": "meta:muse-wonder-1.0",
+    "max_tokens": 16000,
+    "reasoning_effort": "xhigh",
+    "inputs": {
+      "entry": "78c76493bac911db482effedb7460d55e0dcf06525baf09feea220d339e95c1c",
+      "notes": "3f3f0e6f70d6275c047a705f2910da1bdb208b0ec4b6865ea6c6c6fa0c3a6129"
+    },
+    "text_sha": "b589a1e050e1c8143954f935e8f2b4eddc567479fd231ddca56a5db04646915c",
+    "problems": [],
+    "usage": {
+      "input": 2240,
+      "output": 5787,
+      "reasoning": 3294,
+      "cost_usd": 0.11939519999999999
+    },
+    "finish": "stop",
+    "raw": null
+  },
+  "captain": {
+    "stage": "captain",
+    "sample": 2,
+    "key": "fae81fa61b85608413c4b11998b79942d8c9edcb2b9d80493e5d101ca116fd89",
+    "model": "meta:muse-wonder-1.0",
+    "max_tokens": 12000,
+    "inputs": {
+      "entry": "78c76493bac911db482effedb7460d55e0dcf06525baf09feea220d339e95c1c",
+      "portrait": "b589a1e050e1c8143954f935e8f2b4eddc567479fd231ddca56a5db04646915c"
+    },
+    "text_sha": "4a95b6db88ae3537601b459dcd2607ec8b225fc6fcd2257567123c6aab2fe9b0",
+    "problems": [],
+    "usage": {
+      "input": 4479,
+      "output": 8935,
+      "reasoning": 8350,
+      "cost_usd": 0.196616
+    },
+    "finish": "stop",
+    "raw": null
+  },
+  "voice": {
+    "stage": "voice",
+    "sample": 1,
+    "key": "134faa23418b98aa3b7e6b7f2cfd1efaa2b957f0f87ad390ce7f75d3b1ae8d3a",
+    "model": "meta:muse-wonder-1.0",
+    "max_tokens": 12000,
+    "inputs": {
+      "entry": "78c76493bac911db482effedb7460d55e0dcf06525baf09feea220d339e95c1c",
+      "portrait": "b589a1e050e1c8143954f935e8f2b4eddc567479fd231ddca56a5db04646915c"
+    },
+    "text_sha": "55bfd112d0e8bef88e5e1dc58bf3211b16e426870efec7c9719b287072025def",
+    "problems": [],
+    "usage": {
+      "input": 4506,
+      "output": 5276,
+      "reasoning": 4532,
+      "cost_usd": 0.123544
+    },
+    "finish": "stop",
+    "raw": null
+  },
+  "voyage": {
+    "stage": "voyage",
+    "sample": 2,
+    "key": "f9d38cf0738dfec8dada9de57ac73efbd8e9c55d2a18fcf5b1df09d7c00f8434",
+    "model": "meta:muse-wonder-1.0",
+    "max_tokens": 12000,
+    "inputs": {
+      "entry": "78c76493bac911db482effedb7460d55e0dcf06525baf09feea220d339e95c1c",
+      "portrait": "b589a1e050e1c8143954f935e8f2b4eddc567479fd231ddca56a5db04646915c"
+    },
+    "text_sha": "620ddeb9d0648e77ec88f3c1bf3b5e2f419267842d427cdd7d02dccbd8936d5e",
+    "problems": [],
+    "usage": {
+      "input": 4770,
+      "output": 2469,
+      "reasoning": 2211,
+      "cost_usd": 0.06846
+    },
+    "finish": "stop",
+    "raw": null
+  }
+}

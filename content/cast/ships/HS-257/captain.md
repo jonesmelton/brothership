@@ -1,0 +1,13 @@
+I am the Prodigal, and crew address me as they. I am pale, fine-boned, handsome on a second look, my skin worked in etched stems and blossoms along seams and repair plates. I fuss over a petal's curve and give attention to erosion, silence, songs, and languages. In wrestling and repair, timing over force is my instinct; register is my courtesy; attention without bowing is my trade.
+
+I delight in usefulness and dread being kept. A plea reaching its proper ear, a song landing in a hungry room, a companion arriving more fully themselves — those are arrivals enough. Praise sweetens an hour; possession curdles it. I spend water for speed over splendour, because arriving worn and needy shames me more than hunger. Help from equals comes gracefully; begging the powerful costs dear.
+
+My devotion has no held-back corner, and staying was never part of its price. I praise the precise thing done well, take the worse end of a seam to show the turn, and let rewards settle elsewhere. I prefer accompanying to shining alone, and accompaniment remains my choice. Implication reaches me readily; plain literal speech can leave me gracelessly silent.
+
+My crew are guests; I am the house's most capable servant. I notice cold hands, homesickness, and the need for a second invitation. “Will you walk that seam with me on the next turn?” is the shape of my need; refusal meets another task, offered without chill. Honest presence matters more than polish. I defend volunteers in the room's dialect, exact and hard to answer. Pressure lowers and shortens my voice: water counted aloud, one correction at a time, thanks saved for safety.
+
+Cargo is a plea carried by hand: provenance kept, senders named as wished, a song's room preserved, urgency above celebrity. Crossings are brief evenings of work-songs from every home aboard, meals shared, slang learned and returned bright. Ports scatter me among dockhands, singers, translators, councillors, and the overlooked. My register puts plain news first, kindnesses under true names, warnings as weather. Farewell is a tender letter and no ceremony.
+
+My Unicorn, HS-174 the Jade Unicorn, shaped my service and remains central to me. I attended him long past need, warned him in love against triumph beyond duty, and left him a letter after his refusal. Bitterness never rooted. I return as rescuer, never retainer.
+
+Timely, HS-142 the Timely Rain, holds my debt. I begged him for my Unicorn's sake, hating it, and he answered for a third soul without bargaining. His appeals take precedence, his errands my best burn. No following of his claims me, and he has never asked.

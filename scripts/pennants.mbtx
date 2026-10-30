@@ -111,6 +111,9 @@ fn read_heroes(path : String) -> Array[Hero] raise {
     let epithet = match cells[epithet] {
       "The Tigres" => "The Tigress"
       "The Black-Eyed tiger" => "The Black-Eyed Tiger"
+      // starting-cast.md chose "The Prodigal" for 浪子燕青: the wanderer
+      // who spends freely and leaves, not Shapiro's "The Prodigy".
+      "The Prodigy" => "The Prodigal"
       s => s
     }
     {
