@@ -40,7 +40,7 @@ fn hazard_title(h : @core.Hazard) -> String {
   match h {
     Breach => "Breach"
     Flare => "Flare"
-    Salvage => "Salvage"
+    Dust => "Dust"
   }
 }
 

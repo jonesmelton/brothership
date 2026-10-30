@@ -6,9 +6,8 @@ pub(all) enum Hazard {
   Breach
   /// Drive hands before the phase ends, or the hull loses a sixth.
   Flare
-  /// Craft hands before the coast ends, for refit progress. Nothing is lost
-  /// by letting it go.
-  Salvage
+  /// Hull hands before the coast ends, or the hull loses a fifth.
+  Dust
 } derive(Debug, Eq, Compare, Hash, ToJson, FromJson)
 
 ///|
@@ -16,7 +15,7 @@ pub fn Hazard::post(self : Hazard) -> Post {
   match self {
     Breach => Hull
     Flare => Drive
-    Salvage => Craft
+    Dust => Hull
   }
 }
 
@@ -47,8 +46,7 @@ pub const BREACH_LOSS : Int64 = 250_000_000L
 pub const FLARE_LOSS : Int64 = 166_666_666L
 
 ///|
-/// Refit progress a met salvage adds: three crew-hours of engineering.
-pub const SALVAGE_YIELD : Int64 = 172_800L
+pub const DUST_LOSS : Int64 = 200_000_000L
 
 ///|
 /// Counter-based randomness: a hash of the ship's seed, the crossing and a
@@ -82,21 +80,21 @@ pub fn demands_for(
     let i = i.to_int64() * 8L
     let roll = (k : Int64, n : Int64) => draw(seed, crossing, i + k, n)
     let hazard = if plan.coast > 0L && roll(1, 3) == 0L {
-      Salvage
+      Dust
     } else if roll(2, 2) == 0L {
       Breach
     } else {
       Flare
     }
     let (phase, stock) = match hazard {
-      Salvage => (Coast, plan.coast)
+      Dust => (Coast, plan.coast)
       _ => (if roll(3, 2) == 0L { Burn } else { Approach }, plan.burn)
     }
     let permille = 333L + roll(4, 468)
     let hours = match hazard {
       Breach => 3L + roll(5, 4)
       Flare => 4L + roll(5, 5)
-      Salvage => 8L + roll(5, 9)
+      Dust => 6L + roll(5, 7)
     }
     {
       hazard,

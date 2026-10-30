@@ -151,7 +151,7 @@ pub fn hazard_name(h : @core.Hazard) -> String {
   match h {
     Breach => "A breach"
     Flare => "A flare"
-    Salvage => "Salvage"
+    Dust => "Dust"
   }
 }
 
@@ -369,7 +369,7 @@ pub fn ask_sentence(c : @core.Crossing) -> Array[String] {
 fn demand_sentence(d : @core.Demand) -> String {
   let hours = (d.need / @core.HAND + 1800L) / 3600L
   let done = pct(d.done, d.need)
-  let by = if d.hazard == Salvage {
+  let by = if d.hazard == Dust {
     "before the coast ends"
   } else {
     "before the \{phase_name(d.phase)} ends"

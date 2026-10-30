@@ -628,7 +628,7 @@ test "law: a spoken line follows the page of what it is about" {
         3 => Docked(recruits=fold32(k, 4).to_int64(), landing=no_landing())
         4 => Opened(hazard=Breach)
         5 => Met(hazard=Flare)
-        6 => Missed(hazard=Salvage)
+        6 => Missed(hazard=Dust)
         7 => Landed(refit=Baffles, level=1)
         8 => Asked(post=None)
         9 => Took(crew=ys[fold32(k, 2)], post=Hull)

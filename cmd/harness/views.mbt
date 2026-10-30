@@ -519,7 +519,7 @@ fn hazard_name(h : @core.Hazard) -> String {
   match h {
     Breach => "a breach"
     Flare => "a flare"
-    Salvage => "salvage"
+    Dust => "dust"
   }
 }
 

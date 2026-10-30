@@ -54,7 +54,7 @@
 - **standing order**: a post to take when a later phase begins. Fires at the
   phase boundary, so no one has to be present.
 - **demand**: a call for crew-hours on one post before its phase ends:
-  breach, flare or salvage. Fixed at departure.
+  breach, flare or dust. Fixed at departure.
 - **refit**: a permanent change to a ship's fit, built by engineers: baffles,
   plating, injectors or coils.
 - **work**: what an artist makes, six crew-hours each. Delivered at port,

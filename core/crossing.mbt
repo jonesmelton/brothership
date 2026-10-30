@@ -495,26 +495,20 @@ fn Crossing::settle(self : Crossing) -> Crossing {
   }
   if c.demands.iter().any(due) {
     let mut loss = 0L
-    let mut salvage = 0L
     let demands = c.demands.map(d => {
       guard due(d) else { d }
       if d.done >= d.need {
-        if d.hazard == Salvage {
-          salvage += SALVAGE_YIELD
-        }
         { ..d, status: Met, }
       } else {
         loss += match d.hazard {
           Breach => BREACH_LOSS
           Flare => FLARE_LOSS
-          Salvage => 0L
+          Dust => DUST_LOSS
         }
         { ..d, status: Missed, }
       }
     })
-    c = { ..c, demands, fit: { ..c.fit, progress: c.fit.progress + salvage, }, }.lose_hull(
-      loss,
-    )
+    c = { ..c, demands, }.lose_hull(loss)
     changed = true
   }
   if c.left == 0L && c.phase != Arrived {

@@ -190,8 +190,7 @@ pub fn Temperament::ask(self : Temperament, c : @core.Crossing) -> @core.Post? {
       }
     Sly =>
       match c.demands.iter().find_first(d => d.status == Open) {
-        Some(d) if d.hazard == Salvage => Some(Craft)
-        Some(d) if d.hazard == Breach => Some(Hull)
+        Some(d) if d.hazard.post() == Hull => Some(Hull)
         _ => Some(Craft)
       }
   }

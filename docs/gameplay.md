@@ -172,7 +172,7 @@ making is allowed at any phase while aboard, including after arrival and
 before docking. Ship posts do not bank.
 
 Because refits land only when work is made, engineers who never check in
-land nothing during the crossing, apart from the progress a met salvage adds.
+land nothing during the crossing.
 Their banks are made at 100% when the ship docks, so the refit is fitted for
 the next crossing.
 
@@ -281,12 +281,16 @@ and grows with the drive rather than with the clock.
 |---|---|---|---|---|---|
 | `Breach` | hull | burn or approach | 1.5 to 3 crew-hours | hull loses 25% | nothing more |
 | `Flare` | drive | burn or approach | 2 to 4 crew-hours | hull loses 1/6 | nothing more |
-| `Salvage` | craft | coast | 4 to 8 crew-hours | nothing | 3 crew-hours of refit progress |
+| `Dust` | hull | coast | 3 to 6 crew-hours | hull loses 1/5 | nothing more |
 
 A demand in a firing phase ends with the phase, so driving harder leaves less
 time to meet it. Posts held while away count, so nothing depends on being
-present at the right moment. In the simulator, crews missed 30 to 55% of
+present at the right moment. In the simulator, crews missed 45 to 70% of
 demands, most on the Scorpion and fewest on the Tigress.
+
+The coast's demand is a hazard, not something found on the way, because at
+a γ of tens of thousands the ship can match velocity with nothing. A
+microgram of dust at γ 24,000 strikes with about 2 TJ, half a kiloton.
 
 ## port
 

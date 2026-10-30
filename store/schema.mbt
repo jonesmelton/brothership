@@ -40,6 +40,17 @@ let migrations : Array[String] = [
     #|  recorded_at integer not null default (unixepoch())
     #|) strict
   ),
+  // Dust replaced salvage as the coast's demand, so a log from before it
+  // replays to different hulls and refits. Kept aside, not dropped.
+  "alter table event rename to event_before_dust",
+  (
+    #|create table event (
+    #|  seq         integer primary key,
+    #|  ship        text    not null,
+    #|  body        text    not null check (json_valid(body)),
+    #|  recorded_at integer not null default (unixepoch())
+    #|) strict
+  ),
 ]
 
 ///|

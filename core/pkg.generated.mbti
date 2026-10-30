@@ -15,6 +15,8 @@ pub const COMMANDER : Int64 = 4
 
 pub const CRAFT_UNIT : Int64 = 16
 
+pub const DUST_LOSS : Int64 = 200_000_000
+
 pub const ENSIGN : Int64 = 0
 
 pub const FLARE_LOSS : Int64 = 166_666_666
@@ -44,8 +46,6 @@ pub const MAX_RECRUITS : Int64 = 6
 pub const PORT_REPAIR : Int64 = 250_000_000
 
 pub const REGARD_HOUR : Int64 = 14_400
-
-pub const SALVAGE_YIELD : Int64 = 172_800
 
 pub const WATCH_BONUS : Int64 = 4
 
@@ -215,7 +215,7 @@ pub(all) enum Happening {
 pub(all) enum Hazard {
   Breach
   Flare
-  Salvage
+  Dust
 } derive(Compare, Eq, Hash, ToJson, @debug.Debug, @json.FromJson)
 pub fn Hazard::post(Self) -> Post
 

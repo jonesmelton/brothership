@@ -228,8 +228,8 @@ test "demands are fixed by seed and crossing, whatever the crew do" {
     assert_true(ds.length() >= 1 && ds.length() <= 2)
     for d in ds {
       assert_true(d.need > 0L && d.opens_at > 0L)
-      if d.hazard == Salvage {
-        assert_true(d.phase == Coast)
+      if d.hazard == Dust {
+        assert_true(d.phase == Coast && d.hazard.post() == Hull)
         kinds = kinds | 1
       } else {
         assert_true(d.phase is (Burn | Approach))
@@ -237,10 +237,34 @@ test "demands are fixed by seed and crossing, whatever the crew do" {
       }
     }
     for d in @core.demands_for(plan_short(), seed, 3) {
-      assert_true(d.hazard != Salvage)
+      assert_true(d.hazard != Dust)
     }
   }
   inspect(kinds, content="3")
+}
+
+///|
+test "dust missed in the coast costs a fifth of the hull" {
+  let seed = for s in 0L..<256L {
+    let ds = @core.demands_for(plan20(), s, 0)
+    if ds.length() == 1 && ds[0].hazard == Dust {
+      break s
+    }
+  } nobreak {
+    panic()
+  }
+  let mut c = @core.Crossing::new(plan20(), ship(seed~)).apply(
+    Posted(crew="0", post=Craft),
+  ) catch {
+    _ => panic()
+  }
+  let mut before = c.hull
+  while c.phase != Approach {
+    before = c.hull
+    c = c.apply(Elapsed(ticks=60)) catch { _ => panic() }
+  }
+  assert_eq(c.demands[0].status, Missed)
+  assert_true(before - c.hull >= @core.DUST_LOSS)
 }
 
 ///|
