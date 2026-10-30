@@ -55,7 +55,8 @@ pub fn roster(state : @core.State, story : Array[@core.Entry]) -> Array[String] 
     let handle = names.get(crew).unwrap_or("?")
     let rank = @words.rank_name(state.rank(crew))
     let where_ = match c.hands.get(crew) {
-      None => "left the crew this crossing"
+      None if state.officers.contains(crew) => "standing down"
+      None => "left the ship"
       Some(h) => {
         let post = match h.post {
           Craft => "at crafts (\{@words.craft_name(h.craft)})"
@@ -93,7 +94,7 @@ pub fn recount(
   match h {
     Took(crew~, post=Craft) => "\{who(crew)} went to crafts."
     Took(crew~, post~) => "\{who(crew)} took \{@words.post_name(post)}."
-    Left(crew~) => "\{who(crew)} left the crew."
+    Left(crew~) => "\{who(crew)} stood down."
     Stood(crew~) => "\{who(crew)} stood a watch to its end."
     Finished(crew~) => "\{who(crew)} finished a work."
     Made(crew~, craft~, units~, percent~) =>

@@ -96,7 +96,7 @@ test "rejections" {
   debug_inspect(
     reject(port, Crew(crew="ann", intent=Left)),
     content=(
-      #|NotUnderway(event=Crew(crew="ann", intent=Left))
+      #|NotSigned(crew="ann")
     ),
   )
   debug_inspect(
@@ -124,7 +124,7 @@ test "rejections" {
   debug_inspect(
     reject(sea, Crew(crew="ann", intent=Left)),
     content=(
-      #|Crossing(reason=NotAboard(crew="ann"))
+      #|NotSigned(crew="ann")
     ),
   )
 }

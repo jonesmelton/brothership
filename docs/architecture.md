@@ -107,12 +107,15 @@ The server's speakers print each line's times.
   The listener binds only after the store opens, so a response proves boot got
   that far; keep it independent of the game routes.
 - `GET /api/session` returns `@core.Session`, the officer this client acts
-  as. A first visit mints a token and an officer and sets `session` as an
+  as and the ship they are aboard, if any (`Store::aboard`). A client with
+  no ship shows the ships to choose from. A first visit mints a token and an officer and sets `session` as an
   HttpOnly cookie; later visits return the same officer. The cookie is
   `HttpOnly` and `SameSite=Lax`, and `Secure` unless `routes` is called with
   `secure=false` for plain-http development. The token never appears in a
   snapshot or the log, because both publish crew ids.
-- `GET /api/ships` returns `Array[@core.Listing]`, in order of commission.
+- `GET /api/ships` returns `Array[@core.Listing]`, in order of commission:
+  each ship's whereabouts and how many officers are aboard
+  (`@ships.listing`), which `@words.listing_sentence` renders.
 - `GET /api/ships/:id/snapshot` returns `@core.Snapshot`.
 - `GET /api/ships/:id/story?after=seq` returns `@core.Story`: the ship's
   happenings after `seq`, and whether it is writing a line.
@@ -120,8 +123,10 @@ The server's speakers print each line's times.
   `@core.Receipt`. It acts as the session's officer: no session is a 401, and
   a proposal naming another officer is a 403. An unknown ship is a 404. A
   body naming a server event fails to decode and gets a 400.
-- A session is not a seat. Nothing limits how many officers join a ship, and
-  `Posted` adds a hand for any new id.
+- A session is not a seat. Nothing limits how many officers join a ship.
+  An officer serves on one ship at a time: `Store::propose` refuses a
+  proposal from an officer aboard another ship with `AboardAnother`, since
+  no one ship's log can see the others.
 
 ## store
 
@@ -139,7 +144,9 @@ the happenings `@core.happenings` derives from each row and the states
 either side of it, kept in memory and never written. Logs from before
 commissioning are kept in `event_legacy` and not replayed, and logs from
 before banked craft work are kept in `event_before_banking`, because banking
-changes when refits land and so when ships arrive.
+changes when refits land and so when ships arrive. Logs from before
+officers stayed aboard through port are kept in `event_before_officers`,
+because officers taking their posts at departure changes arrivals too.
 Sessions live in a `session` table beside the log: a random token and the
 officer it names. They are not events, do not replay, and are restored with
 the database.
@@ -191,7 +198,8 @@ it with `GATE_MODEL`, and appends `Spoke(line, about)` through
 a line that opens like, or reuses most of the words of, one of the ship's
 last five is dropped (`@speech.repeats`). A failed, blocked, passed or
 repeated line leaves nothing. After a line the ship keeps quiet for 15
-minutes except for departures, arrivals, promotions and new demands. The
+minutes except for departures, arrivals, promotions, new demands and new
+officers, whom it greets knowing only whether it has carried them before. The
 speaker waits while the mind is deciding, so a line can speak to the
 choice. The runtime image copies `content/` for this.
 

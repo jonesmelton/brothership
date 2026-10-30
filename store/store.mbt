@@ -108,6 +108,16 @@ pub fn Store::snapshot(self : Store, ship : String) -> @core.Snapshot? {
 }
 
 ///|
+/// The ship `officer` is aboard, if any. An officer serves on one ship at a
+/// time; `propose` refuses to sign them on to another.
+pub fn Store::aboard(self : Store, officer : String) -> String? {
+  self.voyages
+  .iter()
+  .find_first(pair => pair.1.snapshot.state.officers.contains(officer))
+  .map(pair => pair.0)
+}
+
+///|
 /// Put `berth`'s ship into service, unless a ship with its id already is.
 /// A ship's log begins with this, so its profile and seed are fixed here and
 /// later changes to the berth affect only timing.
@@ -173,7 +183,7 @@ async fn Store::commit(
 /// Validate the proposal for `ship` against its state at `now`, in Unix
 /// seconds, and, if it applies, append it. The ship's own events at `now` go
 /// first and are appended either way; its response to the proposal follows
-/// it. Refusals are part of the protocol and come back as a receipt; only
+/// it. An officer aboard another ship is refused here with `AboardAnother`. Refusals are part of the protocol and come back as a receipt; only
 /// storage failures raise. `None` for an unknown ship. Writes are serialized
 /// so validation always sees the state the event will follow.
 pub async fn Store::propose(
@@ -191,6 +201,13 @@ pub async fn Store::propose(
     officer=_ => true,
     minded=v.minded,
   )
+  if self.aboard(proposal.crew) is Some(other) &&
+    other != ship &&
+    !state.officers.contains(proposal.crew) {
+    self.commit(ship, v, due, state)
+    let reason : @core.Rejected = AboardAnother(ship=other)
+    return Some(Refused(id=proposal.id, reason~, snapshot=v.snapshot))
+  }
   let accepted = state.apply(proposal.event()) catch {
     reason => {
       self.commit(ship, v, due, state)

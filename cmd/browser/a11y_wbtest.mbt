@@ -1,6 +1,6 @@
 ///|
 fn listing(id : String, name : String) -> @core.Listing {
-  { id, name, }
+  { id, name, crossings: 0, whereabouts: InPort(departs=0), officers: 0, }
 }
 
 ///|
@@ -10,6 +10,8 @@ fn aboard() -> Model {
     now: 0L,
     ships: [listing("tigress", "EF-147 The Tigress")],
     ship: Some("tigress"),
+    joining: false,
+    left: None,
     seen: None,
     page: You,
     viewed: { you: 0L, voyage: 0L, ship: 0L, },

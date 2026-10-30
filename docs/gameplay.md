@@ -10,6 +10,13 @@ about ten officers and as many NPC crew as it needs. NPCs keep a ship with one
 officer playable, stand in for officers in the simulation harness, and are
 what deliveries recruit.
 
+An officer serves on one ship at a time. A new player chooses a ship from
+the fleet, in port or underway, and signs on. They stay aboard through each
+port stay and take their post again at departure. They leave when the ship
+docks if they asked to leave after the voyage or did nothing during it, or
+at once if they leave in port, and then choose a ship again. Standing down
+from a post leaves them aboard.
+
 ## the core action: posts
 
 Every crew member, player or NPC, always holds one **post**, and keeps it while

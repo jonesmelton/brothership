@@ -15,6 +15,7 @@ import {
 pub struct Store {
   // private fields
 }
+pub fn Store::aboard(Self, String) -> String?
 pub async fn Store::advance(Self, String, now~ : Int64) -> Unit
 pub fn Store::close(Self) -> Unit raise
 pub async fn Store::commission(Self, @ships.Berth) -> Unit

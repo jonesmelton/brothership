@@ -38,6 +38,10 @@ pub fn landfall_away(Array[@core.Entry], after~ : Int64, upto~ : Int64) -> Array
 
 pub fn landfall_sentences(Array[@core.Entry], you~ : String, now~ : Int64) -> Array[String]
 
+pub fn leaving_sentences(@core.State, String) -> Array[String]
+
+pub fn listing_sentence(@core.Listing, now~ : Int64) -> String
+
 pub fn next_leg_rows(@core.State) -> Array[(String, String)]
 
 pub fn outlook_sentences(@core.Crossing) -> Array[String]

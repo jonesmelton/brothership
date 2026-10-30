@@ -35,6 +35,7 @@ test "a crossing told from departure to docking" {
       #|[
       #|  Departed,
       #|  Asked(post=Some(Drive)),
+      #|  Signed(crew="ann"),
       #|  Took(crew="ann", post=Drive),
       #|  Began(phase=Coast),
       #|  Missed(hazard=Flare),

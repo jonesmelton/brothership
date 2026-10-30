@@ -9,8 +9,14 @@ struct Model {
   now : Int64
   /// The ships in service, once listed.
   ships : Array[@core.Listing]
-  /// The ship this player is aboard, kept in `localStorage`.
+  /// The ship this player is aboard, from the session, or chosen and
+  /// being signed on to. `None` shows the ships to choose from.
   ship : String?
+  /// The player chose `ship` and signs on once its snapshot loads.
+  joining : Bool
+  /// The ship the player left this visit, by name, to say so above the
+  /// ships to choose from.
+  left : String?
   /// The newest `seq` of the ship's story this browser had seen before this
   /// visit, for "while you were away"; `None` on a first visit.
   seen : Int64?
@@ -165,12 +171,27 @@ fn board(
       told: Told::new(),
       sync: Loading,
     },
-    @rabbita.batch([
-      load(emit, ship),
-      tell(emit, ship, 0),
-      @rabbita.effect(() => store_ship(ship)),
-    ]),
+    @rabbita.batch([load(emit, ship), tell(emit, ship, 0)]),
   )
+}
+
+///|
+/// Off the ship: show the ships to choose from, saying which one was left.
+fn ashore(model : Model, emit : @rabbita.Emit[Msg]) -> (Model, @rabbita.Cmd) {
+  let left = model.ships
+    .iter()
+    .find_first(l => model.ship == Some(l.id))
+    .map(l => l.name)
+  let next = {
+    ..model,
+    ship: None,
+    joining: false,
+    left,
+    effect: [],
+    told: Told::new(),
+    sync: Loading,
+  }
+  (next, @rabbita.batch([list(emit), title_cmd(next), focus_cmd("title")]))
 }
 
 ///|
@@ -256,12 +277,31 @@ fn update(
   msg : Msg,
   emit : @rabbita.Emit[Msg],
 ) -> (Model, @rabbita.Cmd) {
-  let ready = (_ship : String, sync : @core.Optimistic, cmd : @rabbita.Cmd) => {
-    ({ ..model, sync: Ready(sync), }, cmd)
+  // Settle on `sync`: sign on if the player just chose this ship, and go
+  // ashore if they are no longer aboard, as after a discharge or a refusal.
+  let ready = (ship : String, sync : @core.Optimistic, cmd : @rabbita.Cmd) => {
+    let aboard = sync.predicted().officers.contains(model.officer)
+    match (aboard, model.joining) {
+      (true, _) => ({ ..model, sync: Ready(sync), joining: false, }, cmd)
+      (false, true) =>
+        try sync.propose(model.officer, Signed) catch {
+          _ => ashore(model, emit)
+        } noraise {
+          (next, _) =>
+            (
+              { ..model, sync: Ready(next), joining: false, },
+              @rabbita.batch([cmd, send_next(emit, ship, sync, next)]),
+            )
+        }
+      (false, false) if sync.in_flight() is Some(_) =>
+        ({ ..model, sync: Ready(sync), }, cmd)
+      (false, false) => ashore(model, emit)
+    }
   }
   let current = (ship : String) => model.ship == Some(ship)
   match (model.sync, msg) {
-    (_, Session(Ok(s))) => ({ ..model, officer: s.officer, }, list(emit))
+    (_, Session(Ok(s))) =>
+      ({ ..model, officer: s.officer, ship: s.ship, }, list(emit))
     (_, Session(Err(err))) =>
       ({ ..model, sync: Offline(reason=err.to_string()), }, @rabbita.none)
     // A line is on its way: look for it sooner than the poll would.
@@ -361,7 +401,7 @@ fn update(
     (_, Listed(Err(err))) =>
       ({ ..model, sync: Offline(reason=err.to_string()), }, @rabbita.none)
     (_, Choose(ship)) => {
-      let (model, cmd) = board(model, ship, emit)
+      let (model, cmd) = board({ ..model, joining: true, }, ship, emit)
       (model, @rabbita.batch([cmd, title_cmd(model), focus_cmd("title")]))
     }
     (_, Loaded(ship, _) | Settled(ship, _)) if !current(ship) =>
@@ -614,7 +654,7 @@ fn choices(
         effect=@words.post_effect(c, officer, p),
       )
     }) +
-    (if hand is Some(_) { [choice(emit, "Leave the crew", Left)] } else { [] }),
+    (if hand is Some(_) { [choice(emit, "Stand down", Left)] } else { [] }),
   )
   guard hand is Some(h) else { [post] }
   let watch = match h.watch {
@@ -723,6 +763,32 @@ fn refit_choices(
 }
 
 ///|
+/// The choices of the You page in port: the post to take at departure.
+fn port_choices(
+  emit : @rabbita.Emit[Msg],
+  s : @core.State,
+  officer : String,
+) -> Array[@rabbita.Html] {
+  let at = s.officers.get(officer).bind(o => o.post)
+  let posts : Array[@core.Post] = [Drive, Hull, Craft]
+  [
+    group(
+      "post",
+      "Post at departure",
+      posts.map(p => {
+        choice(
+          emit,
+          @words.post_label(p),
+          Posted(post=p),
+          pressed=at == Some(p),
+        )
+      }) +
+      (if at is Some(_) { [choice(emit, "Stand down", Left)] } else { [] }),
+    ),
+  ]
+}
+
+///|
 /// How many hours of watch to offer again to `officer`, if any.
 fn Model::reup_hours(self : Model, c : @core.Crossing) -> Int64? {
   guard c.hands.get(self.officer) is Some({ watch: None, .. }) else { None }
@@ -730,20 +796,23 @@ fn Model::reup_hours(self : Model, c : @core.Crossing) -> Int64? {
 }
 
 ///|
-/// The ships to board, in a fixed order, the current one pressed.
+/// The ships to sign on to, in a fixed order, each with where it is.
 fn ship_choices(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
-  // A div, not a fieldset: the heading above already names the list.
-  @html.div(
-    class="choice-row",
+  @html.ul(
+    class="fleet",
+    // Without markers Safari drops list semantics unless asked.
+    attrs=@html.Attrs::build().role("list"),
     model.ships.map(l => {
-      @html.button(
-        type_="button",
-        on_click=emit(Choose(l.id)),
-        attrs=@html.Attrs::build().aria_pressed(
-          (model.ship == Some(l.id)).to_string(),
+      let where_ = "where-\{l.id}"
+      @html.li([
+        @html.button(
+          type_="button",
+          on_click=emit(Choose(l.id)),
+          attrs=@html.Attrs::build().aria_describedby(where_),
+          title(l.name),
         ),
-        title(l.name),
-      )
+        @html.p(id=where_, @words.listing_sentence(l, now=model.now)),
+      ])
     }),
   )
 }
@@ -754,7 +823,19 @@ fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
     let body = match model.sync {
       Offline(reason~) => [@html.p("Out of contact with the fleet: \{reason}")]
       _ if model.ships.is_empty() => [@html.p("Reaching the fleet.")]
-      _ => [ship_choices(model, emit)]
+      _ => {
+        let left = match model.left {
+          Some(name) => [@html.p("You have left \{name}.")]
+          None => []
+        }
+        [
+          ..left,
+          @html.p(
+            "You serve aboard the ship you choose until it docks. Choose again then if you like.",
+          ),
+          ship_choices(model, emit),
+        ]
+      }
     }
     return page(model, [masthead("Choose a ship"), ..body], [], [])
   }
@@ -841,7 +922,7 @@ fn you_page(
         @html.h3("Choices"),
         ..match s.crossing() {
           Some(c) => choices(emit, c, you, model.reup_hours(c))
-          None => [@html.p("Choices open when the ship departs.")]
+          None => port_choices(emit, s, you)
         },
         ..effect,
       ],
@@ -925,8 +1006,36 @@ fn ship_page(
     away_section(model, Ship, "While you were away", []),
     log_section(model, Ship),
     settings_section(model, emit),
-    @html.section([@html.h3("Other ships"), ship_choices(model, emit)]),
+    leaving_section(model, emit, s),
   ]
+}
+
+///|
+/// When the player may leave the ship, and the choice to.
+fn leaving_section(
+  model : Model,
+  emit : @rabbita.Emit[Msg],
+  s : @core.State,
+) -> @rabbita.Html {
+  let choice = match (s.leg, s.officers.get(model.officer)) {
+    (_, None) => []
+    (InPort(_), Some(_)) =>
+      [choice(emit, "Leave the ship", Leaving(leaving=true))]
+    (Underway(_), Some({ leaving, .. })) =>
+      [
+        group("leaving", "After this voyage", [
+          choice(emit, "Leave the ship", Leaving(leaving=true), pressed=leaving),
+          choice(emit, "Stay aboard", Leaving(leaving=false), pressed=!leaving),
+        ]),
+      ]
+  }
+  @html.section(
+    [
+      @html.h3("Leaving"),
+      ..sentences(@words.leaving_sentences(s, model.officer)),
+      ..choice,
+    ],
+  )
 }
 
 ///|
@@ -1135,16 +1244,13 @@ fn main {
   @rabbita.new(() => {
     let (model, emit) = @rabbita.create_state_with_init(
       init=emit => {
-        let ship = stored_ship()
         let model = {
           officer: "",
           now: unix_now(),
           ships: [],
-          ship: if ship == "" {
-            None
-          } else {
-            Some(ship)
-          },
+          ship: None,
+          joining: false,
+          left: None,
           seen: None,
           page: page_from_hash(current_hash()),
           viewed: { you: -1L, voyage: -1L, ship: -1L, },

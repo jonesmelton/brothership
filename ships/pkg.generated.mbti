@@ -38,6 +38,8 @@ pub let itinerary : Array[World]
 
 pub fn leg(Int64) -> (World, World)
 
+pub fn listing(String, @core.State) -> @core.Listing
+
 pub fn on_map((Double, Double, Double)) -> (Double, Double)
 
 pub fn open_post(@core.Crossing) -> @core.Post?
