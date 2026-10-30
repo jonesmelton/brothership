@@ -73,6 +73,9 @@ pub(all) struct Listing {
   /// Crossings flown; `@ships.leg` names the worlds of the one in hand.
   crossings : Int64
   whereabouts : Whereabouts
+  /// How much of the leg is behind the ship, in thousandths: 0 in port and
+  /// 1000 once arrived. Enough to place it on the star map and no more.
+  run : Int64
   /// Officers aboard.
   officers : Int64
 } derive(Debug, Eq, ToJson, FromJson)

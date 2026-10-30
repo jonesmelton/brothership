@@ -1,4 +1,32 @@
 ///|
+/// Whether `officer` is aboard a ship other than `ship`. Such an officer gets
+/// the fleet's whereabouts and no more of `ship`.
+fn aboard_elsewhere(
+  store : @store.Store,
+  officer : String,
+  ship : String,
+) -> Bool {
+  match store.aboard(officer) {
+    Some(aboard) => aboard != ship
+    None => false
+  }
+}
+
+///|
+/// Whether this request's session may read `ship`: it has no session, or its
+/// officer is not aboard another ship.
+async fn may_read(
+  store : @store.Store,
+  req : @moonback.Request,
+  ship : String,
+) -> Bool {
+  match officer_of(store, req) {
+    Some(officer) => !aboard_elsewhere(store, officer, ship)
+    None => true
+  }
+}
+
+///|
 /// JSON API over the store. Wire types are the ones in `@core`, so the
 /// browser decodes exactly what the server encodes.
 ///
@@ -9,14 +37,20 @@
 /// - `POST /api/ships/:id/proposals` with `@core.Proposal` -> `@core.Receipt`
 /// - `GET /api/ships/:id/story?after=seq` -> `@core.Story`
 ///
-/// An unknown ship is a 404. `clock` gives the wall clock in Unix seconds;
-/// proposals are applied at it. `speaking` says whether a ship is writing a
-/// line now, and `thinking` whether its mind is weighing a choice. A proposal acts as the officer in its session cookie: no
-/// session is a 401, and a proposal naming another officer is a 403.
+/// An unknown ship is a 404. A session whose officer is aboard another ship
+/// gets a 403 from that ship's snapshot and story: the fleet list is all it
+/// may see of a ship it is not aboard. `clock` gives the wall clock in Unix
+/// seconds; proposals are applied at it. `speaking` says whether a ship is
+/// writing a line now, and `thinking` whether its mind is weighing a choice.
+/// A proposal acts as the officer in its session cookie: no session is a
+/// 401, and a proposal naming another officer, or a ship other than the one
+/// the officer is aboard, is a 403.
 /// `secure` marks the session cookie `Secure`; keep it false only for
 /// plain-http development. A request with no session mints one only if
 /// `mint_each` has a token for its client and `mint_all` has one for the
 /// server; otherwise it is a 429 with `Retry-After`.
+
+///|
 pub fn routes(
   store : @store.Store,
   clock~ : () -> Int64 = unix_now,
@@ -63,6 +97,10 @@ pub fn routes(
     })
     ctx.get("/api/ships/:id/story", (req, res) => {
       let ship = req.params["id"].to_owned()
+      guard may_read(store, req, ship) else {
+        res.send_json({ "error": "aboard another ship" }, status=403)
+        return
+      }
       let after = @string.parse_int64(req.query().get("after").unwrap_or("0")) catch {
         _ => 0L
       }
@@ -90,7 +128,12 @@ pub fn routes(
       res.send_json(Json(listings))
     })
     ctx.get("/api/ships/:id/snapshot", (req, res) => {
-      match store.snapshot(req.params["id"].to_owned()) {
+      let ship = req.params["id"].to_owned()
+      guard may_read(store, req, ship) else {
+        res.send_json({ "error": "aboard another ship" }, status=403)
+        return
+      }
+      match store.snapshot(ship) {
         Some(snapshot) => res.send_json(snapshot.to_json())
         None => res.send_json({ "error": "no such ship" }, status=404)
       }
@@ -109,8 +152,16 @@ pub fn routes(
             { "error": "proposal is for another officer" },
             status=403,
           )
-        Some(_) => {
+        Some(officer) => {
           let ship = req.params["id"].to_owned()
+          guard store.snapshot(ship) is Some(_) else {
+            res.send_json({ "error": "no such ship" }, status=404)
+            return
+          }
+          guard !aboard_elsewhere(store, officer, ship) else {
+            res.send_json({ "error": "aboard another ship" }, status=403)
+            return
+          }
           match store.propose(ship, proposal, now=clock()) {
             Some(receipt) => res.send_json(receipt.to_json())
             None => res.send_json({ "error": "no such ship" }, status=404)

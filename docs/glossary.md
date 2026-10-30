@@ -25,6 +25,11 @@
 - **officer**: the crew member a player controls. A session's officer is the
   crew id that player's proposals act as. Recruits and other NPC crew are
   crew members but not officers.
+- **service number**: an officer's public crew id, minted once as `OF-` and
+  seven base32 characters (`OF-7K2M9QX`) and stable for the life of the
+  session cookie. It is how the ship knows the officer. Display names are
+  not shipped yet, so it is also the name other officers see in the roster.
+  It is never the session token.
 - **session**: a random token in an HttpOnly cookie, mapped to an officer.
   Not an account: clearing the cookie starts a new officer.
 - **handle**: the server-issued identifier a ship's model uses for one

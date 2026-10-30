@@ -35,10 +35,29 @@ fn new_token() -> String {
 }
 
 ///|
-/// A new officer's public crew id. It is never the session token, because
+/// The alphabet for a service number: Crockford's base32, without `I`, `L`,
+/// `O` and `U`, so no letter is mistaken for a digit or another letter.
+const SERVICE_ALPHABET : String = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+
+///|
+/// Characters after the `OF-` prefix. Seven base32 characters are 35 bits,
+/// which is about 34 billion service numbers. The session table's unique
+/// officer column is the final check.
+const SERVICE_DIGITS : Int32 = 7
+
+///|
+/// A new officer's service number, and their public crew id. The ship knows
+/// an officer by it across sessions. It is never the session token, because
 /// snapshots and the log publish crew ids.
 fn new_officer() -> String {
-  "officer-" + random_hex(8)
+  guard @env.rand(SERVICE_DIGITS) is Some(raw) else {
+    abort("session: the platform has no entropy source")
+  }
+  let out = StringBuilder()
+  for b in raw {
+    out.write_char(SERVICE_ALPHABET.get_char(b.to_int() % 32).unwrap())
+  }
+  "OF-" + out.to_string()
 }
 
 ///|

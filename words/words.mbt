@@ -44,11 +44,11 @@ fn soon_words(seconds : Int64) -> String {
 }
 
 ///|
-/// A ship in the list to choose from, at `now` in Unix seconds: where it is
-/// and who is aboard.
-pub fn listing_sentence(l : @core.Listing, now~ : Int64) -> String {
+/// Where a ship in the list is, at `now` in Unix seconds, without saying who
+/// is aboard.
+pub fn whereabouts_sentence(l : @core.Listing, now~ : Int64) -> String {
   let (from, to) = @ships.leg(l.crossings)
-  let where_ = match l.whereabouts {
+  match l.whereabouts {
     InPort(departs~) =>
       "In port at \{from.name}, leaving for \{to.name} \{soon_words(departs - now)}."
     Underway(arrives=Some(at)) if at <= now => "Arrived at \{to.name}, docking."
@@ -56,11 +56,24 @@ pub fn listing_sentence(l : @core.Listing, now~ : Int64) -> String {
       "Between \{from.name} and \{to.name}, arriving \{in_words(at - now)}."
     Underway(arrives=None) => "Between \{from.name} and \{to.name}."
   }
+}
+
+///|
+/// A ship in the list to choose from, at `now` in Unix seconds: where it is
+/// and who is aboard.
+pub fn listing_sentence(l : @core.Listing, now~ : Int64) -> String {
   let aboard = match l.officers {
     0L => "Nobody aboard yet."
     n => "\{plural(n, "officer", "officers")} aboard."
   }
-  "\{where_} \{aboard}"
+  "\{whereabouts_sentence(l, now~)} \{aboard}"
+}
+
+///|
+/// A ship in the fleet, at `now`, with its title and no one's business but
+/// where it is.
+pub fn fleet_sentence(l : @core.Listing, now~ : Int64) -> String {
+  "\{l.name}: \{whereabouts_sentence(l, now~)}"
 }
 
 ///|
@@ -583,7 +596,18 @@ pub fn priority(
 /// A happening as a sentence for the player `you`, aboard the ship called
 /// `ship` in English.
 pub fn told(h : @core.Happening, you~ : String, ship~ : String) -> String {
-  let who = (crew : String) => if crew == you { "You" } else { "A hand" }
+  told_by(h, you~, ship~, who=crew => if crew == you { "You" } else { "A hand" })
+}
+
+///|
+/// A happening as a sentence, naming a crew member by `who`. The roster uses
+/// this to name an officer by service number instead of "A hand".
+pub fn told_by(
+  h : @core.Happening,
+  you~ : String,
+  ship~ : String,
+  who~ : (String) -> String,
+) -> String {
   match h {
     Departed => "The ship left port."
     Began(phase=Arrived) => "The ship arrived."
@@ -609,7 +633,7 @@ pub fn told(h : @core.Happening, you~ : String, ship~ : String) -> String {
       if crew == you {
         "You stood your watch to its end."
       } else {
-        "A hand stood a watch to its end."
+        "\{who(crew)} stood a watch to its end."
       }
     Finished(crew~) => "\{who(crew)} finished a work."
     Made(crew~, craft~, units~, percent~) =>

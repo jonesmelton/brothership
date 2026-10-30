@@ -63,6 +63,7 @@ async test "api round trip over http" {
         "name": "EF-147 The Tigress",
         "crossings": "0",
         "whereabouts": ["Underway", { "arrives": "1800069192" }],
+        "run": "0",
         "officers": "0",
       },
       {
@@ -70,6 +71,7 @@ async test "api round trip over http" {
         "name": "HS-212 The Twin-Tailed Scorpion",
         "crossings": "0",
         "whereabouts": ["InPort", { "departs": "600" }],
+        "run": "0",
         "officers": "0",
       },
       {
@@ -77,6 +79,7 @@ async test "api round trip over http" {
         "name": "EF-287 The Flea on the Drum",
         "crossings": "0",
         "whereabouts": ["InPort", { "departs": "600" }],
+        "run": "0",
         "officers": "0",
       },
     ])
@@ -100,6 +103,18 @@ async test "api round trip over http" {
     let (_, body) = @http.get("\{base}/api/session", headers~)
     let aboard : @core.Session = @json.from_json(body.json())
     debug_inspect(aboard.ship, content="Some(\"tigress\")")
+    let (res, _) = @http.get("\{base}/api/ships/flea/snapshot", headers~)
+    inspect(res.code, content="403")
+    let (res, _) = @http.get("\{base}/api/ships/flea/story?after=0", headers~)
+    inspect(res.code, content="403")
+    let (res, _) = @http.get("\{base}/api/ships/tigress/snapshot", headers~)
+    inspect(res.code, content="200")
+    let (res, _) = @http.post(
+      "\{base}/api/ships/flea/proposals",
+      proposal.to_json(),
+      headers~,
+    )
+    inspect(res.code, content="403")
     let (res, body) = @http.post(
       "\{base}/api/ships/tigress/proposals",
       "{\"id\":",
@@ -128,7 +143,8 @@ async test "the session cookie names one officer and is HttpOnly" {
     inspect(cookie.path.unwrap_or(""), content="/")
     inspect(cookie.max_age.unwrap_or(0L), content="2592000")
     inspect(cookie.extensions.contains("SameSite=Lax"), content="true")
-    inspect(session.officer.has_prefix("officer-"), content="true")
+    inspect(session.officer.has_prefix("OF-"), content="true")
+    inspect(session.officer.length(), content="10")
     let (response, body) = @http.get(
       "\{base}/api/session",
       headers=cookie_header(cookie),

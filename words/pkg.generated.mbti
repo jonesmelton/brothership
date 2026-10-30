@@ -12,6 +12,8 @@ pub fn about(Int64) -> String
 
 pub fn ago(Int64) -> String
 
+pub fn angle_figure(Double) -> String
+
 pub fn ask_sentence(@core.Crossing) -> Array[String]
 
 pub fn asks_answered(Array[@core.Entry]) -> Map[String, Int64]
@@ -29,6 +31,8 @@ pub fn earning_sentences(@core.State, you~ : String) -> Array[String]
 pub fn effect(@core.State, @core.State, you~ : String) -> Array[String]
 
 pub fn figure(Double, Int32) -> String
+
+pub fn fleet_sentence(@core.Listing, now~ : Int64) -> String
 
 pub fn hazard_name(@core.Hazard) -> String
 
@@ -92,9 +96,13 @@ pub fn since(Ledger, Ledger) -> Array[String]
 
 pub fn told(@core.Happening, you~ : String, ship~ : String) -> String
 
+pub fn told_by(@core.Happening, you~ : String, ship~ : String, who~ : (String) -> String) -> String
+
 pub fn where_rest(@core.State) -> Array[String]
 
 pub fn where_sentences(@core.State) -> Array[String]
+
+pub fn whereabouts_sentence(@core.Listing, now~ : Int64) -> String
 
 pub fn you_sentences(@core.State, String) -> Array[String]
 

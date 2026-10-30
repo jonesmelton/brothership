@@ -274,6 +274,7 @@ pub(all) struct Listing {
   name : String
   crossings : Int64
   whereabouts : Whereabouts
+  run : Int64
   officers : Int64
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 

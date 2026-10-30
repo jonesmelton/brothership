@@ -114,15 +114,22 @@ The server's speakers print each line's times.
   `secure=false` for plain-http development. The token never appears in a
   snapshot or the log, because both publish crew ids.
 - `GET /api/ships` returns `Array[@core.Listing]`, in order of commission:
-  each ship's whereabouts and how many officers are aboard
-  (`@ships.listing`), which `@words.listing_sentence` renders.
+  each ship's whereabouts, how far along its leg it is (`run`, in
+  thousandths), and how many officers are aboard (`@ships.listing`), which
+  `@words.listing_sentence` renders. The fleet map on the Voyage page uses
+  `run` to place every ship.
 - `GET /api/ships/:id/snapshot` returns `@core.Snapshot`.
 - `GET /api/ships/:id/story?after=seq` returns `@core.Story`: the ship's
   happenings after `seq`, and whether it is writing a line.
+  Both the snapshot and the story answer 403 when the session's officer is
+  aboard a different ship: the fleet list is all a player may know of a
+  ship they are not aboard.
 - `POST /api/ships/:id/proposals` takes `@core.Proposal` and returns
   `@core.Receipt`. It acts as the session's officer: no session is a 401, and
-  a proposal naming another officer is a 403. An unknown ship is a 404. A
-  body naming a server event fails to decode and gets a 400.
+  a proposal naming another officer is a 403. A proposal for a ship the
+  officer is not aboard while they are aboard another is also a 403, since
+  the refusal receipt would otherwise carry that ship's snapshot. An unknown
+  ship is a 404. A body naming a server event fails to decode and gets a 400.
 - A session is not a seat. Nothing limits how many officers join a ship.
   An officer serves on one ship at a time: `Store::propose` refuses a
   proposal from an officer aboard another ship with `AboardAnother`, since

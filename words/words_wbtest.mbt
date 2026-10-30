@@ -431,7 +431,7 @@ test "a post's effect on a hull that wears" {
 test "a listing in one sentence" {
   let at = (whereabouts : @core.Whereabouts, crossings : Int64) => {
     listing_sentence(
-      { id: "x", name: "x", crossings, whereabouts, officers: 2, },
+      { id: "x", name: "x", crossings, whereabouts, run: 0, officers: 2, },
       now=1000,
     )
   }
@@ -458,12 +458,30 @@ test "a listing in one sentence" {
         name: "x",
         crossings: 0,
         whereabouts: InPort(departs=0),
+        run: 0,
         officers: 0,
       },
       now=1000,
     ),
     content="In port at Kerala, leaving for Occitan any moment. Nobody aboard yet.",
   )
+}
+
+///|
+test "the fleet list says where a ship is, and not who is aboard" {
+  let l : @core.Listing = {
+    id: "flea",
+    name: "EF-287 The Flea on the Drum",
+    crossings: 0,
+    whereabouts: InPort(departs=600),
+    run: 0,
+    officers: 3,
+  }
+  assert_eq(
+    fleet_sentence(l, now=0),
+    "EF-287 The Flea on the Drum: In port at Kerala, leaving for Occitan in about 10 minutes.",
+  )
+  assert_false(fleet_sentence(l, now=0).contains("aboard"))
 }
 
 ///|

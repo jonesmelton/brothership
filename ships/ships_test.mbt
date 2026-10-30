@@ -200,6 +200,7 @@ test "a listing says where the ship is and who is aboard" {
   let ready = s.launch().unwrap().ready_at
   let l = @ships.listing("tigress", s)
   assert_eq(l.whereabouts, InPort(departs=ready))
+  assert_eq(l.run, 0L)
   inspect(l.officers, content="1")
   // Posting to the drive brings the departure forward at once.
   let s = s.apply(Crew(crew="ann", intent=Posted(post=Drive))) catch {
@@ -215,6 +216,10 @@ test "a listing says where the ship is and who is aboard" {
     @ships.listing("tigress", s).whereabouts,
     Underway(arrives=Some(s.at + c.forecast().unwrap() - c.t)),
   )
+  assert_eq(@ships.listing("tigress", s).run, 0L)
+  let later = p.due(s, s.at + 14_400L, officer=_ => true).1
+  let run = @ships.listing("tigress", later).run
+  assert_true(run > 0L && run < 1000L)
 }
 
 ///|

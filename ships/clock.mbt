@@ -21,11 +21,23 @@ pub fn listing(id : String, state : @core.State) -> @core.Listing {
     Underway(crossing=c, ..) =>
       Underway(arrives=c.forecast().map(at => state.at + at - c.t))
   }
+  let run = match state.crossing() {
+    Some(c) => {
+      let r = reckon(c)
+      if r.length <= 0.0 {
+        0L
+      } else {
+        (r.run / r.length * 1000.0).round().to_int64()
+      }
+    }
+    None => 0L
+  }
   {
     id,
     name: state.profile,
     crossings: state.ship.crossings,
     whereabouts,
+    run,
     officers: state.officers.length().to_int64(),
   }
 }
