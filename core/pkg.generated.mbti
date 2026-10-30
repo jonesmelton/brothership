@@ -17,6 +17,8 @@ pub const CRAFT_UNIT : Int64 = 16
 
 pub const CRUISE_FULL : Int64 = 1000
 
+pub const DOCKHANDS : Int64 = 4
+
 pub const DUST_LOSS : Int64 = 200_000_000
 
 pub const ENSIGN : Int64 = 0
@@ -24,6 +26,8 @@ pub const ENSIGN : Int64 = 0
 pub const EROSION : Int64 = 750
 
 pub const EROSION_PACE : Int64 = 760_500
+
+pub const FIRST_STORES : Int64 = 2400
 
 pub const FLARE_LOSS : Int64 = 166_666_666
 
@@ -49,8 +53,6 @@ pub const MAX_LEVEL : Int64 = 3
 
 pub const MAX_RECRUITS : Int64 = 6
 
-pub const PORT_REPAIR : Int64 = 250_000_000
-
 pub const REGARD_HOUR : Int64 = 14_400
 
 pub const WATCH_BONUS : Int64 = 4
@@ -62,6 +64,8 @@ pub const WATCH_PENALTY : Int64 = 8
 pub const WORKS_PER_RECRUIT : Int64 = 3
 
 pub const WORK_SIZE : Int64 = 345_600
+
+pub const YARD_FLOOR : Int64 = 35_000
 
 pub fn band_of(Int64) -> Int64
 
@@ -90,6 +94,7 @@ pub(all) suberror CrossingRejected {
 pub(all) suberror Rejected {
   NotUnderway(event~ : Event)
   NotInPort(event~ : Event)
+  NotReady(stores~ : Int64)
   NotArrived(event~ : Event)
   Crossing(reason~ : CrossingRejected)
   NotFirst(event~ : Event)
@@ -170,7 +175,7 @@ pub(all) enum Event {
   Crew(crew~ : String, intent~ : Intent)
   Tick(at~ : Int64)
   Departed(plan~ : Plan)
-  Docked
+  Docked(stores~ : Int64)
   Asked(post~ : Post?)
   Refitting(refit~ : Refit?)
   Promoted(crew~ : String, rank~ : Int64)
@@ -212,6 +217,7 @@ pub(all) enum Happening {
   Met(hazard~ : Hazard)
   Missed(hazard~ : Hazard)
   Landed(refit~ : Refit, level~ : Int64)
+  Loaded
   Asked(post~ : Post?)
   Signed(crew~ : String)
   Discharged(crew~ : String)
@@ -251,8 +257,15 @@ pub(all) struct Landing {
   plan : Plan
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct Launch {
+  load : Int64
+  mend : Int64
+  ready_at : Int64
+  hull : Int64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) enum Leg {
-  InPort(since~ : Int64)
+  InPort(port~ : Port)
   Underway(crossing~ : Crossing, spoke~ : Moment?)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
@@ -317,6 +330,14 @@ pub fn Plan::coast_wear(Self, Fit) -> Int64
 pub fn Plan::erosion(Self, Fit) -> Int64
 pub fn Plan::fastest(Self) -> Int64
 pub fn Plan::slowest(Self) -> Int64
+
+pub(all) struct Port {
+  since : Int64
+  stores : Int64
+  ask : Post?
+  spoke : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Port::new(Int64, Int64) -> Self
 
 pub(all) enum Post {
   Drive
@@ -388,6 +409,8 @@ pub fn State::apply(Self, Event) -> Self raise Rejected
 pub fn State::commission(Event) -> Self raise Rejected
 pub fn State::crossing(Self) -> Crossing?
 pub fn State::initial(Ship, profile~ : String) -> Self
+pub fn State::launch(Self) -> Launch?
+pub fn State::posted(Self, Post) -> Int64
 pub fn State::rank(Self, String) -> Int64
 
 pub(all) enum Status {

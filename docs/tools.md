@@ -34,8 +34,8 @@ The officers are the same in every run:
 | `coast` | the coast begins |
 | `ensigns` | six hours out, every officer an ensign; it chooses promotions underway |
 | `arrival` | the ship arrives; it chooses promotions instead of a turn |
-| `port` | the ship has docked after its first crossing; it chooses its cruise |
-| `worn` | the same port with the hull set to 45%; it chooses its cruise |
+| `port` | the ship has docked after its first crossing; it chooses its cruise and port ask |
+| `worn` | the same port with the hull set to 45%; it chooses its cruise and port ask |
 
 | flag | default | meaning |
 | --- | --- | --- |

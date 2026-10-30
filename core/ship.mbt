@@ -27,10 +27,6 @@ pub const WORKS_PER_RECRUIT : Int64 = 3L
 pub const MAX_RECRUITS : Int64 = 6L
 
 ///|
-/// Hull restored by the yard at each port.
-pub const PORT_REPAIR : Int64 = 250_000_000L
-
-///|
 /// Regard for one tick of one hand at weight 1. Regard is shown in these
 /// "hours of plain work".
 pub const REGARD_HOUR : Int64 = 14_400L

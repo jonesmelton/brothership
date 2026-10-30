@@ -30,6 +30,8 @@ pub(all) enum Happening {
   Missed(hazard~ : Hazard)
   /// A refit landed, raising it to `level`.
   Landed(refit~ : Refit, level~ : Int64)
+  /// The stores are loaded, and the ship may depart.
+  Loaded
   /// The ship changed what it asks for.
   Asked(post~ : Post?)
   /// `crew` signed on to the ship.
@@ -90,7 +92,7 @@ pub fn happenings(
       }
       return [Promoted(crew~, rank~, tally~)]
     }
-    Docked => {
+    Docked(_) => {
       let (aboard, plan) = match before.crossing() {
         Some(c) => (c.arrived_at.unwrap_or(c.t), c.plan)
         None =>
@@ -171,7 +173,17 @@ pub fn happenings(
         }
       }
     }
-    (None, None) => roster()
+    (None, None) => {
+      if before.leg is InPort(port=a) && after.leg is InPort(port=b) {
+        if a.stores > 0L && b.stores == 0L {
+          out.push(Loaded)
+        }
+        if b.ask != a.ask {
+          out.push(Asked(post=b.ask))
+        }
+      }
+      roster()
+    }
     (Some(_), None) => ()
   }
   out

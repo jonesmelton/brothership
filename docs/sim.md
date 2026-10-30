@@ -27,7 +27,8 @@ The first argument picks a section and the second the seeds per batch:
 | `scenarios` | every scenario's batch on the plain ship |
 | `ships` | the solo and mixed crews on each ship |
 | `policies` | the solo player under each policy, as artist and as engineer |
-| `voyages` | six legs on each ship, docking between them |
+| `launches` | each ship's port stay at 20 ly by crew in port: minutes, and hull at departure |
+| `voyages` | six legs on each ship, docking and launching between them |
 | `careers` | six-leg voyages by the solo player's policy and craft |
 | `story` | one thoughtful player's check-ins, with what each choice would do |
 | `all` | every section |
@@ -111,7 +112,7 @@ With them, from `cmd/survey` at 20 seeds:
 - a single player moves a 20 ly crossing by about 7% (11.6 to 12.3 hours),
   because the coast, where crew make no difference, is most of it. Their
   choices add up over a voyage: six legs took 60.7 to 68.4 hours on the Flea
-  depending on the player's policy and craft;
+  depending on the player's policy and craft (before the launch; see below);
 - about half of check-ins cannot move arrival by five minutes, once standing
   orders take care of turnover, but about 90% still offer a real trade
   between arrival, hull, works, regard and refits;
@@ -121,3 +122,22 @@ With them, from `cmd/survey` at 20 seeds:
   fixed: the hull band rising and falling at an edge, and a social ship
   chasing recruits who follow its asks. The voyage test now fails any leg of
   200 instants or more.
+
+With the launch (`cmd/survey launches` and `voyages`, 2026-10-30):
+
+- at 20 ly an idle ship waits 120 minutes and the dockhands mend 25% of the
+  hull; one officer on the drive halves the wait; four on the drive leave in
+  24 minutes with 5% from the yard, three and one in 30, two and two in 40.
+  The figures are the same on every ship except the yard's, which follows
+  each ship's repair rate: one officer on the hull from half a hull leaves
+  at 90% on the Flea and 98% on the Tigress;
+- in the solo voyages, with recruits following the port ask, stays ran 5 to
+  90 minutes. The Flea, sly and asking for stores, with six recruits, left
+  its fifth port in 5 minutes; the plain careful ship, asking for the yard,
+  took 60 to 90 minutes and left at full hull;
+- six-leg careers took 77 to 96 hours aboard on the Flea, about an hour more
+  than with the flat quarter-hull repair, and the lowest hull fell by up to
+  7 points, because a ship asking for stores leaves with less than a quarter
+  mended;
+- single crossings are unchanged, so the check-in figures in
+  `docs/gameplay.md` still hold.

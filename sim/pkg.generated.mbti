@@ -17,6 +17,8 @@ pub fn handover(@core.Crossing) -> @core.Order?
 
 pub fn histogram(Array[Int64], lo~ : Int64, hi~ : Int64, bins~ : Int32) -> Array[Int32]
 
+pub fn launch(@core.Ship, Array[(String, @core.Post)], ask~ : @core.Post?, distance_ly~ : Double) -> (@core.Ship, Stay)
+
 pub fn percentile(Array[Int64], Int32) -> Int64
 
 pub let policies : Array[Policy]
@@ -70,6 +72,7 @@ pub(all) struct Leg {
   run : Run
   docked : @core.Ship
   promotions : Array[(String, Int64)]
+  stay : Stay?
 } derive(Eq, @debug.Debug)
 
 pub(all) struct Outcome {
@@ -160,6 +163,11 @@ pub fn Scenario::departing(Self, Int64) -> @core.Ship
 pub fn Scenario::fly(Self, @core.Ship, Int64) -> Run
 pub fn Scenario::run(Self, Int64) -> Run
 pub fn Scenario::voyage(Self, Array[Double], Int64) -> Array[Leg]
+
+pub(all) struct Stay {
+  ticks : Int64
+  hull : Int64
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 

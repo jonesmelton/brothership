@@ -147,7 +147,9 @@ test "landfall with nobody aboard says so" {
 ///|
 test "landfall counts who answered the ship's asks, in order of the roll call" {
   let (flown, now) = first_landfall(posts=[Drive])
-  guard flown.last() is Some({ happening: Docked(landing~, ..), .. }) else {
+  // The ship asks in port after docking, so the docking is not last.
+  guard flown.rev_iter().find_first(e => e.happening is Docked(..))
+    is Some({ happening: Docked(landing~, ..), .. }) else {
     panic()
   }
   let story : Array[@core.Entry] = [

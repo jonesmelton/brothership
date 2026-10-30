@@ -58,7 +58,7 @@ works finished. Then they have up to six choices, each on its own timescale:
 |---|---|---|---|
 | post | `Posted` | until changed | arrival and hull, for everyone |
 | watch | `Watched` | 1 hour or more; the interface offers up to 12 | a quarter more from this hand; regard |
-| standing order | `Ordered` | until the next phase begins | the post taken at the phase change |
+| standing order | `Ordered` | until its phase begins: the coast, the approach or arrival | the post taken at the phase change, or worked in port |
 | make banked work | `Made` | at once | the ship's refit, or one's own works, at 100% to 150% of the bank |
 | craft | `Crafted` | until changed | where the next making goes |
 | refit, for engineers | `Refitting` | until it lands | the ship, for good |
@@ -235,8 +235,8 @@ plan, which is fixed when the ship leaves port, so they pay off only on later
 crossings and most on long hauls. They raise the erosion of a coast at full
 cruise by the same fifth, so a ship with coils that will not mend coasts
 slower and keeps less of their gain. On the Flea, which proposes coils first, a
-solo engineer's six-leg voyage took about 79 hours against 94 for a solo
-artist, both at the Flea's three-fifths cruise.
+solo engineer's six-leg voyage took about 79 hours aboard against 96 for a
+solo artist, both at the Flea's three-fifths cruise, not counting port.
 On the plain ship, which proposes baffles and plating, engineers bought hull
 and no time.
 
@@ -263,7 +263,9 @@ the coast begins", or "drive at turnover". It fires at the phase boundary,
 so a player who leaves during the burn crafts through the coast and is back
 on the drive for the approach without checking in. A watch in progress
 carries over to the new post. An order for a phase the plan skips, such as
-the coast on a hop too short to reach the cap, lapses at turnover.
+the coast on a hop too short to reach the cap, lapses at turnover. An order
+for arrival names the post to work in port: "hull while in port" for a
+player who will not be around when the ship docks.
 
 Before orders, players who crafted through the coast left the approach at
 the drive's floor until they returned, and the coast forecast read about 3
@@ -346,13 +348,48 @@ Arrival docks the crossing into the ship that leaves (`Crossing::dock`):
 - every 3 works delivered across the crew bring a recruit, up to 6.
   Recruits work ship posts only and make no works, so recruits do not breed
   recruits;
-- the yard restores a quarter of the hull;
 - refits stay fitted, and coils change the next crossing's plan;
 - the ship proposes destinations and the crew choose. How several players
   choose is still open, and none of it is built.
 
 Not built yet: works raising their makers' standing at a world, and
 gathering inputs for the next works.
+
+Then the **launch**. The ship departs once its **stores** for the next leg
+are loaded: two crew-hours for every 20 light-years. Officers stay on their
+named posts in port, and in port the posts do other work:
+
+| post in port | does |
+|---|---|
+| drive | loads stores at one hand's rate, so the ship leaves sooner |
+| hull | works the **yard**, mending the hull at the ship's repair rate, until the ship leaves |
+| craft | nothing |
+
+The port's **dockhands** load stores at one hand's rate and mend about a
+quarter hull over two hours whoever is aboard, so a ship with nobody aboard,
+or only absent officers, still leaves. Nothing a crew does, or fails to do,
+holds a ship in port longer than the dockhands take. The choice is whether
+to leave sooner or mend more: every hand on stores brings the departure
+closer and shortens the yard's time; every hand in the yard leaves with more
+hull, and later. The ship asks once each port stay, at docking: bold and
+sly ships for stores, careful ones for the yard while the hull is short,
+social ones for the emptier post. A newly commissioned ship loads ten
+minutes of stores before its first departure.
+
+At 20 ly from half a hull, on every ship (`cmd/survey launches`):
+
+| crew in port | minutes in port | hull at departure |
+|---|---|---|
+| nobody | 120 | 75% |
+| 1 on the drive | 60 | 63% |
+| 1 on the hull | 120 | 90 to 98% |
+| 4 on the drive | 24 | 55% |
+| 3 on the drive, 1 on the hull | 30 | 60 to 62% |
+| 2 on the drive, 2 on the hull | 40 | 68 to 74% |
+
+The ship's launch line reads the forecast, which moves at once when a post
+changes: "Stores load in about 45 minutes, and the ship departs then. The
+yard has the hull at 50%, and 60% by then."
 
 Then the ship departs, and the new world gives everything a new meaning.
 

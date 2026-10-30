@@ -36,8 +36,9 @@ pub(all) enum Event {
   Tick(at~ : Int64)
   /// The ship leaves port on `plan`, worked out by the server.
   Departed(plan~ : Plan)
-  /// The ship docks at the end of an arrived crossing.
-  Docked
+  /// The ship docks at the end of an arrived crossing, with `stores` to load
+  /// for the next leg, sized by the server.
+  Docked(stores~ : Int64)
   /// The ship asks for hands on a post, or stops asking.
   Asked(post~ : Post?)
   /// The ship chooses what its engineers build next.
@@ -59,6 +60,8 @@ pub(all) suberror Rejected {
   NotUnderway(event~ : Event)
   /// The ship departs only from port.
   NotInPort(event~ : Event)
+  /// The ship departs only once its stores are loaded; `stores` are left.
+  NotReady(stores~ : Int64)
   /// The ship docks only once the crossing has arrived.
   NotArrived(event~ : Event)
   Crossing(reason~ : CrossingRejected)
@@ -76,8 +79,7 @@ pub(all) suberror Rejected {
 
 ///|
 pub(all) enum Leg {
-  /// In port since `since`, in Unix seconds.
-  InPort(since~ : Int64)
+  InPort(port~ : Port)
   /// Underway; `spoke` is the moment at which the ship last reconsidered
   /// its ask, if it has this crossing.
   Underway(crossing~ : Crossing, spoke~ : Moment?)
@@ -114,7 +116,13 @@ pub(all) struct State {
 ///|
 /// A voyage that has not begun: `ship` in port, before any tick.
 pub fn State::initial(ship : Ship, profile~ : String) -> State {
-  { at: 0, profile, ship, leg: InPort(since=0), officers: {}, }
+  {
+    at: 0,
+    profile,
+    ship,
+    leg: InPort(port=Port::new(0, FIRST_STORES)),
+    officers: {},
+  }
 }
 
 ///|
@@ -175,8 +183,9 @@ pub fn State::apply(self : State, event : Event) -> State raise Rejected {
     Tick(at~) =>
       match self.leg {
         // The voyage begins at its first tick.
-        InPort(_) if self.at == 0L => { ..self, at, leg: InPort(since=at), }
-        InPort(_) => { ..self, at, }
+        InPort(port~) if self.at == 0L =>
+          { ..self, at, leg: InPort(port={ ..port, since: at, }), }
+        InPort(port~) => self.load(port, at)
         Underway(crossing~, spoke~) =>
           {
             ..self,
@@ -185,7 +194,8 @@ pub fn State::apply(self : State, event : Event) -> State raise Rejected {
           }
       }
     Departed(plan~) => {
-      guard self.leg is InPort(_) else { raise NotInPort(event~) }
+      guard self.leg is InPort(port~) else { raise NotInPort(event~) }
+      guard port.stores == 0L else { raise NotReady(stores=port.stores) }
       // Officers take the posts they named in port.
       let mut c = Crossing::new(plan, self.ship)
       for crew, o in self.officers {
@@ -195,7 +205,7 @@ pub fn State::apply(self : State, event : Event) -> State raise Rejected {
       }
       { ..self, leg: Underway(crossing=c, spoke=None), }
     }
-    Docked => {
+    Docked(stores~) => {
       guard self.leg is Underway(crossing~, ..) && crossing.dock() is Some(ship) else {
         raise NotArrived(event~)
       }
@@ -206,7 +216,8 @@ pub fn State::apply(self : State, event : Event) -> State raise Rejected {
           officers[crew] = { post, leaving: false, active: false, }
         }
       }
-      { ..self, ship, leg: InPort(since=self.at), officers, }
+      let port = Port::new(self.at, stores.max(0L))
+      { ..self, ship, leg: InPort(port~), officers, }
     }
     Spoke(_) => self
     Cruising(cruise~) => {
@@ -217,7 +228,12 @@ pub fn State::apply(self : State, event : Event) -> State raise Rejected {
       { ..self, ship: { ..self.ship, cruise, }, }
     }
     Promoted(crew~, rank~) => forward(Promoted(crew~, rank~), false)
-    Asked(post~) => forward(Asked(post~), true)
+    Asked(post~) =>
+      match self.leg {
+        InPort(port~) =>
+          { ..self, leg: InPort(port={ ..port, ask: post, spoke: true, }), }
+        Underway(_) => forward(Asked(post~), true)
+      }
     Refitting(refit~) => forward(Refitting(refit~), false)
     Crew(crew~, intent~) => {
       let officer = self.officers.get(crew)

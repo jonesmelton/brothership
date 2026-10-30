@@ -3,11 +3,19 @@
 const DEPART_AT : Int64 = 1_800_000_000L
 
 ///|
+/// `ship` in port at `DEPART_AT` with its stores loaded.
+fn ready(ship : @core.Ship) -> @core.State {
+  {
+    ..@core.State::initial(ship, profile="test"),
+    at: DEPART_AT,
+    leg: InPort(port=@core.Port::new(DEPART_AT, 0)),
+  }
+}
+
+///|
 /// `ship` underway on `plan`, ticked to `DEPART_AT`.
 fn underway(plan : @core.Plan, ship : @core.Ship) -> @core.State {
-  @core.State::initial(ship, profile="test")
-  .apply(Tick(at=DEPART_AT))
-  .apply(Departed(plan~)) catch {
+  ready(ship).apply(Departed(plan~)) catch {
     _ => panic()
   }
 }
@@ -61,11 +69,11 @@ test "a voyage departs, arrives, docks and departs again" {
   let at = c.forecast().unwrap()
   let s = s.apply(Tick(at=s.at + at)) catch { _ => panic() }
   inspect(crossing_of(s).arrived_at == Some(at), content="true")
-  let s = s.apply(Docked) catch { _ => panic() }
+  let s = s.apply(Docked(stores=0)) catch { _ => panic() }
   debug_inspect(
     s.leg,
     content=(
-      #|InPort(since=1800053855)
+      #|InPort(port={ since: 1800053855, stores: 0, ask: None, spoke: false })
     ),
   )
   inspect(s.ship.crossings, content="1")
@@ -100,12 +108,22 @@ test "rejections" {
     ),
   )
   debug_inspect(
-    reject(port, Asked(post=Some(Hull))),
-    content="NotUnderway(event=Asked(post=Some(Hull)))",
+    reject(port, Refitting(refit=Some(Plating))),
+    content="NotUnderway(event=Refitting(refit=Some(Plating)))",
   )
-  debug_inspect(reject(port, Docked), content="NotArrived(event=Docked)")
+  debug_inspect(
+    reject(port, Docked(stores=0)),
+    content=(
+      #|NotArrived(event=Docked(stores=0))
+    ),
+  )
   let sea = underway(plan20(), ship())
-  debug_inspect(reject(sea, Docked), content="NotArrived(event=Docked)")
+  debug_inspect(
+    reject(sea, Docked(stores=0)),
+    content=(
+      #|NotArrived(event=Docked(stores=0))
+    ),
+  )
   debug_inspect(
     reject(sea, Departed(plan=plan20())),
     content=(
@@ -234,6 +252,7 @@ test "replay begins at the commission, and only there" {
   let s = @core.replay(
     [
       @core.Event::Commissioned(ship=ship(), profile="test"),
+      Tick(at=DEPART_AT - 600),
       Tick(at=DEPART_AT),
       Departed(plan=plan20()),
       Crew(crew="ann", intent=Posted(post=Hull)),
@@ -265,9 +284,7 @@ test "replay begins at the commission, and only there" {
 
 ///|
 test "a ship chooses its cruise in port, and keeps it" {
-  let s = @core.State::initial(ship(), profile="test").apply(Tick(at=DEPART_AT)) catch {
-    _ => panic()
-  }
+  let s = ready(ship())
   inspect(s.ship.cruise, content="1000")
   let s = s.apply(Cruising(cruise=750)) catch { _ => panic() }
   inspect(s.ship.cruise, content="750")
@@ -284,4 +301,164 @@ test "a ship chooses its cruise in port, and keeps it" {
     }
     inspect(refused is Err(@core.NoSuchCruise(_)), content="true")
   }
+}
+
+///|
+/// A ship in port since `DEPART_AT` with `stores` left to load and `posts`
+/// named by its officers, `crew 1` onwards.
+fn loading(
+  stores : Int64,
+  posts : Array[@core.Post],
+  hull~ : Int64 = @core.HULL_FULL / 2L,
+) -> @core.State {
+  let s = @core.State::initial(ship(hull~), profile="test")
+  let mut s : @core.State = {
+    ..s,
+    at: DEPART_AT,
+    leg: InPort(port={ since: DEPART_AT, stores, ask: None, spoke: false, }),
+  }
+  for i, post in posts {
+    s = s.apply(Crew(crew="crew \{i + 1}", intent=Posted(post~))) catch {
+      _ => panic()
+    }
+  }
+  s
+}
+
+///|
+fn stores_of(s : @core.State) -> Int64 {
+  guard s.leg is InPort(port~) else { panic() }
+  port.stores
+}
+
+///|
+fn tick(s : @core.State, ticks : Int64) -> @core.State {
+  s.apply(Tick(at=s.at + ticks)) catch {
+    _ => panic()
+  }
+}
+
+///|
+test "an empty ship's stores run out at stores / DOCKHANDS ticks" {
+  let s = loading(28_800, [])
+  let ticks = 28_800L / @core.DOCKHANDS
+  inspect(stores_of(tick(s, ticks - 1L)), content="4")
+  inspect(stores_of(tick(s, ticks)), content="0")
+  debug_inspect(
+    s.launch().map(l => l.ready_at - DEPART_AT),
+    content="Some(7200)",
+  )
+}
+
+///|
+test "the drive loads stores, the hull mends without moving the departure, craft does neither" {
+  let idle = loading(28_800, [])
+  let drive = loading(28_800, [Drive])
+  let hull = loading(28_800, [Hull])
+  let craft = loading(28_800, [Craft])
+  let ready = (s : @core.State) => s.launch().unwrap().ready_at - DEPART_AT
+  inspect(ready(drive), content="3600")
+  inspect(ready(hull), content="7200")
+  inspect(ready(craft), content="7200")
+  let hull_after = (s : @core.State) => tick(s, 3600).ship.hull
+  inspect(hull_after(idle), content="626000000")
+  // The ship's fit mends 28,000 a tick for each hand on the hull.
+  inspect(hull_after(hull), content="726800000")
+  inspect(hull_after(craft), content="626000000")
+  inspect(hull_after(drive), content="626000000")
+  assert_eq(stores_of(tick(craft, 3600)), stores_of(tick(idle, 3600)))
+  assert_eq(stores_of(tick(hull, 3600)), stores_of(tick(idle, 3600)))
+}
+
+///|
+test "the yard stops at a full hull" {
+  let s = tick(
+    loading(28_800, [Hull, Hull], hull=@core.HULL_FULL - 1000L),
+    7200,
+  )
+  inspect(s.ship.hull == @core.HULL_FULL, content="true")
+}
+
+///|
+test "the ship departs only once the stores are loaded" {
+  let s = loading(28_800, [Drive])
+  let early = try tick(s, 3599).apply(Departed(plan=plan20())) catch {
+    err => Some(err)
+  } noraise {
+    _ => None
+  }
+  debug_inspect(early, content="Some(NotReady(stores=8))")
+  let ready = s.launch().unwrap().ready_at
+  let s = s.apply(Tick(at=ready)).apply(Departed(plan=plan20())) catch {
+      _ => panic()
+    }
+  inspect(s.crossing().unwrap().count(Drive), content="1")
+}
+
+///|
+test "the launch forecasts the hull at departure" {
+  let s = loading(28_800, [Drive, Hull])
+  let l = s.launch().unwrap()
+  debug_inspect(
+    l,
+    content=(
+      #|{ load: 8, mend: 63000, ready_at: 1800003600, hull: 726800000 }
+    ),
+  )
+  assert_eq(tick(s, l.ready_at - s.at).ship.hull, l.hull)
+}
+
+///|
+test "law: ready_at is the first tick at which the ship may depart" {
+  @qc.quick_check_fn((input : (Int64, Array[Int32])) => {
+    let (stores, picks) = input
+    let stores = fold64(stores, 100_000L)
+    let posts : Array[@core.Post] = [Drive, Hull, Craft]
+    let posts = picks.map(p => posts[(p % 3).abs()])
+    let s = loading(stores, posts)
+    let ready = s.launch().unwrap().ready_at
+    let departs = (s : @core.State) => {
+      try s.apply(Departed(plan=plan20())) catch {
+        _ => false
+      } noraise {
+        _ => true
+      }
+    }
+    let at = (t : Int64) => s.apply(Tick(at=t)) catch { _ => panic() }
+    (ready == s.at || !departs(at(ready - 1L))) && departs(at(ready))
+  })
+}
+
+///|
+test "docking loads stores for the next leg and the yard starts from the arrived hull" {
+  let s = underway(plan20(), ship(hull=@core.HULL_FULL / 2L))
+  let c = crossing_of(s)
+  let s = s.apply(Tick(at=s.at + c.forecast().unwrap())) catch { _ => panic() }
+  let arrived = crossing_of(s).hull
+  let s = s.apply(Docked(stores=28_800)) catch { _ => panic() }
+  inspect(s.ship.hull == arrived, content="true")
+  guard s.leg is InPort(port~) else { panic() }
+  inspect(port.stores, content="28800")
+  inspect(port.since == s.at, content="true")
+}
+
+///|
+test "a ship enters service with ten minutes of stores to load" {
+  let s = @core.State::initial(ship(), profile="test").apply(Tick(at=DEPART_AT)) catch {
+    _ => panic()
+  }
+  inspect(stores_of(s), content="2400")
+  debug_inspect(
+    s.launch().map(l => l.ready_at - DEPART_AT),
+    content="Some(600)",
+  )
+}
+
+///|
+test "the ship's ask in port" {
+  let s = loading(28_800, [])
+  let s = s.apply(Asked(post=Some(Drive))) catch { _ => panic() }
+  guard s.leg is InPort(port~) else { panic() }
+  debug_inspect(port.ask, content="Some(Drive)")
+  inspect(port.spoke, content="true")
 }

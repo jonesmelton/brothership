@@ -16,8 +16,6 @@ pub const MIND_WAIT : Int64 = 300
 
 pub const MINUTES_PER_YEAR : Double = 525960.0
 
-pub const PORT_STAY : Int64 = 600
-
 pub fn allowed(@core.Crossing, Array[String], officer~ : (String) -> Bool) -> Array[(String, Int64)]
 
 pub fn arrived_at(@core.State) -> Int64?
@@ -55,6 +53,10 @@ pub fn promotions(@core.Crossing, officer~ : (String) -> Bool) -> Array[(String,
 pub fn reckon(@core.Crossing) -> Reckoning
 
 pub fn span_of(@core.Plan) -> Double
+
+pub fn stores(legs~ : Int64) -> Int64
+
+pub fn stores_at(Double) -> Int64
 
 pub let worlds : Array[World]
 
@@ -130,6 +132,7 @@ pub(all) enum Temperament {
 pub fn Temperament::ask(Self, @core.Crossing) -> @core.Post?
 pub fn Temperament::cruise(Self, @core.Ship, distance_ly~ : Double) -> Int64
 pub fn Temperament::name(Self) -> String
+pub fn Temperament::port_ask(Self, @core.State) -> @core.Post?
 pub fn Temperament::refit(Self, @core.Crossing) -> @core.Refit?
 pub fn Temperament::turn(Self, @core.Crossing, @core.Moment?) -> Array[Act]
 

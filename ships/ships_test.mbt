@@ -36,7 +36,7 @@ test "left alone, the ship clock flies the itinerary and its log replays" {
     let (events, next) = p.due(s, now, officer=_ => true)
     for e in events {
       match e {
-        Docked => docked += 1
+        Docked(_) => docked += 1
         Departed(_) => departed += 1
         _ => ()
       }
@@ -47,7 +47,7 @@ test "left alone, the ship clock flies the itinerary and its log replays" {
     now = p.wake(s).max(now + 1L)
   }
   debug_inspect((departed, docked, s.ship.crossings), content="(2, 2, 2)")
-  // The first session is in port, for the whole stay.
+  // The first session is in port, loading the first stores.
   debug_inspect(
     log[:2],
     content=(
@@ -81,20 +81,73 @@ test "left alone, the ship clock flies the itinerary and its log replays" {
       #|  ]>
     ),
   )
-  guard log[3] is Departed(_) else { fail("expected the departure third") }
+  debug_inspect(
+    log[2:4],
+    content=(
+      #|<ArrayView: [Asked(post=Some(Hull)), Tick(at=1800000600)]>
+    ),
+  )
   assert_eq(@core.replay(log.iter()), Some(s))
 }
 
 ///|
 test "the ship clock does nothing before the next instant" {
   let p = @ships.profiles()[1]
-  let s = @core.State::initial(p.ship(seed=1), profile=p.name)
-  let (_, s) = p.due(s, 1_800_000_000L, officer=_ => true)
-  inspect(p.wake(s), content="1800000600")
-  let (events, _) = p.due(s, 1_800_000_000L, officer=_ => true)
+  let s = first_port(p)
+  let ready = s.launch().unwrap().ready_at
+  assert_eq(p.wake(s), ready)
+  let (events, _) = p.due(s, s.at, officer=_ => true)
   inspect(events.length(), content="0")
-  let (events, _) = p.due(s, 1_800_000_599L, officer=_ => true)
-  debug_inspect(events, content="[Tick(at=1800000599)]")
+  let (events, _) = p.due(s, ready - 1L, officer=_ => true)
+  assert_eq(events, [Tick(at=ready - 1L)])
+  let (events, _) = p.due(s, ready, officer=_ => true)
+  assert_true(events.iter().any(e => e is Departed(_)))
+}
+
+///|
+/// `p`'s ship left alone from commissioning to its first dock.
+fn first_port(p : @ships.Profile) -> @core.State {
+  let mut s = @core.State::commission(
+    @core.Event::Commissioned(ship=p.ship(seed=1), profile=p.name),
+  ) catch {
+    _ => panic()
+  }
+  let mut now = 1_800_000_000L
+  for _ in 0..<10_000 {
+    s = p.due(s, now, officer=_ => true).1
+    if s.leg is InPort(_) && s.ship.crossings == 1L {
+      return s
+    }
+    now = p.wake(s).max(now + 1L)
+  }
+  abort("never docked")
+}
+
+///|
+test "a docked ship loads stores for its next leg, and asks in its temperament" {
+  let docked = @ships.profiles()[1:]
+    .iter()
+    .map(p => {
+      let s = first_port(p)
+      guard s.leg is InPort(port~) else { panic() }
+      (p.temperament.name(), port.stores, port.ask)
+    })
+  debug_inspect(
+    docked.collect(),
+    content=(
+      #|[
+      #|  ("social", 19832, Some(Hull)),
+      #|  ("bold", 19832, Some(Drive)),
+      #|  ("sly", 19832, Some(Drive)),
+      #|]
+    ),
+  )
+  debug_inspect(
+    [0L, 1L, 2L, 3L].map(legs => @ships.stores(legs~)),
+    content=(
+      #|[22612, 19832, 34801, 28753]
+    ),
+  )
 }
 
 ///|
@@ -106,11 +159,10 @@ test "each berth advances on its own second of the minute" {
       #|[("tigress", 0), ("scorpion", 20), ("flea", 40)]
     ),
   )
-  let now = 1_800_000_000L
+  // In port, with the stores far from loaded, only the slot is due.
   let slots = fleet.map(b => {
-    let s = @core.State::commission(b.commission())
-    let (_, s) = b.profile.due(s, now, officer=_ => true)
-    b.next_advance(s, now) % @ships.MAX_SLEEP
+    let s = first_port(b.profile)
+    b.next_advance(s, s.at) % @ships.MAX_SLEEP
   })
   debug_inspect(
     slots,
@@ -123,23 +175,12 @@ test "each berth advances on its own second of the minute" {
 ///|
 test "a berth acts its lag after the ship's instant" {
   let b = @ships.fleet()[2]
-  let s = @core.State::commission(b.commission())
-  let (_, s) = b.profile.due(s, 1_800_000_000L, officer=_ => true)
-  // The stay ends at +600; the slot in the minute comes first until then.
-  let at = b.next_advance(s, 1_800_000_570L)
-  inspect(
-    at - 1_800_000_000L,
-    content=(
-      #|580
-    ),
-  )
-  let at = b.next_advance(s, 1_800_000_599L)
-  inspect(
-    at - 1_800_000_000L,
-    content=(
-      #|640
-    ),
-  )
+  let s = first_port(b.profile)
+  let ready = s.launch().unwrap().ready_at
+  // The slot in the minute comes first until the stores are loaded.
+  let early = b.next_advance(s, ready - 30L)
+  assert_true(early < ready + b.lag, msg="\{early - ready}")
+  inspect(b.next_advance(s, ready - 1L) - ready, content="40")
 }
 
 ///|
@@ -154,26 +195,20 @@ test "overdue ships, as after a restart, still advance on different seconds" {
 ///|
 test "a listing says where the ship is and who is aboard" {
   let p = @ships.profiles()[1]
-  let t0 = 1_800_000_000L
-  let s = @core.State::initial(p.ship(seed=1), profile=p.name).apply(
-    Tick(at=t0),
-  ) catch {
+  let s = first_port(p)
+  let s = s.apply(Crew(crew="ann", intent=Signed)) catch { _ => panic() }
+  let ready = s.launch().unwrap().ready_at
+  let l = @ships.listing("tigress", s)
+  assert_eq(l.whereabouts, InPort(departs=ready))
+  inspect(l.officers, content="1")
+  // Posting to the drive brings the departure forward at once.
+  let s = s.apply(Crew(crew="ann", intent=Posted(post=Drive))) catch {
     _ => panic()
   }
-  let s = s.apply(Crew(crew="ann", intent=Signed)) catch { _ => panic() }
-  debug_inspect(
-    @ships.listing("tigress", s),
-    content=(
-      #|{
-      #|  id: "tigress",
-      #|  name: "EF-147 The Tigress",
-      #|  crossings: 0,
-      #|  whereabouts: InPort(departs=1800000600),
-      #|  officers: 1,
-      #|}
-    ),
-  )
-  let (events, s) = p.due(s, t0 + @ships.PORT_STAY, officer=_ => true)
+  let sooner = s.launch().unwrap().ready_at
+  assert_true(sooner < ready)
+  assert_eq(@ships.listing("tigress", s).whereabouts, InPort(departs=sooner))
+  let (events, s) = p.due(s, sooner, officer=_ => true)
   assert_true(events.iter().any(e => e is Departed(_)))
   let c = s.crossing().unwrap()
   assert_eq(
@@ -202,12 +237,11 @@ test "a cruise below the cap coasts slower and erodes the hull less" {
 ///|
 test "left alone, a ship sets its temperament's cruise before it departs" {
   let p = @ships.profiles()[3]
-  let mut s = @core.State::commission(
+  let s = @core.State::commission(
     @core.Event::Commissioned(ship=p.ship(seed=1), profile=p.name),
   )
-  let now = 1_800_000_000L
-  s = p.due(s, now, officer=_ => true).1
-  let (events, s) = p.due(s, now + @ships.PORT_STAY, officer=_ => true)
+  let s = p.due(s, 1_800_000_000L, officer=_ => true).1
+  let (events, s) = p.due(s, s.launch().unwrap().ready_at, officer=_ => true)
   let cruise = p.temperament.cruise(s.ship, distance_ly=@ships.hop(0))
   assert_true(cruise < @core.CRUISE_FULL)
   assert_true(events.contains(Cruising(cruise~)))

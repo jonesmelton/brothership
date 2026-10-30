@@ -561,7 +561,8 @@ fn stage_section(model : Model, s : @core.State) -> @rabbita.Html {
   }
   let ask = match s.crossing() {
     Some(c) if c.phase != Arrived => sentences(@words.ask_sentence(c))
-    _ => []
+    Some(_) => []
+    None => sentences(@words.port_ask_sentence(s))
   }
   let pending = match model.told {
     { speaking: true, .. } =>
@@ -681,13 +682,15 @@ fn choices(
       ]
     }
   }
-  let phases : Array[@core.Phase] = [Coast, Approach]
+  let phases : Array[@core.Phase] = [Coast, Approach, Arrived]
   let later = phases.filter(p => {
     p > c.phase && (p != Coast || c.plan.coast > 0L)
   })
-  // One group per phase, so no group holds more than four buttons.
+  // One group per phase, so no group holds more than four buttons. An
+  // order for arrival is the post worked in port, where crafts do nothing.
   let order = later.map(phase => {
-    let buttons = posts.map(p => {
+    let at_port : Array[@core.Post] = [Drive, Hull]
+    let buttons = (if phase == Arrived { at_port } else { posts }).map(p => {
       let order : @core.Order = { phase, post: p, }
       choice(
         emit,
@@ -703,7 +706,11 @@ fn choices(
     }
     group(
       "order-\{@words.phase_name(phase)}",
-      "When the \{@words.phase_name(phase)} begins",
+      if phase == Arrived {
+        "In port, from arrival"
+      } else {
+        "When the \{@words.phase_name(phase)} begins"
+      },
       buttons + cancel,
     )
   })
@@ -763,7 +770,8 @@ fn refit_choices(
 }
 
 ///|
-/// The choices of the You page in port: the post to take at departure.
+/// The choices of the You page in port: the post to work in port and take
+/// at departure, each saying what it would do to the launch.
 fn port_choices(
   emit : @rabbita.Emit[Msg],
   s : @core.State,
@@ -774,13 +782,14 @@ fn port_choices(
   [
     group(
       "post",
-      "Post at departure",
+      "Post in port and at departure",
       posts.map(p => {
         choice(
           emit,
           @words.post_label(p),
           Posted(post=p),
           pressed=at == Some(p),
+          effect=@words.port_effect(s, officer, p),
         )
       }) +
       (if at is Some(_) { [choice(emit, "Stand down", Left)] } else { [] }),

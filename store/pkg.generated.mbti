@@ -19,7 +19,7 @@ pub fn Store::aboard(Self, String) -> String?
 pub async fn Store::advance(Self, String, now~ : Int64) -> Unit
 pub fn Store::close(Self) -> Unit raise
 pub async fn Store::commission(Self, @ships.Berth) -> Unit
-pub async fn Store::cruise(Self, String, Int64, now~ : Int64) -> Bool
+pub async fn Store::cruise(Self, String, Int64, ask~ : @core.Post?, now~ : Int64) -> Bool
 pub async fn Store::decide(Self, String, Array[@ships.Act], moment~ : @core.Moment, now~ : Int64) -> Bool
 pub fn Store::mind(Self, String) -> Unit
 pub fn Store::minded(Self, String) -> Bool

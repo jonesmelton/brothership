@@ -28,7 +28,12 @@ test "a minded ship leaves its asks and refits to its mind" {
   let (s, now) = departed(p)
   let s = { ..s, leg: Underway(crossing=s.crossing().unwrap(), spoke=None), }
   let (events, _) = p.due(s, now + 1L, officer=_ => true, minded=true)
-  debug_inspect(events, content="[Tick(at=1800000602)]")
+  debug_inspect(
+    events,
+    content=(
+      #|[Tick(at=1800000602)]
+    ),
+  )
   let (scripted, _) = p.due(s, now + 1L, officer=_ => true)
   inspect(scripted.length() > 1, content="true")
 }
@@ -55,13 +60,13 @@ test "a minded ship waits for its mind at arrival, then promotes by script" {
     officer=_ => true,
     minded=true,
   )
-  inspect(early.contains(Docked), content="false")
+  inspect(early.iter().any(e => e is Docked(_)), content="false")
   let (late, _) = p.due(
     s,
     arrived + @ships.MIND_WAIT,
     officer=_ => true,
     minded=true,
   )
-  inspect(late.contains(Docked), content="true")
+  inspect(late.iter().any(e => e is Docked(_)), content="true")
   inspect(late.contains(Promoted(crew="a", rank=1)), content="true")
 }

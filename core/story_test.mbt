@@ -16,11 +16,7 @@ fn told(
 
 ///|
 test "a crossing told from departure to docking" {
-  let start = @core.State::initial(ship(), profile="test").apply(
-    Tick(at=DEPART_AT),
-  ) catch {
-    _ => panic()
-  }
+  let start = ready(ship())
   let (said, s) = told(start, [
     Departed(plan=plan20()),
     Asked(post=Some(Drive)),
@@ -45,7 +41,10 @@ test "a crossing told from departure to docking" {
     ),
   )
   let c = s.crossing().unwrap()
-  let (said, _) = told(s, [Tick(at=s.at + c.forecast().unwrap()), Docked])
+  let (said, _) = told(s, [
+    Tick(at=s.at + c.forecast().unwrap()),
+    Docked(stores=0),
+  ])
   debug_inspect(
     said,
     content=(
@@ -87,11 +86,7 @@ test "a ship's line is a happening and changes nothing else" {
 
 ///|
 test "making banked work is told, and finishing and landing follow from it" {
-  let start = @core.State::initial(ship(), profile="test").apply(
-    Tick(at=DEPART_AT),
-  ) catch {
-    _ => panic()
-  }
+  let start = ready(ship())
   let (_, s) = told(start, [
     Departed(plan=plan20()),
     Crew(crew="ann", intent=Posted(post=Craft)),
@@ -126,6 +121,22 @@ test "making banked work is told, and finishing and landing follow from it" {
     left,
     content=(
       #|[Left(crew="ann"), Finished(crew="ann")]
+    ),
+  )
+}
+
+///|
+test "a launch told: the ask, then the stores loaded" {
+  let (said, _) = told(loading(28_800, [Drive]), [
+    Asked(post=Some(Hull)),
+    Tick(at=DEPART_AT + 1800),
+    Tick(at=DEPART_AT + 3600),
+    Tick(at=DEPART_AT + 3700),
+  ])
+  debug_inspect(
+    said,
+    content=(
+      #|[Asked(post=Some(Hull)), Loaded]
     ),
   )
 }

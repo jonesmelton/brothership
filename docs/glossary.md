@@ -63,6 +63,14 @@
   posts only.
 - **docking**: settling an arrived crossing into the ship that leaves port
   (`Crossing::dock`).
+- **launch**: the port stay, from docking until the stores are loaded and
+  the ship departs (`State::launch`).
+- **stores**: what a ship loads in port before it can depart, sized by the
+  next leg's light-years; hands on the drive load them (`Port.stores`).
+- **yard**: the port's mending of the hull, which hands on the hull add to
+  until the ship departs.
+- **dockhands**: the port's own hands, who load stores and work the yard at
+  a floor rate whoever is aboard (`DOCKHANDS`, `YARD_FLOOR`).
 - **temperament**: the scripted stand-in for a ship's model choices: what it
   asks for and which refit it proposes. Bold, careful, social or sly. The
   fallback when the mind's call fails, and the whole policy in the

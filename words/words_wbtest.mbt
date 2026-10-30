@@ -73,7 +73,8 @@ test "a voyage from port to its first moments, in sentences" {
     where_sentences(s),
     content=(
       #|[
-      #|  "In port at Kerala. Departs in about 10 minutes for Occitan, 15.7 light-years away.",
+      #|  "In port at Kerala, bound for Occitan, 15.7 light-years away.",
+      #|  "Stores load in about 10 minutes, and the ship departs then.",
       #|  "Hull at 100%.",
       #|]
     ),
@@ -88,7 +89,7 @@ test "a voyage from port to its first moments, in sentences" {
   debug_inspect(
     you_sentences(s, "ann"),
     content=(
-      #|["You have no post. Choose one to take when the ship departs."]
+      #|["You have no post. Choose one to work in port and take when the ship departs."]
     ),
   )
   debug_inspect(
@@ -103,7 +104,7 @@ test "a voyage from port to its first moments, in sentences" {
   debug_inspect(
     you_sentences(s, "ann"),
     content=(
-      #|["You go to your craft when the ship departs."]
+      #|["Crafts do nothing in port. You go to your craft when the ship departs."]
     ),
   )
   let (_, sea) = p.due(s, 1_800_000_600, officer=_ => true)
@@ -497,6 +498,105 @@ test "leaving is after the voyage, and standing down is not leaving" {
     leaving_sentences(s, "ann"),
     content=(
       #|["You leave the ship when it docks at Occitan, and choose another then."]
+    ),
+  )
+}
+
+///|
+/// The Tigress docked with a leg's stores to load and its hull at half,
+/// "0" aboard on `post`.
+fn launching(post : @core.Post?) -> @core.State {
+  let p = @ships.fleet()[0].profile
+  let s = @core.State::initial(
+    { ..p.ship(seed=1), hull: @core.HULL_FULL / 2L, },
+    profile=p.name,
+  )
+  let s : @core.State = {
+    ..s,
+    at: 1_800_000_000,
+    leg: InPort(port={
+      ..@core.Port::new(1_800_000_000, @ships.stores(legs=0)),
+      ask: Some(Drive),
+    }),
+  }
+  match post {
+    Some(post) =>
+      s.apply(Crew(crew="0", intent=Posted(post~))) catch {
+        _ => panic()
+      }
+    None => s.apply(Crew(crew="0", intent=Signed)) catch { _ => panic() }
+  }
+}
+
+///|
+test "in port, the launch in sentences" {
+  debug_inspect(
+    where_sentences(launching(Some(Drive))),
+    content=(
+      #|[
+      #|  "In port at Kerala, bound for Occitan, 15.7 light-years away.",
+      #|  "Stores load in about 45 minutes, and the ship departs then.",
+      #|  "The yard has the hull at 50%, and 60% by then.",
+      #|]
+    ),
+  )
+  debug_inspect(
+    you_sentences(launching(Some(Drive)), "0"),
+    content=(
+      #|["You load stores on the drive, and take the drive when the ship departs."]
+    ),
+  )
+  debug_inspect(
+    you_sentences(launching(Some(Craft)), "0"),
+    content=(
+      #|["Crafts do nothing in port. You go to your craft when the ship departs."]
+    ),
+  )
+  debug_inspect(
+    port_ask_sentence(launching(None)),
+    content=(
+      #|["The ship asks for hands on the drive, to load stores."]
+    ),
+  )
+}
+
+///|
+test "in port, a post says what it would do to the launch" {
+  let posts : Array[@core.Post] = [Drive, Hull, Craft]
+  debug_inspect(
+    posts.map(p => port_effect(launching(None), "0", p)),
+    content=(
+      #|[
+      #|  "departs 45 minutes sooner, hull 60% then",
+      #|  "hull 88% at departure",
+      #|  "nothing done in port",
+      #|]
+    ),
+  )
+  debug_inspect(
+    posts.map(p => port_effect(launching(Some(Drive)), "0", p)),
+    content=(
+      #|[
+      #|  "",
+      #|  "departs 45 minutes later, hull 88% then",
+      #|  "departs 45 minutes later, nothing done in port",
+      #|]
+    ),
+  )
+}
+
+///|
+test "an order for arrival reads as the post in port" {
+  debug_inspect(
+    order_sentence({ phase: Arrived, post: Hull, }),
+    content=(
+      #|"Standing order: the hull in port, from arrival."
+    ),
+  )
+  debug_inspect(
+    order_sentence({ phase: Coast, post: Drive, }),
+    content=(
+      #|"Standing order: the drive when the coast begins."
     ),
   )
 }

@@ -129,6 +129,17 @@ fn spoken(store : @store.Store) -> Array[@core.Happening] {
 }
 
 ///|
+/// The departure in the story; the ship asks in port before it.
+fn departure(store : @store.Store) -> @core.Entry {
+  store
+  .story("tigress", after=0)
+  .unwrap()
+  .iter()
+  .find_first(e => e.happening is Departed)
+  .unwrap()
+}
+
+///|
 async test "the ship answers its departure with a gated line" {
   let store = departed()
   defer store.close()
@@ -142,7 +153,7 @@ async test "the ship answers its departure with a gated line" {
   )
   speaker.step(store, clock=() => T0 + 620)
   inspect(calls.val, content="2")
-  let departed_at = store.story("tigress", after=0).unwrap()[0].seq
+  let departed_at = departure(store).seq
   assert_eq(spoken(store), [
     Spoke(line="Eat first, loves; the drive wants hands.", about=departed_at),
   ])
@@ -186,7 +197,7 @@ async test "the prompt carries the faces, the readout and what happened" {
     voice(),
     store.snapshot("tigress").unwrap().state,
     story,
-    story[0],
+    departure(store),
   )
   assert_true(call.system[0].contains("You are The Tigress"))
   assert_true(call.system[0].contains("I keep a warm table."))

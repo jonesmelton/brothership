@@ -122,12 +122,12 @@ test "the clock promotes before it docks, in one batch" {
     now = p.wake(s).max(now + 1L)
     let (events, next) = p.due(s, now, officer=everyone)
     s = next
-    if events.contains(Docked) {
+    if events.iter().any(e => e is Docked(_)) {
       batch = events
       break
     }
   }
-  let at = batch.search(Docked).unwrap()
+  let at = batch.search_by(e => e is Docked(_)).unwrap()
   guard batch[at - 1] is Promoted(crew="a", rank=1) else {
     fail("expected a promotion just before Docked")
   }
