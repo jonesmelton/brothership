@@ -47,11 +47,18 @@ pub fn Route::plan(self : Route) -> @core.Plan {
 }
 
 ///|
-/// The plan for a ship with `coils` levels of coils: each raises the γ cap
-/// by a fifth of the route's.
-pub fn Route::plan_with(self : Route, coils~ : Int64) -> @core.Plan {
+/// The plan for a ship with `coils` levels of coils, each raising the γ cap
+/// by a fifth of the route's, coasting at `cruise` thousandths of that cap.
+pub fn Route::plan_with(
+  self : Route,
+  coils~ : Int64,
+  cruise~ : Int64 = @core.CRUISE_FULL,
+) -> @core.Plan {
   let a = self.accel_g * G
-  let cap = self.gamma_cap * (1.0 + coils.to_double() / 5.0)
+  let cap = self.gamma_cap *
+    (1.0 + coils.to_double() / 5.0) *
+    cruise.to_double() /
+    1000.0
   let eta = @fmath.acosh(1.0 + a * self.distance_ly / 2.0).min(
     @fmath.acosh(cap),
   )

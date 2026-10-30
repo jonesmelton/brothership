@@ -217,7 +217,14 @@ pub(all) struct Ship {
   /// Crossings flown. With `seed`, picks each crossing's demands.
   crossings : Int64
   seed : Int64
+  /// The γ the ship coasts at on its next crossing, in thousandths of its
+  /// cap. The ship chooses it in port.
+  cruise : Int64
 } derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// A cruise at the ship's full γ cap.
+pub const CRUISE_FULL : Int64 = 1000L
 
 ///|
 pub fn Ship::new(values : Values, fit : Fit, seed~ : Int64) -> Ship {
@@ -230,6 +237,7 @@ pub fn Ship::new(values : Values, fit : Fit, seed~ : Int64) -> Ship {
     toward_recruit: 0,
     crossings: 0,
     seed,
+    cruise: CRUISE_FULL,
   }
 }
 

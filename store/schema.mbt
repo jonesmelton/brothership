@@ -63,6 +63,18 @@ let migrations : Array[String] = [
     #|  recorded_at integer not null default (unixepoch())
     #|) strict
   ),
+  // The coast now erodes the hull, and a ship carries the cruise it chose,
+  // so a log from before it replays to different hulls and its ships do
+  // not decode. Kept aside, not dropped.
+  "alter table event rename to event_before_erosion",
+  (
+    #|create table event (
+    #|  seq         integer primary key,
+    #|  ship        text    not null,
+    #|  body        text    not null check (json_valid(body)),
+    #|  recorded_at integer not null default (unixepoch())
+    #|) strict
+  ),
 ]
 
 ///|

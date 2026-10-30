@@ -241,7 +241,11 @@ pub fn next_leg_rows(s : @core.State) -> Array[(String, String)] {
     ("Distance", "\{fixed(@ships.hop(crossings), 3)} ly"),
   ]
   guard @ships.profile_named(s.profile) is Some(p) else { rows }
-  let plan = p.next_plan(legs=crossings, coils=s.ship.fit.coils)
+  let plan = p.next_plan(
+    legs=crossings,
+    coils=s.ship.fit.coils,
+    cruise=s.ship.cruise,
+  )
   let r = @ships.reckon(@core.Crossing::new(plan, s.ship))
   let hours = (ticks : Int64) => fixed(ticks.to_double() / 3600.0, 1)
   rows +

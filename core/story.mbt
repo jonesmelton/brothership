@@ -52,6 +52,8 @@ pub(all) enum Happening {
   /// The ship promoted `crew` to `rank`; `tally` is what they did this
   /// crossing.
   Promoted(crew~ : String, rank~ : Int64, tally~ : Tally)
+  /// The ship chose to coast at `cruise` thousandths of its cap.
+  Cruised(cruise~ : Int64)
   Spoke(line~ : String, about~ : Int64)
 } derive(Debug, Eq, ToJson, FromJson)
 
@@ -79,6 +81,8 @@ pub fn happenings(
   }
   match event {
     Spoke(line~, about~) => return [Happening::Spoke(line~, about~)]
+    Cruising(cruise~) =>
+      return if before.ship.cruise == cruise { [] } else { [Cruised(cruise~)] }
     Promoted(crew~, rank~) => {
       let tally = match before.crossing() {
         Some(c) => c.tallies.get(crew).unwrap_or(no_tally)

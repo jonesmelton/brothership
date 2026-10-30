@@ -76,8 +76,9 @@ works, regard and refits together (`moon run cmd/survey --target native`).
 Proper time aboard is wall-clock time. A crossing has three phases:
 
 1. **Burn.** Rapidity rises at a rate set by the drive. The drive wants hands.
-2. **Coast.** The ship runs at its γ cap, and everyone's speed is the same.
-   Drive crew make no difference, so hands go back to their crafts.
+2. **Coast.** The ship runs at its cruise, a share of its γ cap that it
+   chose in port. Drive crew make no difference, but the medium ahead
+   erodes the hull, so hands split between the hull and their crafts.
 3. **Approach.** The ship brakes to rest. The drive wants hands again.
 
 So each phase change is a reason to check in and change post.
@@ -111,6 +112,37 @@ ship, about 4 to start.
 The hull wears faster the harder the ship drives (about `setting²` per hour)
 and is repaired by hull crew. Damage lowers the highest setting the drive can
 reach, so neglecting the hull makes later burns slower.
+
+On the coast the hull erodes instead, at a rate that grows with the square of
+the pace (`Plan::erosion`): the gas and dust ahead strike with an energy and
+a flux that both grow with γ. At γ 24,000 the coast erodes `EROSION`, three
+quarters of the wear at full burn. Over a whole coast the erosion grows with
+γ, since a faster coast is a shorter one, so a slower cruise saves hull in
+proportion. A coast neglected at full cruise drops the hull a band or two,
+and the approach that follows burns at the lower cap.
+
+### the cruise
+
+The ship chooses its cruise in port for the next crossing (`Cruising`), from
+`@ships.cruises`: its full γ cap, four fifths or three fifths. A slower
+cruise arrives later, erodes less, and gives crafters more hours before
+port. Time at home does not change. A solo player with two NPCs on 20 ly
+(`moon run cmd/survey --target native cruises`):
+
+| ship | cruise | hours, median | lowest hull | works, tenths |
+|---|---|---|---|---|
+| a plain ship | full | 12.0 | 62% | 29.7 |
+| a plain ship | 4/5 | 13.6 | 65% | 39.4 |
+| a plain ship | 3/5 | 16.4 | 71% | 55.2 |
+| HS-212 The Twin-Tailed Scorpion | full | 10.9 | 50% | 14.0 |
+| HS-212 The Twin-Tailed Scorpion | 3/5 | 14.8 | 53% | 46.1 |
+
+A minded ship chooses by model (see "the ship's mind" in
+[architecture](architecture.md)); otherwise, and when the model fails, by
+temperament: bold at full, careful at four fifths or three fifths below 60%
+hull, social at full or four fifths below 80% hull, sly at three fifths.
+The scripted ships in the simulator fly each leg of a voyage at their
+temperament's cruise.
 
 Hands are counted in quarters: a crew member is 4 and one standing a watch
 is 5, so `drive_crew` and the hull's repair are sums of quarters.
@@ -200,8 +232,11 @@ and each level costs half again as much as the last.
 
 The first three land mid-crossing and change rates at once. Coils change the
 plan, which is fixed when the ship leaves port, so they pay off only on later
-crossings and most on long hauls. On the Flea, which proposes coils first, a
-solo engineer's six-leg voyage took 61 hours against 68 for a solo artist.
+crossings and most on long hauls. They raise the erosion of a coast at full
+cruise by the same fifth, so a ship with coils that will not mend coasts
+slower and keeps less of their gain. On the Flea, which proposes coils first, a
+solo engineer's six-leg voyage took about 79 hours against 94 for a solo
+artist, both at the Flea's three-fifths cruise.
 On the plain ship, which proposes baffles and plating, engineers bought hull
 and no time.
 
@@ -263,11 +298,14 @@ The ship is the language model. It:
   while it fires, the hull while it is short of full or a breach is open,
   and any craft. It is weighted by the ship's values, doubled on the post
   the ship asks for, and doubled again on a post an open demand needs.
+- **cruises**: in port it chooses how fast to coast the next crossing,
+  trading hours aboard against hull and craft time.
 - **speaks**: arrivals, departures, promotions, and notice of who stood a
   watch.
 
-The ship never sets a rate. Its choices are what to ask, what to propose,
-what to refit, and how it treats crew. The numbers come from posts.
+The ship sets one rate, its cruise, and only in port. Its other choices
+are what to ask, what to propose, what to refit, and how it treats crew.
+The numbers underway come from posts.
 
 The ship reconsiders what it asks for only when something has happened: a
 phase change, a demand opening or closing, or the hull changing band. A
@@ -292,8 +330,8 @@ and grows with the drive rather than with the clock.
 
 A demand in a firing phase ends with the phase, so driving harder leaves less
 time to meet it. Posts held while away count, so nothing depends on being
-present at the right moment. In the simulator, crews missed 45 to 70% of
-demands, most on the Scorpion and fewest on the Tigress.
+present at the right moment. In the simulator, crews missed 44 to 56% of
+demands, fewest on the Scorpion and most on the Flea.
 
 The coast's demand is a hazard, not something found on the way, because at
 a γ of tens of thousands the ship can match velocity with nothing. A
@@ -331,9 +369,9 @@ notices. Starting profiles for the playtest cast, from `ships/profiles.mbt`:
 | HS-212 The Twin-Tailed Scorpion | 46,000 | 26,000 | 3 | 42,000 | 24,000 | 3, 1, 1 | bold |
 | EF-287 The Flea on the Drum | 42,000 | 20,000 | 3 | 34,000 | 20,000 | 1, 1, 3 | sly |
 
-The same solo crew on a 20 ly crossing arrived in 10.5 hours on the
-Scorpion with the hull down to 59%, and in 13.0 hours on the Tigress with
-the hull at 88% and the fewest demands missed. The Flea made the most works
+The same solo crew on a 20 ly crossing at full cruise arrived in 11.0 hours
+on the Scorpion with the hull down to 50%, and in 13.0 hours on the Tigress
+with the hull at 80%. The Flea made the most works
 and twice the regard for crafters: its crafters reached rank 3 within six
 crossings while its drivers stayed at rank 1.
 
@@ -360,7 +398,8 @@ Each phase is a stock that changes linearly, so the crossing fits the
 [idle core](../research/idle-core.md) model and stays in `Int64`:
 
 - **burn**: rapidity η rises at `a * setting`;
-- **coast**: distance left falls at a constant rate;
+- **coast**: distance left falls at a constant rate, and the hull erodes at
+  one;
 - **approach**: η falls to zero.
 
 Rates change only at events in the log, such as a post change, so the state

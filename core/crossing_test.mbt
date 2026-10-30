@@ -693,3 +693,32 @@ test "the schedules the laws use reach every mechanic" {
   )
   assert_true(seen.all(n => n > 0), msg=seen.map(n => n.to_string()).join(", "))
 }
+
+///|
+/// The crossing a single craft hand flies on `plan`, advanced into the coast.
+fn coasting(plan : @core.Plan) -> @core.Crossing {
+  let mut c = @core.Crossing::new(plan, ship()).apply(
+    Posted(crew="0", post=Craft),
+  ) catch {
+    _ => panic()
+  }
+  while c.phase != Coast {
+    c = c.apply(Elapsed(ticks=600)) catch { _ => panic() }
+  }
+  c
+}
+
+///|
+test "the coast wears the hull by the square of its pace" {
+  let slow = coasting(plan20())
+  let fast = coasting({ ..plan20(), coast_rate: plan20().coast_rate * 2L, })
+  let worn = (c : @core.Crossing) => {
+    let start = c.hull
+    let c = c.apply(Elapsed(ticks=@core.HOUR)) catch { _ => panic() }
+    start - c.hull
+  }
+  let a = worn(slow)
+  let b = worn(fast)
+  assert_true(a > 0L)
+  assert_true(b >= a * 4L - 4L && b <= a * 4L + 4L, msg="\{a} \{b}")
+}

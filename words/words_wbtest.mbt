@@ -344,7 +344,7 @@ test "the readout is the shipping forecast, front-loaded" {
   debug_inspect(
     readout(sea(posts=[Drive], ticks=7 * 3600L)),
     content=(
-      #|"Coast. Occitan in about 6 hours. Hull 46%."
+      #|"Coast. Occitan in about 6 hours. Hull 28%."
     ),
   )
 }
@@ -373,7 +373,7 @@ test "a post says what it would change, and nothing for the one held" {
   debug_inspect(
     effects("1"),
     content=(
-      #|["arrive about 2 hours sooner", "", "banks work for your craft"]
+      #|["arrival about the same", "", "banks work for your craft"]
     ),
   )
   debug_inspect(

@@ -235,11 +235,33 @@ pub fn Temperament::turn(
 pub const PORT_STAY : Int64 = 600L
 
 ///|
-/// The plan for the leg after `legs` crossings, for a ship with `coils`.
+/// The plan for the leg after `legs` crossings, for a ship with `coils`
+/// coasting at `cruise`.
 pub fn Profile::next_plan(
   self : Profile,
   legs~ : Int64,
   coils~ : Int64,
+  cruise~ : Int64 = @core.CRUISE_FULL,
 ) -> @core.Plan {
-  { ..self.route, distance_ly: hop(legs), }.plan_with(coils~)
+  { ..self.route, distance_ly: hop(legs), }.plan_with(coils~, cruise~)
+}
+
+///|
+/// The cruises a ship chooses among, in thousandths of its γ cap.
+pub let cruises : Array[Int64] = [1000, 800, 600]
+
+///|
+/// The cruise the ship sets in port for a crossing of `distance_ly`.
+pub fn Temperament::cruise(
+  self : Temperament,
+  ship : @core.Ship,
+  distance_ly~ : Double,
+) -> Int64 {
+  ignore(distance_ly)
+  match self {
+    Bold => 1000
+    Careful => if ship.hull < @core.HULL_FULL * 6L / 10L { 600 } else { 800 }
+    Social => if ship.hull < @core.HULL_FULL * 8L / 10L { 800 } else { 1000 }
+    Sly => 600
+  }
 }

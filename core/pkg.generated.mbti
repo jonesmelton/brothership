@@ -15,9 +15,15 @@ pub const COMMANDER : Int64 = 4
 
 pub const CRAFT_UNIT : Int64 = 16
 
+pub const CRUISE_FULL : Int64 = 1000
+
 pub const DUST_LOSS : Int64 = 200_000_000
 
 pub const ENSIGN : Int64 = 0
+
+pub const EROSION : Int64 = 750
+
+pub const EROSION_PACE : Int64 = 760_500
 
 pub const FLARE_LOSS : Int64 = 166_666_666
 
@@ -87,6 +93,7 @@ pub(all) suberror Rejected {
   NotArrived(event~ : Event)
   Crossing(reason~ : CrossingRejected)
   NotFirst(event~ : Event)
+  NoSuchCruise(cruise~ : Int64)
   NotSigned(crew~ : String)
   AboardAnother(ship~ : String)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
@@ -167,6 +174,7 @@ pub(all) enum Event {
   Asked(post~ : Post?)
   Refitting(refit~ : Refit?)
   Promoted(crew~ : String, rank~ : Int64)
+  Cruising(cruise~ : Int64)
   Spoke(line~ : String, about~ : Int64)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
@@ -213,6 +221,7 @@ pub(all) enum Happening {
   Finished(crew~ : String)
   Made(crew~ : String, craft~ : Craft, units~ : Int64, percent~ : Int64)
   Promoted(crew~ : String, rank~ : Int64, tally~ : Tally)
+  Cruised(cruise~ : Int64)
   Spoke(line~ : String, about~ : Int64)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
@@ -304,6 +313,8 @@ pub(all) struct Plan {
   eta_rate : Int64
   coast_rate : Int64
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Plan::coast_wear(Self, Fit) -> Int64
+pub fn Plan::erosion(Self, Fit) -> Int64
 pub fn Plan::fastest(Self) -> Int64
 pub fn Plan::slowest(Self) -> Int64
 
@@ -356,6 +367,7 @@ pub(all) struct Ship {
   toward_recruit : Int64
   crossings : Int64
   seed : Int64
+  cruise : Int64
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn Ship::new(Values, Fit, seed~ : Int64) -> Self
 pub fn Ship::rank(Self, String) -> Int64

@@ -10,17 +10,23 @@ pub struct Prompts {
 }
 
 ///|
-/// `system`, `turn` and `muster` are the templates in `content/mind/`;
-/// `setting` is `content/cast/prompts/setting.md`.
+/// `system`, `turn`, `muster` and `cruise` are the templates in
+/// `content/mind/`; `setting` is `content/cast/prompts/setting.md`.
 pub fn Prompts::new(
   system~ : String,
   turn~ : String,
   muster~ : String,
+  cruise~ : String,
   setting~ : String,
 ) -> Prompts {
   {
     prompts: @prompt.Prompts::new(
-      Map([("system", system), ("turn", turn), ("muster", muster)]),
+      Map([
+        ("system", system),
+        ("turn", turn),
+        ("muster", muster),
+        ("cruise", cruise),
+      ]),
     ),
     setting,
   }
@@ -36,6 +42,7 @@ pub async fn Prompts::load(content~ : String) -> Prompts {
     system=read("mind/system.md"),
     turn=read("mind/turn.md"),
     muster=read("mind/muster.md"),
+    cruise=read("mind/cruise.md"),
     setting=read("cast/prompts/setting.md"),
   )
 }
@@ -178,6 +185,153 @@ pub fn Prompts::muster(
     max_tokens=3000,
     reasoning_effort="low",
   )
+}
+
+///|
+/// The word a reply uses for each cruise.
+fn cruise_word(cruise : Int64) -> String {
+  match cruise {
+    1000L => "hard"
+    800L => "steady"
+    600L => "easy"
+    _ => "\{cruise} thousandths"
+  }
+}
+
+///|
+/// How many hands on the hull hold it even against `erosion`, to the
+/// nearest tenth.
+fn hands_even(erosion : Int64, repair : Int64) -> String {
+  let tenths = (erosion * 10L + repair / 2L) / repair
+  match tenths {
+    10L => "one hand"
+    t => "\{t / 10L}.\{t % 10L} hands"
+  }
+}
+
+///|
+fn cruise_share(cruise : Int64) -> String {
+  match cruise {
+    1000L => "all"
+    800L => "four fifths"
+    600L => "three fifths"
+    _ => "\{cruise / 10L}%"
+  }
+}
+
+///|
+/// The officers aboard in port and the posts they named for departure.
+fn port_crew(state : @core.State) -> String {
+  let named = [0, 0, 0, 0]
+  for _, o in state.officers {
+    let i = match o.post {
+      Some(Drive) => 0
+      Some(Hull) => 1
+      Some(Craft) => 2
+      None => 3
+    }
+    named[i] += 1
+  }
+  let n = state.officers.length()
+  let recruits = match state.ship.recruits {
+    0L => ""
+    1L => " 1 recruit works the ship's posts."
+    r => " \{r} recruits work the ship's posts."
+  }
+  guard n > 0 else { return "No officers have signed on yet.\{recruits}" }
+  let officers = if n == 1 { "1 officer is" } else { "\{n} officers are" }
+  let unnamed = if named[3] > 0 { ", and \{named[3]} nothing yet" } else { "" }
+  "\{officers} aboard. For departure, \{named[0]} named the drive, \{named[1]} the hull and \{named[2]} crafts\{unnamed}.\{recruits}"
+}
+
+///|
+/// Whether a happening is about the ship rather than one hand. In port
+/// there are no handles to name hands by.
+fn voyage_wide(h : @core.Happening) -> Bool {
+  h
+  is (Departed
+  | Began(_)
+  | Docked(..)
+  | Opened(_)
+  | Met(_)
+  | Missed(_)
+  | Landed(..)
+  | Asked(_)
+  | Cruised(_))
+}
+
+///|
+/// The call asking the model how fast `voice`'s ship coasts on the next
+/// crossing. Only in port.
+pub fn Prompts::cruise(
+  self : Prompts,
+  voice : @speech.Voice,
+  values~ : @core.Values,
+  model~ : String,
+  profile~ : @ships.Profile,
+  state : @core.State,
+  story : Array[@core.Entry],
+  thoughts~ : Array[String],
+) -> @llm.Call raise {
+  guard state.leg is InPort(_) else { fail("the ship is not in port") }
+  let ship = state.ship
+  let hours = (ticks : Int64) => (ticks + 1800L) / 3600L
+  let cruises = @ships.cruises.map(cruise => {
+    let plan = profile.next_plan(
+      legs=ship.crossings,
+      coils=ship.fit.coils,
+      cruise~,
+    )
+    Json::object({
+      "name": Json(cruise_word(cruise)),
+      "share": Json(cruise_share(cruise)),
+      "hands": Json(hands_even(plan.erosion(ship.fit), ship.fit.repair)),
+      "hours": Json(
+        "\{hours(plan.fastest())} to \{hours(plan.slowest())} hours",
+      ),
+      "wear": Json("\{plan.coast_wear(ship.fit) * 100L / @core.HULL_FULL}%"),
+      "current": Json::boolean(cruise == ship.cruise),
+    })
+  })
+  let last = @speech.this_crossing(story)
+  let user = self.prompts.render("cruise", {
+    "leg": strings(@words.next_leg_rows(state).map(r => "\{r.0}: \{r.1}")),
+    "hull": Json("\{ship.hull * 100L / @core.HULL_FULL}%"),
+    "crew": Json(port_crew(state)),
+    "cruises": Json::array(cruises),
+    "recent": last
+    .filter(e => voyage_wide(e.happening))
+    .iter()
+    .map(e => {
+      Json::string(@speech.recount(e.happening, Map([]), ship=voice.epithet))
+    })
+    .collect()
+    |> Json::array,
+    "thoughts": strings(thoughts),
+  })
+  @llm.Call::new(
+    model~,
+    system=[self.system(voice, values)],
+    user~,
+    max_tokens=3000,
+    reasoning_effort="low",
+  )
+}
+
+///|
+/// The cruise the model chose in `reply`, and its reason. Raises
+/// `Unreadable` without one of `@ships.cruises` by name.
+pub fn decode_cruise(reply : String) -> (Int64, String) raise Unreadable {
+  let o = object(reply)
+  let name = match o.get("cruise") {
+    Some(String(s)) => s.trim().to_owned().to_lower()
+    _ => raise Unreadable("no cruise in the reply")
+  }
+  guard @ships.cruises.iter().find_first(c => cruise_word(c) == name)
+    is Some(cruise) else {
+    raise Unreadable("no such cruise: \{name}")
+  }
+  (cruise, thought_of(o))
 }
 
 ///|

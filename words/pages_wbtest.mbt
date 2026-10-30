@@ -153,7 +153,7 @@ test "effect: a hand on the drive" {
     effect(before, after, you="0"),
     content=(
       #|[
-      #|  "Arrival about 6 hours sooner.",
+      #|  "Arrival about 5 hours sooner.",
       #|  "You now earn 2 hours of regard an hour.",
       #|]
     ),
@@ -169,7 +169,7 @@ test "effect: a hand on the hull while it wears" {
   debug_inspect(
     effect(before, after, you="3"),
     content=(
-      #|["Arrival about 40 minutes sooner.", "The hull now mends."]
+      #|["Arrival about 2 hours sooner.", "The hull now mends."]
     ),
   )
 }
@@ -220,7 +220,7 @@ test "effect: a hand that saves a demand" {
   debug_inspect(
     found,
     content=(
-      #|Some(["Breach will now be met.", "The hull now mends."])
+      #|Some(["Arrival about 35 minutes sooner.", "Breach will now be met."])
     ),
   )
 }

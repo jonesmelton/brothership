@@ -44,6 +44,9 @@ pub(all) enum Event {
   Refitting(refit~ : Refit?)
   /// The ship promotes `crew` one rank, at arrival before `Docked`.
   Promoted(crew~ : String, rank~ : Int64)
+  /// The ship chooses, in port, the γ it coasts at from its next departure,
+  /// in thousandths of its cap.
+  Cruising(cruise~ : Int64)
   /// The ship said `line`, in answer to the happening at log position
   /// `about`. Written by a model and passed by the content gate; changes no
   /// state, so replay never needs the model.
@@ -61,6 +64,8 @@ pub(all) suberror Rejected {
   Crossing(reason~ : CrossingRejected)
   /// A ship's log begins with `Commissioned`, and has it nowhere else.
   NotFirst(event~ : Event)
+  /// A cruise is above zero and at most `CRUISE_FULL`.
+  NoSuchCruise(cruise~ : Int64)
   /// Only an officer aboard can do this.
   NotSigned(crew~ : String)
   /// The officer is aboard `ship`, and an officer serves on one ship at a
@@ -204,6 +209,13 @@ pub fn State::apply(self : State, event : Event) -> State raise Rejected {
       { ..self, ship, leg: InPort(since=self.at), officers, }
     }
     Spoke(_) => self
+    Cruising(cruise~) => {
+      guard cruise > 0L && cruise <= CRUISE_FULL else {
+        raise NoSuchCruise(cruise~)
+      }
+      guard self.leg is InPort(_) else { raise NotInPort(event~) }
+      { ..self, ship: { ..self.ship, cruise, }, }
+    }
     Promoted(crew~, rank~) => forward(Promoted(crew~, rank~), false)
     Asked(post~) => forward(Asked(post~), true)
     Refitting(refit~) => forward(Refitting(refit~), false)

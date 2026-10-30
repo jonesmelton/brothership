@@ -73,6 +73,7 @@ test "left alone, the ship clock flies the itinerary and its log replays" {
       #|        toward_recruit: 0,
       #|        crossings: 0,
       #|        seed: 1,
+      #|        cruise: 1000,
       #|      },
       #|      profile="EF-147 The Tigress",
       #|    ),
@@ -179,4 +180,37 @@ test "a listing says where the ship is and who is aboard" {
     @ships.listing("tigress", s).whereabouts,
     Underway(arrives=Some(s.at + c.forecast().unwrap() - c.t)),
   )
+}
+
+///|
+test "a cruise below the cap coasts slower and erodes the hull less" {
+  let route = @ships.Route::default()
+  let full = route.plan_with(coils=0)
+  let half = route.plan_with(coils=0, cruise=500)
+  assert_true(
+    half.coast_rate * 2L <= full.coast_rate + 2000L,
+    msg="\{half.coast_rate}",
+  )
+  assert_true(half.fastest() > full.fastest())
+  // Erosion per tick goes as the pace squared, so over a coast as the pace.
+  let worn = (p : @core.Plan) => {
+    p.coast / p.coast_rate * p.coast_rate / 1000L * p.coast_rate
+  }
+  assert_true(worn(half) < worn(full))
+}
+
+///|
+test "left alone, a ship sets its temperament's cruise before it departs" {
+  let p = @ships.profiles()[3]
+  let mut s = @core.State::commission(
+    @core.Event::Commissioned(ship=p.ship(seed=1), profile=p.name),
+  )
+  let now = 1_800_000_000L
+  s = p.due(s, now, officer=_ => true).1
+  let (events, s) = p.due(s, now + @ships.PORT_STAY, officer=_ => true)
+  let cruise = p.temperament.cruise(s.ship, distance_ly=@ships.hop(0))
+  assert_true(cruise < @core.CRUISE_FULL)
+  assert_true(events.contains(Cruising(cruise~)))
+  guard s.crossing() is Some(c) else { fail("not underway") }
+  assert_eq(c.plan, p.next_plan(legs=0, coils=0, cruise~))
 }

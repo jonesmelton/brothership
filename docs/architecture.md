@@ -52,7 +52,7 @@ the server.
 
 Only the server moves game time. Clients propose an `Intent`; the log holds
 `Event`, which adds the server's `Tick(at)` in Unix seconds, `Departed`,
-`Docked`, and the ship's `Asked`, `Refitting`, `Promoted` and `Spoke`. Before anything it writes,
+`Docked`, and the ship's `Asked`, `Refitting`, `Promoted`, `Cruising` and `Spoke`. Before anything it writes,
 the store appends a tick at the wall clock, so a receipt's snapshot may
 include a tick and the ship's response to the proposal as well as the
 proposal itself; `seq` counts them all. Between receipts the client applies
@@ -147,6 +147,9 @@ before banked craft work are kept in `event_before_banking`, because banking
 changes when refits land and so when ships arrive. Logs from before
 officers stayed aboard through port are kept in `event_before_officers`,
 because officers taking their posts at departure changes arrivals too.
+Logs from before dust replaced salvage are kept in `event_before_dust`, and
+logs from before the coast eroded the hull in `event_before_erosion`, whose
+`Commissioned` ships also lack the `cruise` field and no longer decode.
 Sessions live in a `session` table beside the log: a random token and the
 officer it names. They are not events, do not replay, and are restored with
 the database.
@@ -215,8 +218,13 @@ crossing's happenings and its own last thoughts, asks `MIND_MODEL` for
 `Store::decide`, which drops the turn if the moment passed while the model
 thought. At arrival it renders `content/mind/muster.md` and appends the
 promotions the model names, as far as `@ships.allowed` lets them stand,
-then docks, through `Store::muster`. The thought is never shown to
-players; the speaker hears it.
+then docks, through `Store::muster`. Once each port stay it renders
+`content/mind/cruise.md` with the next leg, the hull, the officers' named
+posts, the last crossing's happenings and, for each of `@ships.cruises`,
+the hours aboard, the coast's unmended erosion and the hull hands that hold
+it even, asks for `{"cruise", "thought"}`, and appends `Cruising` through
+`Store::cruise`, which does nothing once the ship has departed. The
+thought is never shown to players; the speaker hears it.
 
 While underway, a ship whose officers are bottom-heavy
 (`@ships.bottom_heavy`: three in four are ensigns, and one has served the
@@ -225,15 +233,17 @@ most once every 30 minutes. The cycle renders the muster prompt with
 `arrived` false, appends what the model names through `Store::promote`,
 which never docks, and falls back to the longest-serving ensign.
 
-A failed, unreadable or late reply (2 minutes for a turn, 3 for a muster)
-falls back to the temperament and `@ships.promotions`. If the mind never
+A failed, unreadable or late reply (2 minutes for a turn or a cruise, 3
+for a muster) falls back to the temperament and `@ships.promotions`. An
+unminded ship's clock sets the temperament's cruise just before it
+departs. If the mind never
 musters, the clock promotes by script and docks `MIND_WAIT` (5 minutes)
 after arrival. Until a turn lands the ship asks for nothing, and the Log
 says it is weighing a choice (`Story.thinking`). Replay reads only the
 log, so it never calls the model.
 
 `cmd/audition` flies the Tigress with four scripted officers to a
-departure, a demand, the coast and an arrival, and gives each moment to
+departure, a demand, the coast, an arrival and the next port, and gives each moment to
 every ship's character and values, sampled, on the models it is given.
 Replies are cached in `.cache/llm`. See `docs/tools.md` for how to run it
 and `cmd/speak`.

@@ -15,6 +15,8 @@ pub struct Mind {
   priv mut mustered : Int64?
   /// Unix seconds of the last mid-crossing promotion cycle.
   priv mut cycled : Int64?
+  /// The port stay, by when it began in Unix seconds, last given a cruise.
+  priv mut cruised : Int64?
   priv mut thinking : Bool
   priv thoughts : Array[String]
 }
@@ -52,6 +54,7 @@ pub fn Mind::new(
     weighed: None,
     mustered: None,
     cycled: None,
+    cruised: None,
     thinking: false,
     thoughts: [],
   }
@@ -136,6 +139,11 @@ pub async fn Mind::step(
     return
   }
   let state = snapshot.state
+  if state.leg is InPort(since~) && self.cruised != Some(since) {
+    self.cruised = Some(since)
+    self.course(store, state, story, clock~)
+    return
+  }
   guard state.leg is Underway(crossing=c, spoke~) else { return }
   match @ships.arrived_at(state) {
     Some(at) if self.mustered != Some(at) => {
@@ -342,6 +350,67 @@ async fn Mind::cycle(
     })
     "Underway you promoted \{who.join(", ")}."
   }
+  self.remember(line, why)
+  self.report("\{how} in \{@async.now() - started} ms: \{line} \{why}")
+}
+
+///|
+async fn Mind::course(
+  self : Mind,
+  store : @store.Store,
+  state : @core.State,
+  story : Array[@core.Entry],
+  clock~ : () -> Int64,
+) -> Unit {
+  self.thinking = true
+  defer {
+    self.thinking = false
+  }
+  let started = @async.now()
+  let chosen = try {
+    let call = self.prompts.cruise(
+      self.voice,
+      values=self.profile.values,
+      model=self.model,
+      profile=self.profile,
+      state,
+      story,
+      thoughts=self.recalled(),
+    )
+    match @async.with_timeout_opt(TURN_MS, () => self.backend.call(call)) {
+      Some(reply) => Some(decode_cruise(reply.text))
+      None => {
+        self.report("no cruise in \{TURN_MS} ms")
+        None
+      }
+    }
+  } catch {
+    err => {
+      self.report("cruise failed: \{err}")
+      None
+    }
+  }
+  let (cruise, why, how) = match chosen {
+    Some((cruise, why)) => (cruise, why, "set its cruise")
+    None => {
+      let distance_ly = @ships.hop(state.ship.crossings)
+      (
+        self.profile.temperament.cruise(state.ship, distance_ly~),
+        "",
+        "set its cruise by its temperament",
+      )
+    }
+  }
+  guard store.cruise(self.ship, cruise, now=clock()) else {
+    self.report("departed before the cruise landed")
+    return
+  }
+  let at = if cruise == @core.CRUISE_FULL {
+    "your full γ cap"
+  } else {
+    "\{cruise_share(cruise)} of your γ cap"
+  }
+  let line = "In port you chose to coast at \{at}."
   self.remember(line, why)
   self.report("\{how} in \{@async.now() - started} ms: \{line} \{why}")
 }

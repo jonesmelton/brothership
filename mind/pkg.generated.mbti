@@ -11,6 +11,8 @@ import {
 }
 
 // Values
+pub fn decode_cruise(String) -> (Int64, String) raise Unreadable
+
 pub fn decode_muster(String, Map[String, String]) -> (Array[String], String) raise Unreadable
 
 pub fn decode_turn(String, @core.Crossing) -> Choice raise Unreadable
@@ -38,9 +40,10 @@ pub fn Mind::thoughts(Self) -> Array[String]
 pub struct Prompts {
   // private fields
 }
+pub fn Prompts::cruise(Self, @speech.Voice, values~ : @core.Values, model~ : String, profile~ : @ships.Profile, @core.State, Array[@core.Entry], thoughts~ : Array[String]) -> @llm.Call raise
 pub async fn Prompts::load(content~ : String) -> Self
 pub fn Prompts::muster(Self, @speech.Voice, values~ : @core.Values, model~ : String, @core.State, Array[@core.Entry], thoughts~ : Array[String], arrived~ : Bool) -> @llm.Call raise
-pub fn Prompts::new(system~ : String, turn~ : String, muster~ : String, setting~ : String) -> Self
+pub fn Prompts::new(system~ : String, turn~ : String, muster~ : String, cruise~ : String, setting~ : String) -> Self
 pub fn Prompts::turn(Self, @speech.Voice, values~ : @core.Values, model~ : String, @core.State, Array[@core.Entry], thoughts~ : Array[String]) -> @llm.Call raise
 
 // Type aliases

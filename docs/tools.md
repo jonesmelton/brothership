@@ -34,6 +34,8 @@ The officers are the same in every run:
 | `coast` | the coast begins |
 | `ensigns` | six hours out, every officer an ensign; it chooses promotions underway |
 | `arrival` | the ship arrives; it chooses promotions instead of a turn |
+| `port` | the ship has docked after its first crossing; it chooses its cruise |
+| `worn` | the same port with the hull set to 45%; it chooses its cruise |
 
 | flag | default | meaning |
 | --- | --- | --- |
@@ -42,7 +44,7 @@ The officers are the same in every run:
 | `--gate M` | `meta:muse-spark-1.3-contributor` | model that gates the line |
 | `--samples N` | 3 | choices sampled per ship and moment |
 | `--replay` | off | use only cached replies; a miss is an error |
-| scenario names | all five | which moments to run |
+| scenario names | all seven | which moments to run |
 
 For each scenario it prints the readout and roster the model sees, then for
 each ship a tally of its choices (`the hull ×2, the drive ×1`), each

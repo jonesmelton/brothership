@@ -55,7 +55,7 @@ fn weight(h : @core.Happening) -> Int32? {
     Opened(_) => Some(7)
     Missed(_) | Promoted(..) => Some(6)
     Began(phase=Arrived) | Departed | Signed(_) => Some(5)
-    Began(_) => Some(4)
+    Began(_) | Cruised(_) => Some(4)
     Met(_) => Some(3)
     Landed(..) | Made(..) => Some(2)
     Docked(..)

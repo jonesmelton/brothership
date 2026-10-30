@@ -66,9 +66,16 @@ pub fn Profile::due(
     push(Docked)
   }
   if s.leg is InPort(since~) && s.at >= since + PORT_STAY {
+    let legs = s.ship.crossings
+    if !minded {
+      let cruise = self.temperament.cruise(s.ship, distance_ly=hop(legs))
+      if cruise != s.ship.cruise {
+        push(Cruising(cruise~))
+      }
+    }
     push(
       Departed(
-        plan=self.next_plan(legs=s.ship.crossings, coils=s.ship.fit.coils),
+        plan=self.next_plan(legs~, coils=s.ship.fit.coils, cruise=s.ship.cruise),
       ),
     )
   }

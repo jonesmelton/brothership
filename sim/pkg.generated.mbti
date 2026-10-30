@@ -150,6 +150,7 @@ pub(all) struct Scenario {
   ship : @ships.Profile
   route : @ships.Route
   hull : Int64
+  cruise : Int64
   actors : Array[Actor]
 } derive(Eq, @debug.Debug)
 pub fn Scenario::actor_of(Self, String) -> Actor?

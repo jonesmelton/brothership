@@ -46,6 +46,7 @@ pub fn scenarios() -> Array[Scenario] {
       ship,
       route,
       hull: full,
+      cruise: @core.CRUISE_FULL,
       actors: [
         player("you", Cooperative),
         npc("npc 1", Careful),
@@ -57,6 +58,7 @@ pub fn scenarios() -> Array[Scenario] {
       ship,
       route,
       hull: full,
+      cruise: @core.CRUISE_FULL,
       actors: [
         player("a", Cooperative),
         player("b", Cooperative),
@@ -75,6 +77,7 @@ pub fn scenarios() -> Array[Scenario] {
       ship,
       route,
       hull: full,
+      cruise: @core.CRUISE_FULL,
       actors: Array::makei(8, i => player("p\{i + 1}", Selfish)),
     },
     {
@@ -82,6 +85,7 @@ pub fn scenarios() -> Array[Scenario] {
       ship,
       route,
       hull: full,
+      cruise: @core.CRUISE_FULL,
       actors: [player("a", Cooperative), player("b", Careful)] +
       Array::makei(6, i => {
         player(
@@ -96,6 +100,7 @@ pub fn scenarios() -> Array[Scenario] {
       ship,
       route,
       hull: full * 3L / 10L,
+      cruise: @core.CRUISE_FULL,
       actors: Array::makei(8, i => player("d\{i + 1}", Driver)),
     },
     {
@@ -103,6 +108,7 @@ pub fn scenarios() -> Array[Scenario] {
       ship,
       route,
       hull: full,
+      cruise: @core.CRUISE_FULL,
       actors: Array::makei(8, i => hammer("h\{i + 1}", Hastener)),
     },
     {
@@ -110,6 +116,7 @@ pub fn scenarios() -> Array[Scenario] {
       ship,
       route,
       hull: full,
+      cruise: @core.CRUISE_FULL,
       actors: Array::makei(4, i => hammer("s\{i + 1}", Saboteur)) +
       Array::makei(4, i => player("p\{i + 1}", Cooperative)),
     },

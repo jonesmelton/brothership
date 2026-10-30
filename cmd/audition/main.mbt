@@ -5,7 +5,8 @@
 //   moon run cmd/audition -- [--replay] [--mind M] [--writer M] [--gate M]
 //     [--samples N] [scenario ...]
 //
-// Scenarios: departure, demand, coast, ensigns, arrival (default: all). Each is
+// Scenarios: departure, demand, coast, ensigns, arrival, port, worn (default:
+// all). Each is
 // flown by the Tigress with four scripted officers; only the character
 // changes. Replies are cached in .cache/llm, so a rerun is free.
 
@@ -102,6 +103,8 @@ priv struct Scenario {
   name : String
   about : String
   stop : (@core.State, Array[@core.Entry]) -> Bool
+  /// The hull the ship is shown with, in percent, if not as flown.
+  hull : Int64?
 }
 
 ///|
@@ -115,16 +118,19 @@ let scenarios : Array[Scenario] = [
     name: "departure",
     about: "an hour out of port, crew settling",
     stop: (s, _) => s.crossing() is Some(c) && c.t >= @core.HOUR,
+    hull: None,
   },
   {
     name: "demand",
     about: "the first demand of the crossing has just opened",
     stop: (_, story) => has(story, h => h is Opened(_)),
+    hull: None,
   },
   {
     name: "coast",
     about: "the coast has begun; the drive does nothing for hours",
     stop: (_, story) => has(story, h => h is Began(phase=Coast)),
+    hull: None,
   },
   {
     name: "ensigns",
@@ -132,13 +138,72 @@ let scenarios : Array[Scenario] = [
     stop: (s, _) => {
       s.crossing() is Some(c) && c.served("ann") >= @ships.ENSIGN_SERVICE
     },
+    hull: None,
   },
   {
     name: "arrival",
     about: "arrived; the ship chooses whom to promote before docking",
     stop: (s, _) => @ships.arrived_at(s) is Some(_),
+    hull: None,
+  },
+  {
+    name: "port",
+    about: "docked after the first crossing; the ship chooses how fast to coast the next",
+    stop: (s, _) => s.leg is InPort(_) && s.ship.crossings >= 1L,
+    hull: None,
+  },
+  {
+    name: "worn",
+    about: "the same port, with the hull at 45% after the yard",
+    stop: (s, _) => s.leg is InPort(_) && s.ship.crossings >= 1L,
+    hull: Some(45),
   },
 ]
+
+///|
+/// Each ship's cruise in port, sampled, with its reasons.
+async fn audition_cruise(
+  backend : @llm.Backend,
+  prompts : @mind.Prompts,
+  voices : Array[(@speech.Voice, @core.Values)],
+  mind_model~ : String,
+  samples~ : Int32,
+  state : @core.State,
+  story : Array[@core.Entry],
+) -> Unit {
+  let profile = @ships.fleet()[0].profile
+  for pair in voices {
+    let (voice, values) = pair
+    println("\n### \{voice.epithet}\n")
+    let picks = []
+    let thoughts = []
+    for sample in 1..<=samples {
+      try {
+        let call = {
+          ..prompts.cruise(
+            voice,
+            values~,
+            model=mind_model,
+            profile~,
+            state,
+            story,
+            thoughts=[],
+          ),
+          sample,
+        }
+        let (cruise, why) = @mind.decode_cruise(backend.call(call).text)
+        picks.push(@words.cruise_words(cruise))
+        thoughts.push(why)
+      } catch {
+        err => picks.push("failed (\{err})")
+      }
+    }
+    println("- chose: \{tally(picks)}")
+    for t in thoughts {
+      println("  - \{t}")
+    }
+  }
+}
 
 ///|
 fn flag(args : Array[String], name : String) -> String? {
@@ -216,10 +281,34 @@ async fn main {
   for sc in chosen {
     let store = fly(sc.stop)
     let snapshot = store.snapshot(SHIP).unwrap()
-    let state = snapshot.state
+    let state = match sc.hull {
+      Some(pct) =>
+        {
+          ..snapshot.state,
+          ship: { ..snapshot.state.ship, hull: @core.HULL_FULL / 100L * pct, },
+        }
+      None => snapshot.state
+    }
     let story = store.story(SHIP, after=0).unwrap()
-    let c = state.crossing().unwrap()
     println("\n## \{sc.name}: \{sc.about}\n")
+    if state.leg is InPort(_) {
+      for row in @words.next_leg_rows(state) {
+        println("    \{row.0}: \{row.1}")
+      }
+      println("    Hull: \{state.ship.hull * 100L / @core.HULL_FULL}%")
+      audition_cruise(
+        backend,
+        prompts,
+        voices,
+        mind_model~,
+        samples~,
+        state,
+        story,
+      )
+      store.close()
+      continue
+    }
+    let c = state.crossing().unwrap()
     for line in @words.where_sentences(state) {
       println("    \{line}")
     }

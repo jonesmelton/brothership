@@ -12,6 +12,7 @@ fn prompts() -> @mind.Prompts {
     system="{{ epithet }}: {{ captain }}",
     turn="{{ ask }} {{ refit }}{% for r in refits %} {{ r.name }}{% endfor %}",
     muster="{% for line in roster %}{{ line }}\n{% endfor %}",
+    cruise="{% for c in cruises %}{{ c.name }} {% endfor %}",
     setting="",
   )
 }
@@ -52,6 +53,7 @@ fn cycle_prompts() -> @mind.Prompts {
     system="{{ epithet }}",
     turn="{{ ask }} {{ refit }}",
     muster="CYCLE {{ arrived }}{% for line in roster %} {{ line }}{% endfor %}",
+    cruise="{% for c in cruises %}{{ c.name }} {% endfor %}",
     setting="",
   )
 }
@@ -290,5 +292,83 @@ async test "a failed cycle falls back to the longest-serving ensign" {
   debug_inspect(
     ["ann", "bo", "cy", "di"].map(id => hands.get(id).unwrap().rank),
     content="[0, 1, 0, 0]",
+  )
+}
+
+///|
+test "a cruise is read by name from the reply" {
+  debug_inspect(
+    @mind.decode_cruise("{\"cruise\": \"steady\", \"thought\": \"Ease off.\"}"),
+    content=(
+      #|(800, "Ease off.")
+    ),
+  )
+  inspect(@mind.decode_cruise("{\"cruise\": \"hard\"}").0, content="1000")
+  let unreadable = try {
+    ignore(@mind.decode_cruise("{\"cruise\": \"ludicrous\"}"))
+    false
+  } catch {
+    _ => true
+  }
+  inspect(unreadable, content="true")
+}
+
+///|
+/// A store with every berth commissioned and in port, `ship` minded.
+async fn in_port(ship : String) -> @store.Store {
+  let store = @store.Store::open(":memory:")
+  for berth in @ships.fleet() {
+    store.commission(berth)
+  }
+  store.mind(ship)
+  store.advance(ship, now=T0)
+  store
+}
+
+///|
+async test "in port the mind chooses the cruise, once a stay" {
+  let store = in_port("tigress")
+  defer store.close()
+  let calls = Ref(0)
+  let mind = @mind.Mind::new(
+    "tigress",
+    @ships.fleet()[0].profile,
+    voice(),
+    prompts(),
+    model="m",
+    model("{\"cruise\": \"easy\", \"thought\": \"Slow.\"}", calls),
+  )
+  mind.step(store, clock=() => T0 + 10)
+  mind.step(store, clock=() => T0 + 20)
+  inspect(calls.val, content="1")
+  inspect(store.snapshot("tigress").unwrap().state.ship.cruise, content="600")
+  store.advance("tigress", now=T0 + 600)
+  let s = store.snapshot("tigress").unwrap().state
+  let p = @ships.fleet()[0].profile
+  assert_eq(
+    s.crossing().unwrap().plan,
+    p.next_plan(legs=0, coils=0, cruise=600),
+  )
+}
+
+///|
+async test "a failed cruise call falls back to the temperament" {
+  let store = in_port("flea")
+  defer store.close()
+  let calls = Ref(0)
+  let p = @ships.fleet()[2].profile
+  let mind = @mind.Mind::new(
+    "flea",
+    p,
+    voice(),
+    prompts(),
+    model="m",
+    model("", calls),
+  )
+  mind.step(store, clock=() => T0 + 10)
+  let s = store.snapshot("flea").unwrap().state
+  assert_eq(
+    s.ship.cruise,
+    p.temperament.cruise(s.ship, distance_ly=@ships.hop(0)),
   )
 }

@@ -65,7 +65,7 @@ test "a voyage departs, arrives, docks and departs again" {
   debug_inspect(
     s.leg,
     content=(
-      #|InPort(since=1800050759)
+      #|InPort(since=1800053855)
     ),
   )
   inspect(s.ship.crossings, content="1")
@@ -261,4 +261,27 @@ test "replay begins at the commission, and only there" {
     _ => false
   }
   inspect(twice, content="true")
+}
+
+///|
+test "a ship chooses its cruise in port, and keeps it" {
+  let s = @core.State::initial(ship(), profile="test").apply(Tick(at=DEPART_AT)) catch {
+    _ => panic()
+  }
+  inspect(s.ship.cruise, content="1000")
+  let s = s.apply(Cruising(cruise=750)) catch { _ => panic() }
+  inspect(s.ship.cruise, content="750")
+  let s = s.apply(Departed(plan=plan20())) catch { _ => panic() }
+  inspect(s.ship.cruise, content="750")
+  let refused : Result[_, @core.Rejected] = Ok(s.apply(Cruising(cruise=500))) catch {
+    e => Err(e)
+  }
+  inspect(refused is Err(@core.NotInPort(_)), content="true")
+  let s = @core.State::initial(ship(), profile="test")
+  for cruise in [0L, 1001L] {
+    let refused : Result[_, @core.Rejected] = Ok(s.apply(Cruising(cruise~))) catch {
+      e => Err(e)
+    }
+    inspect(refused is Err(@core.NoSuchCruise(_)), content="true")
+  }
 }

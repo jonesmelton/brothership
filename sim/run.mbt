@@ -46,6 +46,9 @@ pub(all) struct Scenario {
   route : @ships.Route
   /// Hull at departure, in `@core.HULL_FULL` units.
   hull : Int64
+  /// The cruise of a single crossing, in thousandths of the γ cap. A voyage
+  /// takes the temperament's cruise for each leg instead.
+  cruise : Int64
   actors : Array[Actor]
 } derive(Debug, Eq)
 
@@ -198,7 +201,7 @@ fn id_of(i : Int32, actors : Int32) -> String {
 ///|
 /// The ship this scenario departs with.
 pub fn Scenario::departing(self : Scenario, seed : Int64) -> @core.Ship {
-  { ..self.ship.ship(seed~), hull: self.hull, }
+  { ..self.ship.ship(seed~), hull: self.hull, cruise: self.cruise, }
 }
 
 ///|
@@ -211,7 +214,7 @@ pub fn Scenario::run(self : Scenario, seed : Int64) -> Run {
 /// the next: a check-in, a join, or a boundary where a rate changes on its
 /// own. The ship acts at every instant.
 pub fn Scenario::fly(self : Scenario, ship : @core.Ship, seed : Int64) -> Run {
-  let plan = self.route.plan_with(coils=ship.fit.coils)
+  let plan = self.route.plan_with(coils=ship.fit.coils, cruise=ship.cruise)
   let actors = self.crew(ship)
   let temperament = self.ship.temperament
   let mut c = @core.Crossing::new(plan, ship)
@@ -405,6 +408,10 @@ pub fn Scenario::voyage(
   let mut ship = self.departing(seed)
   for d in distances {
     let s = { ..self, route: { ..self.route, distance_ly: d, }, }
+    ship = {
+      ..ship,
+      cruise: self.ship.temperament.cruise(ship, distance_ly=d),
+    }
     let run = s.fly(ship, seed + ship.crossings * 7919L)
     let promoted = @ships.promotions(run.last, officer=crew => {
       self.actor_of(crew).map(a => a.is_player()).unwrap_or(false)

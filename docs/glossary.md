@@ -69,4 +69,9 @@
   simulator.
 - **mind**: the model that makes a ship's choices on the server: its asks,
   refits and promotions (`@mind.Mind`). A ship with a mind is *minded*.
+- **cruise**: the share of its γ cap a ship coasts at, chosen in port for
+  the next crossing: full, four fifths or three fifths (`Ship.cruise`, in
+  thousandths). A slower cruise arrives later and erodes the hull less.
+- **erosion**: what the coast does to the hull, growing with the square of
+  the pace. Wear is what the burn does.
 - **band**: one of four hull ranges that set the drive's highest setting.

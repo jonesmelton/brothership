@@ -413,3 +413,38 @@ pub async fn Store::promote(
 pub fn Store::close(self : Store) -> Unit raise {
   self.conn.close()
 }
+
+///|
+/// Append the cruise `ship`'s mind chose, after the ship's own events at
+/// `now`, if the ship is still in port; nothing if the cruise is unchanged.
+/// Returns whether the ship was in port to take it.
+pub async fn Store::cruise(
+  self : Store,
+  ship : String,
+  cruise : Int64,
+  now~ : Int64,
+) -> Bool {
+  self.write.acquire()
+  defer self.write.release()
+  guard self.voyages.get(ship) is Some(v) else { return false }
+  let (due, state) = v.profile.due(
+    v.snapshot.state,
+    now,
+    officer=_ => true,
+    minded=v.minded,
+  )
+  guard state.leg is InPort(_) else {
+    self.commit(ship, v, due, state)
+    return false
+  }
+  guard cruise != state.ship.cruise else {
+    self.commit(ship, v, due, state)
+    return true
+  }
+  let e : @core.Event = Cruising(cruise~)
+  let s = state.apply(e) catch {
+    err => abort("store: cruise refused: \{err.to_json().stringify()}")
+  }
+  self.commit(ship, v, [..due, e], s)
+  true
+}

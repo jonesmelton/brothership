@@ -57,6 +57,7 @@ test "every policy, checking in every minute, stays inside the envelope" {
         ship: @ships.profiles()[2],
         route: { ..@ships.profiles()[2].route, distance_ly: distance, },
         hull: @core.HULL_FULL / 2L,
+        cruise: @core.CRUISE_FULL,
         actors: Array::makei(4, i => {
           name: "x\{i}",
           policy,

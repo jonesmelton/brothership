@@ -319,9 +319,33 @@ fn Crossing::rates(self : Crossing) -> (Int64, Int64) {
       let wear = @math.rate(@math.rate(self.fit.wear, s), s)
       (@math.rate(self.plan.eta_rate, s), repair - wear)
     }
-    Coast => (self.plan.coast_rate, repair)
+    Coast => (self.plan.coast_rate, repair - self.plan.erosion(self.fit))
     Arrived => (0, 0)
   }
+}
+
+///|
+/// Coast rate at γ 24,000, where the coast erodes the hull by `EROSION`.
+pub const EROSION_PACE : Int64 = 760_500L
+
+///|
+/// Hull lost per tick on the coast at `EROSION_PACE`, in thousandths of
+/// the wear at full burn.
+pub const EROSION : Int64 = 750L
+
+///|
+/// Hull lost per tick on the coast for a ship fitted with `fit`. The medium
+/// ahead strikes with energy and flux that both grow with γ, so erosion
+/// grows with the square of the pace.
+pub fn Plan::erosion(self : Plan, fit : Fit) -> Int64 {
+  let g = self.coast_rate * 1000L / EROSION_PACE
+  fit.wear * EROSION / 1000L * g / 1000L * g / 1000L
+}
+
+///|
+/// Hull the whole coast erodes with nobody mending it.
+pub fn Plan::coast_wear(self : Plan, fit : Fit) -> Int64 {
+  @math.ticks_to_empty(self.coast, self.coast_rate) * self.erosion(fit)
 }
 
 ///|
@@ -364,10 +388,10 @@ pub fn Crossing::next_boundary(self : Crossing) -> Int64 {
   if net < 0L && self.hull == HULL_FULL {
     // The hull post becomes useful, and earns regard, a tick from now.
     next = 1L
-  } else if net < 0L && band > 0L && self.hull > 0L {
-    next = next.min(
-      @math.ticks_to_empty(self.hull - band * HULL_FULL / 4L + 1L, -net),
-    )
+  } else if net < 0L && self.hull > 0L {
+    // Band 0 has no edge below it, but the hull still stops at empty.
+    let edge = if band > 0L { band * HULL_FULL / 4L - 1L } else { 0L }
+    next = next.min(@math.ticks_to_empty(self.hull - edge, -net))
   } else if net > 0L && self.hull < HULL_FULL {
     let edge = if band < 3L { rise_at(band) } else { HULL_FULL }
     next = next.min(@math.ticks_to_empty(edge - self.hull, net))

@@ -152,7 +152,7 @@ let header : Array[(String, Int32)] = [
 
 ///|
 fn summary_row(name : String, s : @sim.Scenario, m : Summary) -> Unit {
-  let plan = s.route.plan()
+  let plan = s.route.plan_with(coils=0, cruise=s.cruise)
   let n = m.runs
   let per = (x : Int64) => "\{x * 10L / n / 10L}.\{x * 10L / n % 10L}"
   row([
@@ -213,6 +213,28 @@ fn ships(runs : Int32) -> Unit {
 }
 
 ///|
+fn cruises(runs : Int32) -> Unit {
+  for base in [@sim.scenarios()[0], @sim.scenarios()[1], @sim.scenarios()[2]] {
+    for distance in [20.0, 30.0] {
+      println("== \{base.name}, by cruise, \{distance.to_int()} ly")
+      row(header)
+      for p in @ships.profiles() {
+        for cruise in @ships.cruises {
+          let s = {
+            ..base,
+            ship: p,
+            route: { ..p.route, distance_ly: distance, },
+            cruise,
+          }
+          summary_row("\{p.name} \{cruise}", s, summarize(s, runs))
+        }
+      }
+      println("")
+    }
+  }
+}
+
+///|
 fn policies(runs : Int32) -> Unit {
   let base = @sim.scenarios()[0]
   for craft in [@core.Artist, @core.Engineer] {
@@ -254,6 +276,7 @@ fn voyages() -> Unit {
       ship: p,
       route: p.route,
       hull: @core.HULL_FULL,
+      cruise: @core.CRUISE_FULL,
       actors,
     }
     row([
@@ -361,6 +384,7 @@ fn careers(runs : Int32) -> Unit {
           ship: p,
           route: p.route,
           hull: @core.HULL_FULL,
+          cruise: @core.CRUISE_FULL,
           actors,
         }
         let mut total = 0L
@@ -486,6 +510,9 @@ fn main {
   }
   if all || section == "ships" {
     ships(runs)
+  }
+  if all || section == "cruises" {
+    cruises(runs)
   }
   if all || section == "policies" {
     policies(runs)

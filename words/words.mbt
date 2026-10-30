@@ -471,8 +471,13 @@ pub fn priority(
 ) -> Priority {
   match e.happening {
     Opened(_) => Interrupt
-    Departed | Began(_) | Docked(..) | Met(_) | Missed(_) | Landed(..) =>
-      Announce
+    Departed
+    | Began(_)
+    | Docked(..)
+    | Met(_)
+    | Missed(_)
+    | Landed(..)
+    | Cruised(_) => Announce
     // Your own making is announced by its effect sentence already.
     Made(_) => Quiet
     Stood(crew~) | Finished(crew~) | Discharged(crew~) =>
@@ -529,6 +534,18 @@ pub fn told(h : @core.Happening, you~ : String, ship~ : String) -> String {
     Promoted(crew~, rank~, ..) =>
       "\{who(crew)} \{if crew == you { "were" } else { "was" }} promoted to \{rank_name(rank)}."
     Spoke(line~, ..) => "\{ship}: \{line}"
+    Cruised(cruise~) => "The ship will coast at \{cruise_words(cruise)}."
+  }
+}
+
+///|
+/// A cruise, in thousandths of the γ cap, as a share of it.
+pub fn cruise_words(cruise : Int64) -> String {
+  match cruise {
+    1000L => "its full γ cap"
+    800L => "four fifths of its γ cap"
+    600L => "three fifths of its γ cap"
+    _ => "\{pct(cruise, 1000L)}% of its γ cap"
   }
 }
 

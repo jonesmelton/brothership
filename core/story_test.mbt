@@ -56,7 +56,7 @@ test "a crossing told from departure to docking" {
       #|    recruits=0,
       #|    landing={
       #|      leg: 0,
-      #|      aboard: 50430,
+      #|      aboard: 53526,
       #|      works: 0,
       #|      plan: {
       #|        burn: 10779000000,
