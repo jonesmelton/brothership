@@ -62,6 +62,14 @@ async fn main {
         thinking=ship => {
           ships.iter().any(sp => sp.id == ship && sp.mind.thinking())
         },
+        thoughts=ship => {
+          ships
+          .iter()
+          .find_first(sp => sp.id == ship)
+          .map(sp => sp.mind.thoughts())
+          .unwrap_or([])
+        },
+        admin=admin(),
         secure=!dev,
       ),
     )
@@ -79,6 +87,18 @@ async fn main {
     }
     app.serve(listener)
   })
+}
+
+///|
+/// The admin page's basic-auth credentials: `ADMIN_USER`, or `admin`, and
+/// `ADMIN_PASSWORD`. None, and no admin page, without a password.
+fn admin() -> (String, String)? {
+  guard @env.get_env_var("ADMIN_PASSWORD") is Some(password) && password != "" else {
+    println("admin: no ADMIN_PASSWORD, /admin is off")
+    return None
+  }
+  let user = @env.get_env_var("ADMIN_USER").filter(u => u != "")
+  Some((user.unwrap_or("admin"), password))
 }
 
 ///|

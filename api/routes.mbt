@@ -49,6 +49,11 @@ async fn may_read(
 /// plain-http development. A request with no session mints one only if
 /// `mint_each` has a token for its client and `mint_all` has one for the
 /// server; otherwise it is a 429 with `Retry-After`.
+///
+/// `GET /admin` is an HTML page of the whole game, with every ship's
+/// officers, lines, log and `thoughts`, which players never see. It asks
+/// for HTTP basic credentials matching `admin`, and is a 404 when `admin`
+/// is `None`.
 
 ///|
 pub fn routes(
@@ -56,6 +61,8 @@ pub fn routes(
   clock~ : () -> Int64 = unix_now,
   speaking~ : (String) -> Bool = _ => false,
   thinking~ : (String) -> Bool = _ => false,
+  thoughts~ : (String) -> Array[String] = _ => [],
+  admin~ : (String, String)? = None,
   secure~ : Bool = true,
   mint_each~ : Limiter = Limiter::new(burst=10, interval=30),
   mint_all~ : Limiter = Limiter::new(burst=200, interval=1),
@@ -121,6 +128,24 @@ pub fn routes(
     // the game API's routes: Fly takes the whole machine out of rotation when
     // its check fails.
     ctx.get("/healthz", (_req, res) => res.send_json({ "ok": true }))
+    ctx.get("/admin", (req, res) => {
+      guard admin is Some((user, password)) else {
+        res.send_json({ "error": "no such page" }, status=404)
+        return
+      }
+      guard admin_authorized(req, user, password) else {
+        res.send_text("credentials required", status=401, headers=[
+          (
+            "WWW-Authenticate",
+            "Basic realm=\"\{ADMIN_REALM}\", charset=\"UTF-8\"",
+          ),
+          ("Cache-Control", "no-store"),
+        ])
+        return
+      }
+      let page = admin_page(store, now=clock(), speaking~, thinking~, thoughts~)
+      res.send_html(page, headers=[("Cache-Control", "no-store")])
+    })
     ctx.get("/api/ships", (_req, res) => {
       let listings : Array[@core.Listing] = store
         .ships()

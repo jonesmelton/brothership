@@ -7,7 +7,7 @@ import {
 }
 
 // Values
-pub fn routes(@store.Store, clock? : () -> Int64, speaking? : (String) -> Bool, thinking? : (String) -> Bool, secure? : Bool, mint_each? : Limiter, mint_all? : Limiter) -> @moonback.Module
+pub fn routes(@store.Store, clock? : () -> Int64, speaking? : (String) -> Bool, thinking? : (String) -> Bool, thoughts? : (String) -> Array[String], admin? : (String, String)?, secure? : Bool, mint_each? : Limiter, mint_all? : Limiter) -> @moonback.Module
 
 pub fn unix_now() -> Int64
 

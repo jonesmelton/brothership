@@ -24,6 +24,7 @@ pub async fn Store::decide(Self, String, Array[@ships.Act], moment~ : @core.Mome
 pub fn Store::mind(Self, String) -> Unit
 pub fn Store::minded(Self, String) -> Bool
 pub async fn Store::muster(Self, String, Array[String], now~ : Int64) -> Array[(String, Int64)]?
+pub async fn Store::officers(Self) -> Array[(String, Int64)]
 pub async fn Store::open(String) -> Self
 pub async fn Store::open_session(Self, String, String, now~ : Int64) -> Unit
 pub async fn Store::promote(Self, String, Array[String], now~ : Int64) -> Array[(String, Int64)]?

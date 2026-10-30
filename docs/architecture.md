@@ -130,6 +130,12 @@ The server's speakers print each line's times.
   officer is not aboard while they are aboard another is also a 403, since
   the refusal receipt would otherwise carry that ship's snapshot. An unknown
   ship is a 404. A body naming a server event fails to decode and gets a 400.
+- `GET /admin` is an HTML page of the whole game: every ship, every
+  officer with a session, each ship's lines, log and its mind's recent
+  thoughts, which players never see. It takes HTTP basic auth against
+  `ADMIN_USER` (default `admin`) and `ADMIN_PASSWORD`, and answers 404
+  when `ADMIN_PASSWORD` is unset. Thoughts live in memory, so a restart
+  empties them.
 - A session is not a seat. Nothing limits how many officers join a ship.
   An officer serves on one ship at a time: `Store::propose` refuses a
   proposal from an officer aboard another ship with `AboardAnother`, since
