@@ -231,11 +231,17 @@ pub fn Temperament::turn(
 }
 
 ///|
-/// The stores to load in port for the leg after `legs` crossings: two
-/// crew-hours, in quarter-hand-ticks, for each 20 light-years.
-pub fn stores(legs~ : Int64) -> Int64 {
+/// The stores to load in port for a leg of `distance_ly`: two crew-hours,
+/// in quarter-hand-ticks, for each 20 light-years.
+pub fn stores_at(distance_ly : Double) -> Int64 {
   let at_20 = 2L * @core.HOUR * @core.HAND
-  (at_20.to_double() * hop(legs) / 20.0).to_int64()
+  (at_20.to_double() * distance_ly / 20.0).to_int64()
+}
+
+///|
+/// The stores to load in port for the leg after `legs` crossings.
+pub fn stores(legs~ : Int64) -> Int64 {
+  stores_at(hop(legs))
 }
 
 ///|

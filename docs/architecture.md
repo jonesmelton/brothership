@@ -63,8 +63,8 @@ It also polls the snapshot, since the ship acts on its own.
 until its berth's next advance (`Berth::next_advance`), then calls
 `Store::advance` for that ship. A berth has a `lag`, its own second in the
 minute: it advances at that second when idle, and that long after each of
-the ship's instants (`Profile::wake`: a rate boundary, arrival, or the end
-of the port stay). Ships with the same instant, such as ships departing
+the ship's instants (`Profile::wake`: a rate boundary, arrival, or the
+stores loaded in port). Ships with the same instant, such as ships departing
 together, therefore take their turns, and will call a model, at different
 seconds. What a ship does at an instant is the pure function `Profile::due`
 in `ships`, tested without sleeping.
@@ -150,6 +150,9 @@ because officers taking their posts at departure changes arrivals too.
 Logs from before dust replaced salvage are kept in `event_before_dust`, and
 logs from before the coast eroded the hull in `event_before_erosion`, whose
 `Commissioned` ships also lack the `cruise` field and no longer decode.
+Logs from before the launch are kept in `event_before_launch`: their
+`Docked` carries no stores and their departures come before any stores
+would have loaded.
 Sessions live in a `session` table beside the log: a random token and the
 officer it names. They are not events, do not replay, and are restored with
 the database.
@@ -218,12 +221,14 @@ crossing's happenings and its own last thoughts, asks `MIND_MODEL` for
 `Store::decide`, which drops the turn if the moment passed while the model
 thought. At arrival it renders `content/mind/muster.md` and appends the
 promotions the model names, as far as `@ships.allowed` lets them stand,
-then docks, through `Store::muster`. Once each port stay it renders
-`content/mind/cruise.md` with the next leg, the hull, the officers' named
-posts, the last crossing's happenings and, for each of `@ships.cruises`,
-the hours aboard, the coast's unmended erosion and the hull hands that hold
-it even, asks for `{"cruise", "thought"}`, and appends `Cruising` through
-`Store::cruise`, which does nothing once the ship has departed. The
+then docks with the stores for the next leg, through `Store::muster`. Once
+each port stay it renders `content/mind/cruise.md` with the next leg, the
+launch as players read it, the hull, the officers' named posts, the last
+crossing's happenings and, for each of `@ships.cruises`, the hours aboard,
+the coast's unmended erosion and the hull hands that hold it even, asks for
+`{"cruise", "ask", "thought"}`, and appends `Cruising` and the port's
+`Asked` through `Store::cruise`, which does nothing once the ship has
+departed. An unreadable ask falls back to `Temperament::port_ask`. The
 thought is never shown to players; the speaker hears it.
 
 While underway, a ship whose officers are bottom-heavy

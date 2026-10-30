@@ -387,18 +387,90 @@ pub fn Scenario::fly(self : Scenario, ship : @core.Ship, seed : Int64) -> Run {
 }
 
 ///|
-/// One crossing of a voyage, and the ship that left port after it.
+/// What a port stay came to.
+pub(all) struct Stay {
+  /// Ticks in port until the stores were loaded.
+  ticks : Int64
+  /// The hull at departure.
+  hull : Int64
+} derive(Debug, Eq)
+
+///|
+/// `ship` launched for a leg of `distance_ly`, with `posts` the officers
+/// aboard and the post each works in port, and the ship asking for `ask`:
+/// the ship that departs, and the stay.
+pub fn launch(
+  ship : @core.Ship,
+  posts : Array[(String, @core.Post)],
+  ask~ : @core.Post?,
+  distance_ly~ : Double,
+) -> (@core.Ship, Stay) {
+  let mut s : @core.State = {
+    ..@core.State::initial(ship, profile="sim"),
+    at: 1,
+    leg: InPort(port={
+      ..@core.Port::new(1, @ships.stores_at(distance_ly)),
+      ask,
+    }),
+  }
+  for pair in posts {
+    s = s.apply(Crew(crew=pair.0, intent=Posted(post=pair.1))) catch {
+      err => abort("launch: \{err.to_json().stringify()}")
+    }
+  }
+  let ready = s.launch().unwrap().ready_at
+  let s = s.apply(Tick(at=ready)) catch { _ => panic() }
+  (s.ship, { ticks: ready - 1L, hull: s.ship.hull, })
+}
+
+///|
+/// The launch after `arrived` docked as `ship`, for a leg of `distance_ly`.
+/// The ship asks in its temperament, steady crew take what it asks, and
+/// everyone else keeps the post they held at arrival.
+fn Scenario::launch_after(
+  self : Scenario,
+  arrived : @core.Crossing,
+  ship : @core.Ship,
+  distance_ly : Double,
+) -> (@core.Ship, Stay) {
+  let posts = arrived.hands.iter().map(p => (p.0, p.1.post)).collect()
+  // The temperament weighs the posts as held at arrival.
+  let mut s = @core.State::initial(ship, profile="sim")
+  for pair in posts {
+    s = s.apply(Crew(crew=pair.0, intent=Posted(post=pair.1))) catch { _ => s }
+  }
+  let ask = self.ship.temperament.port_ask(s)
+  let steady = (crew : String) => {
+    match self.actor_of(crew) {
+      Some(a) => a.policy == Steady
+      None => crew.has_prefix("recruit ")
+    }
+  }
+  let posts = posts.map(p => {
+    match ask {
+      Some(post) if steady(p.0) && post != Craft => (p.0, post)
+      _ => p
+    }
+  })
+  launch(ship, posts, ask~, distance_ly~)
+}
+
+///|
+/// One crossing of a voyage, and the ship that docked after it.
 pub(all) struct Leg {
   distance_ly : Double
   run : Run
   docked : @core.Ship
   /// The promotions made at arrival, before docking, as (crew, new rank).
   promotions : Array[(String, Int64)]
+  /// The launch for the next leg; `None` after the last.
+  stay : Stay?
 } derive(Debug, Eq)
 
 ///|
-/// Fly `distances` one after another, docking between them, so refits,
-/// recruits, hull and ranks carry from each crossing into the next.
+/// Fly `distances` one after another, docking and launching between them,
+/// so refits, recruits, hull and ranks carry from each crossing into the
+/// next.
 pub fn Scenario::voyage(
   self : Scenario,
   distances : Array[Double],
@@ -406,7 +478,7 @@ pub fn Scenario::voyage(
 ) -> Array[Leg] {
   let legs = []
   let mut ship = self.departing(seed)
-  for d in distances {
+  for i, d in distances {
     let s = { ..self, route: { ..self.route, distance_ly: d, }, }
     ship = {
       ..ship,
@@ -422,8 +494,19 @@ pub fn Scenario::voyage(
         err => abort("promotion: \{err.to_json().stringify()}")
       }
     }
-    ship = arrived.dock().unwrap()
-    legs.push({ distance_ly: d, run, docked: ship, promotions: promoted, })
+    let docked = arrived.dock().unwrap()
+    let stay = match distances.get(i + 1) {
+      Some(next) => {
+        let (launched, stay) = self.launch_after(arrived, docked, next)
+        ship = launched
+        Some(stay)
+      }
+      None => {
+        ship = docked
+        None
+      }
+    }
+    legs.push({ distance_ly: d, run, docked, promotions: promoted, stay, })
   }
   legs
 }

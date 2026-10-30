@@ -56,6 +56,8 @@ pub fn span_of(@core.Plan) -> Double
 
 pub fn stores(legs~ : Int64) -> Int64
 
+pub fn stores_at(Double) -> Int64
+
 pub let worlds : Array[World]
 
 // Errors

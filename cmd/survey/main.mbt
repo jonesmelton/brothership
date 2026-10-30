@@ -291,6 +291,8 @@ fn voyages() -> Unit {
       ("rank", 5),
       ("promoted", 9),
       ("live", 5),
+      ("port", 8),
+      ("→hull", 6),
     ])
     let voyage = s.voyage(legs, 11L)
     for leg in voyage {
@@ -304,19 +306,29 @@ fn voyages() -> Unit {
       let delivered = leg.docked.records
         .values()
         .fold(init=0L, (n, x) => n + x.works)
-      row([
-        ("\{leg.distance_ly.to_int()} ly", 8),
-        (hours(r.arrived_at), 7),
-        ("\{hours(r.plan.fastest())}–\{hours(r.plan.slowest())}", 11),
-        (pct(leg.docked.hull, @core.HULL_FULL), 7),
-        (ds, 16),
-        ("\{f.needed}/\{f.wear}/\{f.repair}", 22),
-        (delivered.to_string(), 6),
-        (leg.docked.recruits.to_string(), 9),
-        (leg.docked.rank(@sim.actor_id(0)).to_string(), 5),
-        (leg.promotions.length().to_string(), 9),
-        (pct(r.live_checkins.to_int64(), r.checkins.to_int64()), 5),
-      ])
+      row(
+        [
+          ("\{leg.distance_ly.to_int()} ly", 8),
+          (hours(r.arrived_at), 7),
+          ("\{hours(r.plan.fastest())}–\{hours(r.plan.slowest())}", 11),
+          (pct(leg.docked.hull, @core.HULL_FULL), 7),
+          (ds, 16),
+          ("\{f.needed}/\{f.wear}/\{f.repair}", 22),
+          (delivered.to_string(), 6),
+          (leg.docked.recruits.to_string(), 9),
+          (leg.docked.rank(@sim.actor_id(0)).to_string(), 5),
+          (leg.promotions.length().to_string(), 9),
+          (pct(r.live_checkins.to_int64(), r.checkins.to_int64()), 5),
+          ..match leg.stay {
+            Some(stay) =>
+              [
+                ("\{(stay.ticks + 30L) / 60L} min", 8),
+                (pct(stay.hull, @core.HULL_FULL), 6),
+              ]
+            None => [("–", 8), ("–", 6)]
+          },
+        ],
+      )
     }
     let last = voyage[voyage.length() - 1].docked
     let counts = Array::make(@core.COMMANDER.to_int() + 1, 0)
@@ -330,6 +342,38 @@ fn voyages() -> Unit {
     )
     println("")
   }
+}
+
+///|
+/// Each ship's launch at 20 ly from half a hull, by crew in port: minutes
+/// until the stores are loaded, and the hull at departure.
+fn launches() -> Unit {
+  println(
+    "== launches at 20 ly from 50% hull: minutes in port, hull at departure",
+  )
+  let crews : Array[(String, Array[@core.Post])] = [
+    ("idle", []),
+    ("1 drive", [Drive]),
+    ("1 hull", [Hull]),
+    ("4 drive", [Drive, Drive, Drive, Drive]),
+    ("3 drive 1 hull", [Drive, Drive, Drive, Hull]),
+    ("2 drive 2 hull", [Drive, Drive, Hull, Hull]),
+    ("4 hull", [Hull, Hull, Hull, Hull]),
+  ]
+  row([("ship", 34), ..crews.map(c => (c.0, 16))])
+  for p in @ships.profiles() {
+    let ship = { ..p.ship(seed=1), hull: @core.HULL_FULL / 2L, }
+    let cells = crews.map(c => {
+      let posts = c.1.mapi((i, post) => ("crew \{i + 1}", post))
+      let (_, stay) = @sim.launch(ship, posts, ask=None, distance_ly=20.0)
+      (
+        "\{(stay.ticks + 30L) / 60L} min, \{pct(stay.hull, @core.HULL_FULL)}",
+        16,
+      )
+    })
+    row([(p.name, 34), ..cells])
+  }
+  println("")
 }
 
 ///|
@@ -516,6 +560,9 @@ fn main {
   }
   if all || section == "policies" {
     policies(runs)
+  }
+  if all || section == "launches" {
+    launches()
   }
   if all || section == "voyages" {
     voyages()

@@ -195,3 +195,38 @@ test "percentile and histogram" {
   )
   debug_inspect(@sim.histogram(xs, lo=1, hi=5, bins=2), content="[2, 3]")
 }
+
+///|
+test "a voyage launches between legs, and the next leg leaves with the yard's hull" {
+  let legs : Array[Double] = [8.0, 20.0, 12.0]
+  for p in @ships.profiles() {
+    let base = @sim.scenarios()[0]
+    let s = { ..base, ship: p, route: p.route, }
+    let voyage = s.voyage(legs, 3)
+    for i, leg in voyage {
+      let label = "\{p.name} leg \{i}"
+      guard leg.stay is Some(stay) else {
+        assert_eq(i, voyage.length() - 1, msg=label)
+        continue
+      }
+      let floor = @ships.stores_at(legs[i + 1]) / @core.DOCKHANDS
+      assert_true(stay.ticks > 0L && stay.ticks <= floor, msg=label)
+      assert_true(stay.hull >= leg.docked.hull, msg=label)
+      assert_eq(voyage[i + 1].run.samples[0].hull, stay.hull, msg=label)
+    }
+  }
+}
+
+///|
+test "an idle launch at 20 ly waits two hours and mends about a quarter hull" {
+  let p = @ships.profiles()[1]
+  let ship = { ..p.ship(seed=1), hull: @core.HULL_FULL / 2L, }
+  let (launched, stay) = @sim.launch(ship, [], ask=None, distance_ly=20.0)
+  debug_inspect(
+    stay,
+    content=(
+      #|{ ticks: 7200, hull: 752000000 }
+    ),
+  )
+  assert_eq(launched.hull, stay.hull)
+}
