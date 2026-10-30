@@ -19,7 +19,8 @@ standing orders, the hull), `docs/decisions.md`, `docs/sim.md`.
 
 ## facts established before writing this
 
-Checked on 2026-10-29 against the repo at `afda139`.
+Checked on 2026-10-29 against the repo at `afda139` with the uncommitted
+cruise work in the tree (`Cruising`, `Ship.cruise`).
 
 - The port is `Leg::InPort(since~)` (`core/state.mbt`). There is no
   `Crossing` in port: officers are `State.officers`, each with
