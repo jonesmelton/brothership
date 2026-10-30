@@ -116,7 +116,13 @@ pub(all) struct State {
 ///|
 /// A voyage that has not begun: `ship` in port, before any tick.
 pub fn State::initial(ship : Ship, profile~ : String) -> State {
-  { at: 0, profile, ship, leg: InPort(port=Port::new(0, 0)), officers: {}, }
+  {
+    at: 0,
+    profile,
+    ship,
+    leg: InPort(port=Port::new(0, FIRST_STORES)),
+    officers: {},
+  }
 }
 
 ///|

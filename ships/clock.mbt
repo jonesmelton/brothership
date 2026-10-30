@@ -17,7 +17,7 @@ pub fn arrived_at(state : @core.State) -> Int64? {
 /// The ship `id` in the fleet's list, as it is in `state`.
 pub fn listing(id : String, state : @core.State) -> @core.Listing {
   let whereabouts : @core.Whereabouts = match state.leg {
-    InPort(since~) => InPort(departs=since + PORT_STAY)
+    InPort(_) => InPort(departs=state.launch().unwrap().ready_at)
     Underway(crossing=c, ..) =>
       Underway(arrives=c.forecast().map(at => state.at + at - c.t))
   }
@@ -33,8 +33,8 @@ pub fn listing(id : String, state : @core.State) -> @core.Listing {
 ///|
 /// The ship's own events at `now`, in Unix seconds, applied in order to
 /// `state`: the tick, the promotions an arrived crossing has earned (of the
-/// hands for which `officer` holds) and then docking, departure for
-/// the next hop once the port stay is over, and the ship's turn. Returns the
+/// hands for which `officer` holds) and then docking with the stores for
+/// the next hop, departure once they are loaded, and the ship's turn. Returns the
 /// events and the state after them.
 ///
 /// A `minded` ship's mind, a model on the server, makes its turn and
@@ -63,9 +63,9 @@ pub fn Profile::due(
     for pair in promotions(s.crossing().unwrap(), officer~) {
       push(Promoted(crew=pair.0, rank=pair.1))
     }
-    push(Docked)
+    push(Docked(stores=stores(legs=s.ship.crossings + 1L)))
   }
-  if s.leg is InPort(since~) && s.at >= since + PORT_STAY {
+  if s.launch() is Some(l) && l.ready_at <= s.at {
     let legs = s.ship.crossings
     if !minded {
       let cruise = self.temperament.cruise(s.ship, distance_ly=hop(legs))
@@ -84,17 +84,24 @@ pub fn Profile::due(
 }
 
 ///|
-/// What the ship says and chooses at this instant, if underway: see
-/// `Temperament::turn`. Run after the clock and after every crew intent,
-/// since either can open a moment. Nothing for a `minded` ship.
+/// What the ship says and chooses at this instant: see `Temperament::turn`
+/// underway, and `Temperament::port_ask` once each port stay. Run after the
+/// clock and after every crew intent, since either can open a moment.
+/// Nothing for a `minded` ship.
 pub fn Profile::respond(
   self : Profile,
   state : @core.State,
   minded~ : Bool = false,
 ) -> (Array[@core.Event], @core.State) {
-  guard !minded &&
-    state.leg is Underway(crossing~, spoke~) &&
-    crossing.arrived_at is None else {
+  guard !minded else { ([], state) }
+  if state.leg is InPort(port~) && !port.spoke {
+    let e : @core.Event = Asked(post=self.temperament.port_ask(state))
+    let s = state.apply(e) catch {
+      err => abort("ship turn: \{err.to_json().stringify()}")
+    }
+    return ([e], s)
+  }
+  guard state.leg is Underway(crossing~, spoke~) && crossing.arrived_at is None else {
     ([], state)
   }
   let events : Array[@core.Event] = self.temperament
@@ -118,8 +125,7 @@ pub fn Act::event(self : Act) -> @core.Event {
 
 ///|
 /// The next instant, in Unix seconds, at which the ship has something to
-/// do: a rate boundary of the crossing, its arrival, or the end of the port
-/// stay. Never before `state.at`. For a `minded` ship, arrival is followed
+/// do: a rate boundary of the crossing, its arrival, or the stores loaded. Never before `state.at`. For a `minded` ship, arrival is followed
 /// by `MIND_WAIT`.
 pub fn Profile::wake(
   _self : Profile,
@@ -127,7 +133,7 @@ pub fn Profile::wake(
   minded~ : Bool = false,
 ) -> Int64 {
   match state.leg {
-    InPort(since~) => (since + PORT_STAY).max(state.at)
+    InPort(_) => state.launch().unwrap().ready_at.max(state.at)
     Underway(crossing~, ..) =>
       if arrived_at(state) is Some(at) {
         if minded {

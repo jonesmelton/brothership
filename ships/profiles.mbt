@@ -231,8 +231,36 @@ pub fn Temperament::turn(
 }
 
 ///|
-/// How long the ship stays in port between crossings, in seconds.
-pub const PORT_STAY : Int64 = 600L
+/// The stores to load in port for the leg after `legs` crossings: two
+/// crew-hours, in quarter-hand-ticks, for each 20 light-years.
+pub fn stores(legs~ : Int64) -> Int64 {
+  let at_20 = 2L * @core.HOUR * @core.HAND
+  (at_20.to_double() * hop(legs) / 20.0).to_int64()
+}
+
+///|
+/// What the ship asks for in port, where the drive loads stores and the hull
+/// works the yard: leaving sooner, or leaving mended.
+pub fn Temperament::port_ask(
+  self : Temperament,
+  state : @core.State,
+) -> @core.Post? {
+  match self {
+    Bold | Sly => Some(Drive)
+    Careful =>
+      if state.ship.hull < @core.HULL_FULL {
+        Some(Hull)
+      } else {
+        Some(Drive)
+      }
+    Social =>
+      if state.posted(Hull) <= state.posted(Drive) {
+        Some(Hull)
+      } else {
+        Some(Drive)
+      }
+  }
+}
 
 ///|
 /// The plan for the leg after `legs` crossings, for a ship with `coils`

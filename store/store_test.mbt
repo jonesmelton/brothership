@@ -159,6 +159,8 @@ async test "the story tells what happened, after a given seq" {
     kinds(story),
     content=(
       #|[
+      #|  Asked(post=Some(Hull)),
+      #|  Loaded,
       #|  Departed,
       #|  Asked(post=Some(Drive)),
       #|  Signed(crew="ann"),
@@ -171,7 +173,9 @@ async test "the story tells what happened, after a given seq" {
     store.story("tigress", after=first).unwrap().length() == story.length() - 1,
     content="true",
   )
-  inspect(story.iter().all(e => e.at == T0 + 600), content="true")
+  // The ship asked in port at its first tick; the rest is the departure.
+  inspect(story[0].at == T0, content="true")
+  inspect(story[1:].iter().all(e => e.at == T0 + 600), content="true")
   debug_inspect(store.story("nobody", after=0), content="None")
 }
 
@@ -208,7 +212,7 @@ async test "a ship's line is appended after its tick and joins the story" {
   debug_inspect(
     last.happening,
     content=(
-      #|Spoke(line="Who will sit with me?", about=6)
+      #|Spoke(line="Who will sit with me?", about=5)
     ),
   )
   inspect(last.at, content="1800000700")

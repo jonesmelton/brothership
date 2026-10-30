@@ -17,9 +17,7 @@ fn act(s : @core.State, crew : String, intent : @core.Intent) -> @core.State {
 
 ///|
 fn in_port() -> @core.State {
-  @core.State::initial(ship(), profile="test").apply(Tick(at=DEPART_AT)) catch {
-    _ => panic()
-  }
+  ready(ship())
 }
 
 ///|

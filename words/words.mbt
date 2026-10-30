@@ -204,12 +204,21 @@ pub fn plural(n : Int64, one : String, many : String) -> String {
 /// Where the ship is: the first thing the check-in says.
 pub fn where_sentences(s : @core.State) -> Array[String] {
   match s.leg {
-    InPort(since~) => {
+    InPort(_) => {
       let (at, next) = @ships.leg(s.ship.crossings)
       let hop = fixed(@ships.hop(s.ship.crossings), 1)
+      let l = s.launch().unwrap()
+      let hull = pct(s.ship.hull, @core.HULL_FULL)
+      let then = pct(l.hull, @core.HULL_FULL)
+      let yard = if then == hull {
+        "Hull at \{hull}%."
+      } else {
+        "The yard has the hull at \{hull}%, and \{then}% by then."
+      }
       [
-        "In port at \{at.name}. Departs \{soon_words(since + @ships.PORT_STAY - s.at)} for \{next.name}, \{hop} light-years away.",
-        "Hull at \{pct(s.ship.hull, @core.HULL_FULL)}%.",
+        "In port at \{at.name}, bound for \{next.name}, \{hop} light-years away.",
+        "Stores load \{soon_words(l.ready_at - s.at)}, and the ship departs then.",
+        yard,
       ]
     }
     Underway(crossing=c, ..) => {
@@ -386,6 +395,69 @@ pub fn ask_sentence(c : @core.Crossing) -> Array[String] {
 }
 
 ///|
+/// What the ship asks for in port, and what it would do there.
+pub fn port_ask_sentence(s : @core.State) -> Array[String] {
+  guard s.leg is InPort(port~) else { [] }
+  match port.ask {
+    Some(Drive) => ["The ship asks for hands on the drive, to load stores."]
+    Some(Hull) => ["The ship asks for hands on the hull, to work the yard."]
+    Some(Craft) => ["The ship asks for hands at crafts."]
+    None => []
+  }
+}
+
+///|
+/// A standing order as a sentence.
+pub fn order_sentence(o : @core.Order) -> String {
+  match o.phase {
+    Arrived => "Standing order: \{post_name(o.post)} in port, from arrival."
+    p =>
+      "Standing order: \{post_name(o.post)} when the \{phase_name(p)} begins."
+  }
+}
+
+///|
+/// What taking `post` in port would do to the launch, for `crew`; nothing
+/// for the post held.
+pub fn port_effect(s : @core.State, crew : String, post : @core.Post) -> String {
+  guard s.launch() is Some(now) &&
+    s.officers.get(crew).bind(o => o.post) != Some(post) else {
+    ""
+  }
+  let then = try s.apply(Crew(crew~, intent=Posted(post~))) catch {
+    _ => return ""
+  } noraise {
+    after => after.launch().unwrap()
+  }
+  let gap = (now.ready_at - then.ready_at).abs()
+  let when = if gap < 300L {
+    "departs about the same"
+  } else if then.ready_at < now.ready_at {
+    "departs \{minutes_words(gap)} sooner"
+  } else {
+    "departs \{minutes_words(gap)} later"
+  }
+  match post {
+    _ if then.ready_at != now.ready_at && post != Craft =>
+      "\{when}, hull \{pct(then.hull, @core.HULL_FULL)}% then"
+    Drive | Hull => "hull \{pct(then.hull, @core.HULL_FULL)}% at departure"
+    Craft if then.ready_at != now.ready_at => "\{when}, nothing done in port"
+    Craft => "nothing done in port"
+  }
+}
+
+///|
+/// A span to the nearest 5 minutes under an hour, then in the words of
+/// `about`.
+fn minutes_words(seconds : Int64) -> String {
+  if seconds < 3600L {
+    plural(((seconds + 150L) / 300L * 5L).max(5L), "minute", "minutes")
+  } else {
+    about(seconds)
+  }
+}
+
+///|
 fn demand_sentence(d : @core.Demand) -> String {
   let hours = (d.need / @core.HAND + 1800L) / 3600L
   let done = pct(d.done, d.need)
@@ -419,9 +491,22 @@ pub fn you_sentences(s : @core.State, crew : String) -> Array[String] {
   guard s.officers.get(crew) is Some(officer) else { ["You are not aboard."] }
   guard s.crossing() is Some(c) else {
     match officer.post {
-      Some(Craft) => ["You go to your craft when the ship departs."]
-      Some(p) => ["You take \{post_name(p)} when the ship departs."]
-      None => ["You have no post. Choose one to take when the ship departs."]
+      Some(Drive) =>
+        [
+          "You load stores on the drive, and take the drive when the ship departs.",
+        ]
+      Some(Hull) =>
+        [
+          "You work the yard on the hull, and take the hull when the ship departs.",
+        ]
+      Some(Craft) =>
+        [
+          "Crafts do nothing in port. You go to your craft when the ship departs.",
+        ]
+      None =>
+        [
+          "You have no post. Choose one to work in port and take when the ship departs.",
+        ]
     }
   }
   guard c.hands.get(crew) is Some(h) else {
@@ -436,10 +521,7 @@ pub fn you_sentences(s : @core.State, crew : String) -> Array[String] {
     None => ""
   }
   let order = match h.order {
-    Some(o) =>
-      [
-        "Standing order: \{post_name(o.post)} when the \{phase_name(o.phase)} begins.",
-      ]
+    Some(o) => [order_sentence(o)]
     None => []
   }
   let craft = if h.post == Craft {
@@ -486,7 +568,7 @@ pub fn priority(
       } else {
         Quiet
       }
-    Asked(_) | Signed(_) | Took(..) | Left(_) => Quiet
+    Asked(_) | Signed(_) | Took(..) | Left(_) | Loaded => Quiet
     // The roll call is read on the Voyage page; speech announces your own.
     Promoted(crew~, ..) => if crew == you { Announce } else { Quiet }
     Spoke(about~, ..) =>
@@ -515,6 +597,7 @@ pub fn told(h : @core.Happening, you~ : String, ship~ : String) -> String {
     Missed(hazard~) => "\{hazard_name(hazard)} was missed."
     Landed(refit~, level~) =>
       "A refit landed: \{refit_name(refit)} to level \{level}, \{refit_effect(refit, level)}."
+    Loaded => "The stores are loaded."
     Asked(post=Some(post)) => "The ship asks for hands on \{post_name(post)}."
     Asked(post=None) => "The ship stopped asking for hands."
     Took(crew~, post=Craft) => "\{who(crew)} went to crafts."

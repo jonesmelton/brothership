@@ -257,12 +257,13 @@ fn voyage_wide(h : @core.Happening) -> Bool {
   | Missed(_)
   | Landed(..)
   | Asked(_)
+  | Loaded
   | Cruised(_))
 }
 
 ///|
-/// The call asking the model how fast `voice`'s ship coasts on the next
-/// crossing. Only in port.
+/// The call asking the model, in port, how fast `voice`'s ship coasts on the
+/// next crossing, and whether it asks the crew to load stores or mend.
 pub fn Prompts::cruise(
   self : Prompts,
   voice : @speech.Voice,
@@ -297,6 +298,7 @@ pub fn Prompts::cruise(
   let user = self.prompts.render("cruise", {
     "leg": strings(@words.next_leg_rows(state).map(r => "\{r.0}: \{r.1}")),
     "hull": Json("\{ship.hull * 100L / @core.HULL_FULL}%"),
+    "launch": strings(@words.where_sentences(state)[1:].to_owned()),
     "crew": Json(port_crew(state)),
     "cruises": Json::array(cruises),
     "recent": last
@@ -380,12 +382,8 @@ pub(all) struct Choice {
 /// The turn in `reply` for crossing `c`. The ask is always made, so the log
 /// records that the ship reconsidered; the refit only if it changes and
 /// can be built. Raises `Unreadable` without a valid ask.
-pub fn decode_turn(
-  reply : String,
-  c : @core.Crossing,
-) -> Choice raise Unreadable {
-  let o = object(reply)
-  let ask : @core.Post? = match o.get("ask") {
+fn ask_of(o : Map[String, Json]) -> @core.Post? raise Unreadable {
+  match o.get("ask") {
     Some(String("drive")) => Some(Drive)
     Some(String("hull")) => Some(Hull)
     Some(String("crafts" | "craft")) => Some(Craft)
@@ -393,6 +391,22 @@ pub fn decode_turn(
     _ =>
       raise Unreadable("no ask in the reply: \{Json(o.get("ask")).stringify()}")
   }
+}
+
+///|
+/// What the ship asks for in port, from a cruise reply. Raises `Unreadable`
+/// without a readable `ask`.
+pub fn decode_port_ask(reply : String) -> @core.Post? raise Unreadable {
+  ask_of(object(reply))
+}
+
+///|
+pub fn decode_turn(
+  reply : String,
+  c : @core.Crossing,
+) -> Choice raise Unreadable {
+  let o = object(reply)
+  let ask = ask_of(o)
   let refit = match o.get("refit") {
     Some(String(name)) =>
       match @core.refits.iter().find_first(r => @words.refit_name(r) == name) {

@@ -361,10 +361,13 @@ pub async fn Store::muster(
     }
     events.push(e)
   }
-  s = s.apply(Docked) catch {
+  let docked : @core.Event = Docked(
+    stores=@ships.stores(legs=s.ship.crossings + 1L),
+  )
+  s = s.apply(docked) catch {
     err => abort("store: docking refused: \{err.to_json().stringify()}")
   }
-  events.push(Docked)
+  events.push(docked)
   self.commit(ship, v, events, s)
   Some(promoted)
 }
@@ -415,13 +418,14 @@ pub fn Store::close(self : Store) -> Unit raise {
 }
 
 ///|
-/// Append the cruise `ship`'s mind chose, after the ship's own events at
-/// `now`, if the ship is still in port; nothing if the cruise is unchanged.
-/// Returns whether the ship was in port to take it.
+/// Append the cruise and the port ask `ship`'s mind chose, after the ship's
+/// own events at `now`, if the ship is still in port; no `Cruising` if the
+/// cruise is unchanged. Returns whether the ship was in port to take them.
 pub async fn Store::cruise(
   self : Store,
   ship : String,
   cruise : Int64,
+  ask~ : @core.Post?,
   now~ : Int64,
 ) -> Bool {
   self.write.acquire()
@@ -437,14 +441,16 @@ pub async fn Store::cruise(
     self.commit(ship, v, due, state)
     return false
   }
-  guard cruise != state.ship.cruise else {
-    self.commit(ship, v, due, state)
-    return true
+  let events = [..due]
+  if cruise != state.ship.cruise {
+    events.push(Cruising(cruise~))
   }
-  let e : @core.Event = Cruising(cruise~)
-  let s = state.apply(e) catch {
-    err => abort("store: cruise refused: \{err.to_json().stringify()}")
-  }
-  self.commit(ship, v, [..due, e], s)
+  events.push(Asked(post=ask))
+  let s = events[due.length():].fold(init=state, (s, e) => {
+    s.apply(e) catch {
+      err => abort("store: cruise refused: \{err.to_json().stringify()}")
+    }
+  })
+  self.commit(ship, v, events, s)
   true
 }

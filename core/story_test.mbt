@@ -16,11 +16,7 @@ fn told(
 
 ///|
 test "a crossing told from departure to docking" {
-  let start = @core.State::initial(ship(), profile="test").apply(
-    Tick(at=DEPART_AT),
-  ) catch {
-    _ => panic()
-  }
+  let start = ready(ship())
   let (said, s) = told(start, [
     Departed(plan=plan20()),
     Asked(post=Some(Drive)),
@@ -90,11 +86,7 @@ test "a ship's line is a happening and changes nothing else" {
 
 ///|
 test "making banked work is told, and finishing and landing follow from it" {
-  let start = @core.State::initial(ship(), profile="test").apply(
-    Tick(at=DEPART_AT),
-  ) catch {
-    _ => panic()
-  }
+  let start = ready(ship())
   let (_, s) = told(start, [
     Departed(plan=plan20()),
     Crew(crew="ann", intent=Posted(post=Craft)),

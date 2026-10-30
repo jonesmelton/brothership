@@ -46,6 +46,8 @@ pub fn listing_sentence(@core.Listing, now~ : Int64) -> String
 
 pub fn next_leg_rows(@core.State) -> Array[(String, String)]
 
+pub fn order_sentence(@core.Order) -> String
+
 pub fn outlook_sentences(@core.Crossing) -> Array[String]
 
 pub fn page_of(@core.Entry, you~ : String, story~ : Array[@core.Entry]) -> Page
@@ -53,6 +55,10 @@ pub fn page_of(@core.Entry, you~ : String, story~ : Array[@core.Entry]) -> Page
 pub fn phase_name(@core.Phase) -> String
 
 pub fn plural(Int64, String, String) -> String
+
+pub fn port_ask_sentence(@core.State) -> Array[String]
+
+pub fn port_effect(@core.State, String, @core.Post) -> String
 
 pub fn post_effect(@core.Crossing, String, @core.Post) -> String
 

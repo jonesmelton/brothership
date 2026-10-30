@@ -15,6 +15,8 @@ pub fn decode_cruise(String) -> (Int64, String) raise Unreadable
 
 pub fn decode_muster(String, Map[String, String]) -> (Array[String], String) raise Unreadable
 
+pub fn decode_port_ask(String) -> @core.Post? raise Unreadable
+
 pub fn decode_turn(String, @core.Crossing) -> Choice raise Unreadable
 
 // Errors

@@ -13,6 +13,11 @@ pub const DOCKHANDS : Int64 = 4L
 pub const YARD_FLOOR : Int64 = 35_000L
 
 ///|
+/// Stores a newly commissioned ship loads before its first departure: ten
+/// minutes of the dockhands' work, so officers can sign on before it leaves.
+pub const FIRST_STORES : Int64 = 2400L
+
+///|
 /// The ship in port.
 pub(all) struct Port {
   /// Docked at, in Unix seconds.

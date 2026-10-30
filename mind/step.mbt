@@ -139,8 +139,8 @@ pub async fn Mind::step(
     return
   }
   let state = snapshot.state
-  if state.leg is InPort(since~) && self.cruised != Some(since) {
-    self.cruised = Some(since)
+  if state.leg is InPort(port~) && self.cruised != Some(port.since) {
+    self.cruised = Some(port.since)
     self.course(store, state, story, clock~)
     return
   }
@@ -378,7 +378,15 @@ async fn Mind::course(
       thoughts=self.recalled(),
     )
     match @async.with_timeout_opt(TURN_MS, () => self.backend.call(call)) {
-      Some(reply) => Some(decode_cruise(reply.text))
+      Some(reply) =>
+        Some(
+          (
+            decode_cruise(reply.text),
+            Some(decode_port_ask(reply.text)) catch {
+              _ => None
+            },
+          ),
+        )
       None => {
         self.report("no cruise in \{TURN_MS} ms")
         None
@@ -390,18 +398,21 @@ async fn Mind::course(
       None
     }
   }
-  let (cruise, why, how) = match chosen {
-    Some((cruise, why)) => (cruise, why, "set its cruise")
+  let by_temperament = self.profile.temperament.port_ask(state)
+  let (cruise, ask, why, how) = match chosen {
+    Some(((cruise, why), ask)) =>
+      (cruise, ask.unwrap_or(by_temperament), why, "set its cruise and ask")
     None => {
       let distance_ly = @ships.hop(state.ship.crossings)
       (
         self.profile.temperament.cruise(state.ship, distance_ly~),
+        by_temperament,
         "",
-        "set its cruise by its temperament",
+        "set its cruise and ask by its temperament",
       )
     }
   }
-  guard store.cruise(self.ship, cruise, now=clock()) else {
+  guard store.cruise(self.ship, cruise, ask~, now=clock()) else {
     self.report("departed before the cruise landed")
     return
   }
@@ -410,7 +421,12 @@ async fn Mind::course(
   } else {
     "\{cruise_share(cruise)} of your γ cap"
   }
-  let line = "In port you chose to coast at \{at}."
+  let asked = match ask {
+    Some(Drive) => " You asked for hands on the drive, to load stores."
+    Some(Hull) => " You asked for hands on the hull, to work the yard."
+    _ => " You asked for nothing in particular."
+  }
+  let line = "In port you chose to coast at \{at}.\{asked}"
   self.remember(line, why)
   self.report("\{how} in \{@async.now() - started} ms: \{line} \{why}")
 }

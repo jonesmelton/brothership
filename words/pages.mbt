@@ -150,6 +150,7 @@ fn page_of_entry(
     | Opened(_)
     | Met(_)
     | Missed(_)
+    | Loaded
     | Cruised(_) => Voyage
     Landed(..) | Asked(_) => Ship
     Promoted(crew~, ..) => if crew == you { You } else { Ship }

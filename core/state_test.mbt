@@ -3,11 +3,19 @@
 const DEPART_AT : Int64 = 1_800_000_000L
 
 ///|
+/// `ship` in port at `DEPART_AT` with its stores loaded.
+fn ready(ship : @core.Ship) -> @core.State {
+  {
+    ..@core.State::initial(ship, profile="test"),
+    at: DEPART_AT,
+    leg: InPort(port=@core.Port::new(DEPART_AT, 0)),
+  }
+}
+
+///|
 /// `ship` underway on `plan`, ticked to `DEPART_AT`.
 fn underway(plan : @core.Plan, ship : @core.Ship) -> @core.State {
-  @core.State::initial(ship, profile="test")
-  .apply(Tick(at=DEPART_AT))
-  .apply(Departed(plan~)) catch {
+  ready(ship).apply(Departed(plan~)) catch {
     _ => panic()
   }
 }
@@ -244,6 +252,7 @@ test "replay begins at the commission, and only there" {
   let s = @core.replay(
     [
       @core.Event::Commissioned(ship=ship(), profile="test"),
+      Tick(at=DEPART_AT - 600),
       Tick(at=DEPART_AT),
       Departed(plan=plan20()),
       Crew(crew="ann", intent=Posted(post=Hull)),
@@ -275,9 +284,7 @@ test "replay begins at the commission, and only there" {
 
 ///|
 test "a ship chooses its cruise in port, and keeps it" {
-  let s = @core.State::initial(ship(), profile="test").apply(Tick(at=DEPART_AT)) catch {
-    _ => panic()
-  }
+  let s = ready(ship())
   inspect(s.ship.cruise, content="1000")
   let s = s.apply(Cruising(cruise=750)) catch { _ => panic() }
   inspect(s.ship.cruise, content="750")
@@ -436,14 +443,14 @@ test "docking loads stores for the next leg and the yard starts from the arrived
 }
 
 ///|
-test "a ship enters service with its stores aboard" {
+test "a ship enters service with ten minutes of stores to load" {
   let s = @core.State::initial(ship(), profile="test").apply(Tick(at=DEPART_AT)) catch {
     _ => panic()
   }
-  inspect(stores_of(s), content="0")
+  inspect(stores_of(s), content="2400")
   debug_inspect(
-    s.launch().map(l => l.ready_at == DEPART_AT),
-    content="Some(true)",
+    s.launch().map(l => l.ready_at - DEPART_AT),
+    content="Some(600)",
   )
 }
 
