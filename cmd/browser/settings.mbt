@@ -176,6 +176,66 @@ fn Model::say(
 }
 
 ///|
+/// The settings menu, a page of its own. It is not one of the ship's pages,
+/// so the ship's stage, log and voice stay out of it.
+fn settings_page(
+  model : Model,
+  emit : @rabbita.Emit[Msg],
+) -> Array[@rabbita.Html] {
+  let number = if model.officer == "" {
+    [@html.p("Your service number arrives with the session.")]
+  } else {
+    [
+      @html.p(class="designation", model.officer),
+      @html.p(
+        "This is how the ship knows you. It is the name other officers see.",
+      ),
+    ]
+  }
+  let back = if model.ship is Some(_) {
+    "Back to the ship"
+  } else {
+    "Back to the fleet"
+  }
+  [
+    @html.p([@html.a(href="#ship", class="control", back)]),
+    @html.section([@html.h3("Your service number"), ..number]),
+    @html.section([
+      @html.h3("Preferences"),
+      @html.p("These are kept in this browser."),
+      toggles(
+        "hear",
+        "Read aloud as it happens",
+        [
+          (Everything, "Everything"),
+          (Urgent, "Urgent only"),
+          (Nothing, "Nothing"),
+        ],
+        model.hear,
+        h => Hear(h),
+        emit,
+      ),
+      toggles(
+        "sounds",
+        "Sounds",
+        [(On, "On"), (Off, "Off")],
+        model.sounds,
+        s => Sound(s),
+        emit,
+      ),
+      toggles(
+        "face",
+        "Type",
+        [(Book, "Book"), (Legible, "Legible")],
+        model.face,
+        f => Typeface(f),
+        emit,
+      ),
+    ]),
+  ]
+}
+
+///|
 /// Play `cue` if sounds are on.
 fn Model::chime(self : Model, cue : Cue?) -> @rabbita.Cmd {
   match cue_for(self.sounds, cue) {

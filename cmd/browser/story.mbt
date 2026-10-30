@@ -151,7 +151,7 @@ fn Told::away(
       on(e) &&
       @words.priority(e, you~, story=self.entries) != Quiet
     })
-    .map(e => @words.told(e.happening, you~, ship~))
+    .map(e => named(e.happening, you~, ship~))
   if lines.is_empty() {
     [NOTHING_NEW]
   } else {
@@ -164,3 +164,17 @@ const FIRST_VISIT : String = "This is your first visit to this ship."
 
 ///|
 const NOTHING_NEW : String = "Nothing new since your last visit."
+
+///|
+/// A happening as a sentence on the page, naming another officer by service
+/// number. Announcements keep "A hand", since a service number read aloud is
+/// spelled out letter by letter.
+fn named(h : @core.Happening, you~ : String, ship~ : String) -> String {
+  @words.told_by(h, you~, ship~, who=crew => {
+    if crew == you {
+      "You"
+    } else {
+      crew
+    }
+  })
+}

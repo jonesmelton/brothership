@@ -4,24 +4,20 @@
 // from assistive technology. See docs/visual-design.md.
 
 ///|
-/// Where the turns of a crossing and the ship fall on one clock, in
-/// thousandths of the crossing.
-struct Scale {
+/// Where the turns and the ship fall on the hours aboard, in thousandths
+/// sized as the track is, and the Lorentz factor at the top and now.
+struct GammaProfile {
   burn_end : Int64
   approach_start : Int64
   now : Int64
-} derive(Debug, Eq)
+  /// The rapidity at the top of the burn, and its Lorentz factor.
+  top : Double
+  peak : Double
+  now_gamma : Double
+} derive(Debug)
 
 ///|
-/// The crossing on two clocks: hours aboard, sized as the track is, and
-/// years at the worlds.
-struct Nomogram {
-  aboard : Scale
-  worlds : Scale
-} derive(Debug, Eq)
-
-///|
-fn nomogram(c : @core.Crossing) -> Nomogram {
+fn gamma_profile(c : @core.Crossing) -> GammaProfile {
   let st = stretches(c)
   let width = (p : @core.Phase) => {
     st.iter().find_first(s => s.phase == p).map(s => s.width).unwrap_or(0L)
@@ -39,21 +35,49 @@ fn nomogram(c : @core.Crossing) -> Nomogram {
       }
     })
   }
-  let r = @ships.reckon(c)
-  let share = (years : Double) => (years / r.span * 1000.0).round().to_int64()
-  let burn = share(r.burn_span)
   {
-    aboard: {
-      burn_end: width(Burn),
-      approach_start: 1000L - width(Approach),
-      now,
-    },
-    worlds: {
-      burn_end: burn,
-      approach_start: 1000L - burn,
-      now: share(r.years),
-    },
+    burn_end: width(Burn),
+    approach_start: 1000L - width(Approach),
+    now,
+    top: c.plan.burn.to_double() / 1.0e9,
+    peak: @ships.gamma(c.plan.burn),
+    now_gamma: @ships.reckon(c).gamma(),
   }
+}
+
+///|
+/// A height on the chart for a Lorentz factor, between one at the base and
+/// the crossing's peak at the top.
+fn chart_y(gamma : Double, peak : Double) -> Int64 {
+  guard peak > 1.0 else { return PROFILE_BASE }
+  let share = (gamma - 1.0) / (peak - 1.0)
+  (PROFILE_BASE.to_double() - share * (PROFILE_BASE - PROFILE_TOP).to_double())
+  .round()
+  .to_int64()
+}
+
+///|
+/// Samples across each burn. The curve turns sharply near the top, so the
+/// samples are close enough there that the polyline reads as a curve.
+const BURN_SAMPLES : Int32 = 48
+
+///|
+/// The Lorentz factor over the hours aboard as a polyline. Rapidity rises
+/// in step with the burn's hours, so γ = cosh(η) stays near one for most of
+/// the burn and climbs to the peak in its last stretch; the approach is the
+/// mirror of it.
+fn gamma_curve(g : GammaProfile) -> Array[(Int64, Int64)] {
+  let ys = Array::makei(BURN_SAMPLES + 1, k => {
+    let f = k.to_double() / BURN_SAMPLES.to_double()
+    chart_y(@cmath.cosh(g.top * f), g.peak)
+  })
+  let n = BURN_SAMPLES.to_int64()
+  let rise = ys.mapi((k, y) => (g.burn_end * k.to_int64() / n, y))
+  let fall = ys.mapi((k, _) => {
+    let x = g.approach_start + (1000L - g.approach_start) * k.to_int64() / n
+    (x, ys[BURN_SAMPLES - k])
+  })
+  [..rise, ..fall]
 }
 
 ///|
@@ -85,15 +109,11 @@ fn split_profile(
 }
 
 ///|
-/// The drawing's height in viewBox units: the profile's base, and the
-/// worlds' axis below it.
-const PROFILE_TOP : Int64 = 6
+/// The drawing's height in viewBox units: the profile's base and top.
+const PROFILE_TOP : Int64 = 10
 
 ///|
-const PROFILE_BASE : Int64 = 90
-
-///|
-const WORLDS_AXIS : Int64 = 150
+const PROFILE_BASE : Int64 = 400
 
 ///|
 fn points(ps : Array[(Int64, Int64)]) -> Array[(Int32, Int32)] {
@@ -110,61 +130,61 @@ fn scale_label(what : String, total : String) -> @rabbita.Html {
 }
 
 ///|
-/// The crossing's rapidity over hours aboard, a ramp, a plateau and a ramp
-/// down, with each turn and the ship carried down to where it falls in the
-/// worlds' years. The burns that take hours aboard are a sliver of the years.
-fn nomogram_figure(c : @core.Crossing) -> @rabbita.Html {
-  let n = nomogram(c)
-  let a = n.aboard
-  let profile : Array[(Int64, Int64)] = [
-    (0, PROFILE_BASE),
-    (a.burn_end, PROFILE_TOP),
-    (a.approach_start, PROFILE_TOP),
-    (1000, PROFILE_BASE),
-  ]
-  let (flown, ahead) = split_profile(profile, a.now)
-  let link = (class : String, top : Int64, bottom : Int64) => {
-    @svg.line(
-      class~,
-      x1=top.to_int(),
-      y1=PROFILE_BASE.to_int(),
-      x2=bottom.to_int(),
-      y2=WORLDS_AXIS.to_int(),
-    )
-  }
-  let axis = (y : Int64) => {
-    @svg.line(class="axis", x1=0, y1=y.to_int(), x2=1000, y2=y.to_int())
-  }
-  let r = @ships.reckon(c)
-  let hours = c.forecast().map(t => t.to_double() / 3600.0)
+/// The Lorentz factor over the hours aboard: one at departure, climbing to
+/// the coast's peak at the end of the burn, and back to one at arrival. The
+/// ship is an HTML dot over the drawing, so the stretched drawing does not
+/// stretch it.
+fn gamma_figure(c : @core.Crossing) -> @rabbita.Html {
+  let g = gamma_profile(c)
+  let (flown, ahead) = split_profile(gamma_curve(g), g.now)
+  let now_y = chart_y(g.now_gamma, g.peak)
   let svg = @svg.svg(
-    view_box="0 0 1000 \{WORLDS_AXIS}",
+    view_box="0 0 1000 \{PROFILE_BASE}",
     attrs=@svg.Attrs::build().preserve_aspect_ratio("none"),
     [
-      axis(PROFILE_BASE),
-      axis(WORLDS_AXIS),
-      link("turn", a.burn_end, n.worlds.burn_end),
-      link("turn", a.approach_start, n.worlds.approach_start),
+      @svg.line(
+        class="axis",
+        x1=0,
+        y1=PROFILE_BASE.to_int(),
+        x2=1000,
+        y2=PROFILE_BASE.to_int(),
+      ),
+      @svg.line(
+        class="peak",
+        x1=0,
+        y1=PROFILE_TOP.to_int(),
+        x2=1000,
+        y2=PROFILE_TOP.to_int(),
+      ),
       @svg.polyline(class="ahead", points=points(ahead)),
       @svg.polyline(class="flown", points=points(flown)),
-      // From the ship on the profile, down to both clocks.
-      @svg.polyline(
+      @svg.line(
         class="now",
-        points=points([
-          flown.last().unwrap_or((a.now, PROFILE_BASE)),
-          (a.now, PROFILE_BASE),
-          (n.worlds.now, WORLDS_AXIS),
-        ]),
+        x1=g.now.to_int(),
+        y1=PROFILE_BASE.to_int(),
+        x2=g.now.to_int(),
+        y2=now_y.to_int(),
       ),
     ],
   )
-  @html.div(class="nomogram", attrs=@html.Attrs::build().aria_hidden("true"), [
+  let left = "\{g.now / 10L}.\{g.now % 10L}%"
+  let top = now_y * 1000L / PROFILE_BASE
+  let dot = @html.span(
+    class="dot",
+    style=["left: \{left}", "top: \{top / 10L}.\{top % 10L}%"],
+    "",
+  )
+  let hours = c.forecast().map(t => t.to_double() / 3600.0)
+  @html.div(class="chart", attrs=@html.Attrs::build().aria_hidden("true"), [
     scale_label(
-      "Rapidity, by hours aboard",
+      "Lorentz factor γ",
+      "\{@words.figure(g.peak, 0)} on the coast, \{@words.figure(g.now_gamma, 0)} now",
+    ),
+    @html.div(class="plot", [svg, dot]),
+    scale_label(
+      "Hours aboard",
       hours.map(h => "\{@words.figure(h, 1)} h").unwrap_or(""),
     ),
-    svg,
-    scale_label("Years at the worlds", "\{@words.figure(r.span, 2)} years"),
   ])
 }
 
@@ -224,9 +244,24 @@ fn ship_on_map(c : @core.Crossing, crossings : Int64) -> (Double, Double) {
 }
 
 ///|
-/// The worlds in their plane, every lane between them, the leg under way
-/// and the ship on it, and the Sun, which lies 7.6 ly off the plane.
-fn map_figure(s : @core.State) -> @rabbita.Html {
+/// Where a ship in the fleet list is on the map: the share of its leg it has
+/// run, along it.
+fn listing_on_map(l : @core.Listing) -> (Double, Double) {
+  let (from, to) = @ships.leg(l.crossings)
+  let f = (l.run.to_double() / 1000.0).max(0.0).min(1.0)
+  let (fx, fy) = from.on_map()
+  let (tx, ty) = to.on_map()
+  (fx + (tx - fx) * f, fy + (ty - fy) * f)
+}
+
+///|
+/// The worlds in their plane, every lane between them, the fleet's ships and
+/// the leg under way, and the Sun, which lies 7.6 ly off the plane.
+fn map_figure(
+  s : @core.State,
+  fleet : Array[@core.Listing],
+  own : String?,
+) -> @rabbita.Html {
   let frame = map_frame()
   let ws = @ships.worlds
   let at = (p : (Double, Double)) => {
@@ -248,6 +283,38 @@ fn map_figure(s : @core.State) -> @rabbita.Html {
       lanes.push(segment("lane", ws[i].on_map(), ws[j].on_map()))
     }
   }
+  let place = (
+    p : (Double, Double),
+    class : String,
+    label : Array[@rabbita.Html],
+  ) => {
+    let (x, y) = frame.place(p)
+    let left = "\{x / 10L}.\{x % 10L}%"
+    let top = "\{y * 1000L / frame.height / 10L}.\{y * 1000L / frame.height % 10L}%"
+    @html.span(
+      class="place \{class}",
+      style=["left: \{left}", "top: \{top}"],
+      label,
+    )
+  }
+  let offsets : Array[(Double, Double)] = [
+    (12.0, -8.0),
+    (-12.0, -8.0),
+    (12.0, 10.0),
+    (-12.0, 10.0),
+  ]
+  let others = fleet
+    .filter(l => own != Some(l.id))
+    .mapi((i, l) => {
+      let (dx, dy) = offsets[i % offsets.length()]
+      let (x, y) = listing_on_map(l)
+      let p = (x + dx / frame.scale, y + dy / frame.scale)
+      let pennant = @ships.profile_named(l.name)
+        .bind(profile => profile.title)
+        .map(title => title.pennant)
+        .unwrap_or(l.name)
+      (p, place(p, "other", [@html.span(class="star", pennant)]))
+    })
   let (from, to) = @ships.leg(s.ship.crossings)
   let leg = match s.crossing() {
     Some(c) => {
@@ -266,24 +333,11 @@ fn map_figure(s : @core.State) -> @rabbita.Html {
     [
       ..lanes,
       ..ws.map(w => dot("world", w.on_map(), 8)),
+      ..others.map(o => dot("other", o.0, 6)),
       dot("sun", sun, 6),
       ..leg,
     ],
   )
-  let place = (
-    p : (Double, Double),
-    class : String,
-    label : Array[@rabbita.Html],
-  ) => {
-    let (x, y) = frame.place(p)
-    let left = "\{x / 10L}.\{x % 10L}%"
-    let top = "\{y * 1000L / frame.height / 10L}.\{y * 1000L / frame.height % 10L}%"
-    @html.span(
-      class="place \{class}",
-      style=["left: \{left}", "top: \{top}"],
-      label,
-    )
-  }
   let names = ws.map(w => {
     place(w.on_map(), "world", [
       @html.span(class="name", w.name),
@@ -294,7 +348,31 @@ fn map_figure(s : @core.State) -> @rabbita.Html {
     class="map",
     style=["aspect-ratio: 1000 / \{frame.height}"],
     attrs=@html.Attrs::build().aria_hidden("true"),
-    [svg, ..names, place(sun, "sun", [@html.span(class="star", "Sun")])],
+    [
+      svg,
+      ..names,
+      ..others.map(o => o.1),
+      place(sun, "sun", [@html.span(class="star", "Sun")]),
+    ],
+  )
+}
+
+///|
+/// The fleet seen from aboard: the star map, and a sentence for every ship
+/// but this one. A ship's log is its own while the player is aboard it.
+fn fleet_section(
+  model : Model,
+  s : @core.State,
+  fleet : Array[@core.Listing],
+) -> @rabbita.Html {
+  let others = fleet.filter(l => model.ship != Some(l.id))
+  let lines = if others.is_empty() {
+    [@html.p("No other ships are in service.")]
+  } else {
+    others.map(l => @html.p(@words.fleet_sentence(l, now=model.now)))
+  }
+  @html.section(
+    [@html.h3("The fleet"), ..lines, map_figure(s, fleet, model.ship)],
   )
 }
 
@@ -310,24 +388,27 @@ fn figures(caption : String, rows : Array[(String, String)]) -> @rabbita.Html {
 }
 
 ///|
-/// The Voyage page's reckoning: underway, the two clocks, the map and the
-/// figures; in port, the map and the leg the ship departs on next.
+/// The Voyage page's reckoning: underway, the speed over the voyage and the
+/// figures behind it, with the bow sight among the instruments; in port, the
+/// leg the ship departs on next. The star map is in the fleet section.
 fn reckoning_section(s : @core.State) -> @rabbita.Html {
   let body = match s.crossing() {
     Some(c) => {
       let instruments = @words.instrument_rows(s)
       [
-        nomogram_figure(c),
+        gamma_figure(c),
         figures("The crossing", @words.reckoning_rows(s)),
         ..if instruments.is_empty() {
           []
         } else {
-          [figures("Instruments", instruments)]
+          [
+            figures("Instruments", instruments),
+            sky_figure(@ships.reckon(c).eta, c.plan.burn.to_double() / 1.0e9),
+          ]
         },
-        map_figure(s),
       ]
     }
-    None => [map_figure(s), figures("Next leg", @words.next_leg_rows(s))]
+    None => [figures("Next leg", @words.next_leg_rows(s))]
   }
   @html.section([
     @html.details([@html.summary("Instruments and reckoning"), ..body]),

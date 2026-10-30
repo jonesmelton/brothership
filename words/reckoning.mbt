@@ -120,7 +120,7 @@ fn energy_figure(ev : Double) -> String {
 
 ///|
 /// An angle given in arcseconds, in degrees, arcminutes or arcseconds.
-fn angle_figure(arcsec : Double) -> String {
+pub fn angle_figure(arcsec : Double) -> String {
   if arcsec >= 3600.0 {
     "\{sig3(arcsec / 3600.0)}°"
   } else if arcsec >= 60.0 {
@@ -216,6 +216,7 @@ pub fn instrument_rows(s : @core.State) -> Array[(String, String)] {
   }
   let times = sig3(r.doppler())
   [
+    ("Peak Lorentz factor γ", gamma_figure(@ships.gamma(c.plan.burn))),
     ("Lorentz factor γ", gamma_figure(r.gamma())),
     ("Rapidity η", fixed(r.eta, 2)),
     ("Pace", pace),

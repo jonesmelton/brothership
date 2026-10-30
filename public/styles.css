@@ -146,6 +146,14 @@ p,
   text-wrap: pretty;
 }
 
+/* Model lines can carry a word wider than a column at large text sizes.
+   Breaking it is better than a sideways scroll. */
+.checkin p,
+.checkin li,
+.masthead h1 {
+  overflow-wrap: anywhere;
+}
+
 .han {
   font-family: var(--font-han);
   font-style: normal;
@@ -246,8 +254,36 @@ p,
 }
 
 .masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  column-gap: 1rem;
   border-block-start: 3px solid var(--accent);
   padding-block-start: 1rem;
+}
+/* The title keeps most of the line; at large text or on a narrow phone the
+   link wraps under it rather than squeezing it. */
+.masthead h1 {
+  flex: 1 1 0;
+  min-width: min(100%, 7em);
+}
+/* The way out to the settings menu: quiet, at the top end, off the ship's
+   papers. It follows the title in the source. */
+.masthead .menu {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  margin-block-start: -0.25rem;
+  padding: 0.25rem 0;
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+  color: var(--quiet);
+}
+.masthead .menu:hover {
+  color: var(--ink);
 }
 .masthead h1 {
   margin: 0;
@@ -354,7 +390,7 @@ p,
 .track {
   display: flex;
   gap: 0.25rem;
-  margin-block: 0.5rem 1rem;
+  margin-block: 0.5rem 0.25rem;
   container-type: inline-size;
   overflow: hidden;
 }
@@ -382,6 +418,30 @@ p,
   color: var(--ink);
   font-weight: 600;
 }
+/* The same voyage on the worlds' clock, a sliver of it in the burns. No
+   numbers: the Instruments table has those. */
+.ages {
+  margin-block: 0 1rem;
+}
+.ages .label {
+  display: block;
+  margin-block-end: 0.25rem;
+  font-size: 0.875rem;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+  color: var(--quiet);
+}
+.ages .agebar {
+  display: flex;
+  gap: 0.25rem;
+  height: 0.25rem;
+}
+.ages .age {
+  min-width: 0;
+}
+.ages .age .bar {
+  height: 100%;
+}
 /* A bar beside the sentence it repeats; see docs/visual-design.md. */
 .measure {
   flex: 1 0 100%;
@@ -395,68 +455,129 @@ p,
   letter-spacing: 0.06em;
   color: var(--quiet);
 }
-/* The reckoning: two clocks, a map and tables of figures. The drawings are
-   hairlines and repeat the tables; see docs/visual-design.md. */
-.nomogram,
+/* The reckoning: speed over the voyage and tables of figures. The drawings
+   are hairlines and repeat the tables; see docs/visual-design.md. */
+.chart,
+.bow,
 .map {
   margin-block: 0.5rem 1.25rem;
 }
-.nomogram svg {
+.chart .plot {
+  position: relative;
+}
+.chart svg {
   display: block;
   width: 100%;
   height: 6rem;
   overflow: visible;
 }
-.nomogram svg *,
+/* The ship, over the drawing so the stretched viewBox keeps it round. */
+.chart .dot {
+  position: absolute;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+}
+.chart svg *,
+.bow svg *,
 .map svg * {
   vector-effect: non-scaling-stroke;
   fill: none;
 }
-.nomogram .axis,
+.chart .axis,
 .map .lane {
   stroke: var(--rule);
   stroke-width: 1px;
 }
-.nomogram .turn {
-  stroke: var(--quiet);
-  stroke-width: 1px;
-  stroke-dasharray: 2 3;
-}
-.nomogram .flown,
+.chart .flown,
 .map .flown {
   stroke: var(--accent);
   stroke-width: 2px;
 }
-.nomogram .ahead,
+.chart .ahead,
 .map .ahead {
   stroke: var(--quiet);
   stroke-width: 1px;
   stroke-dasharray: 4 3;
 }
-.nomogram .now {
+.chart .now {
   stroke: var(--ink);
   stroke-width: 1.5px;
 }
-.nomogram .scale,
+.chart .peak {
+  stroke: var(--rule);
+  stroke-width: 1px;
+  stroke-dasharray: 1 3;
+}
+.chart .scale,
+.bow .scale,
 .map .place {
   font-size: 0.875rem;
   font-variant-caps: all-small-caps;
   letter-spacing: 0.06em;
   color: var(--quiet);
 }
-.nomogram .scale {
+.chart .scale,
+.bow .scale {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.25rem 1rem;
   margin-block: 0.25rem;
 }
-.nomogram .total {
+.chart .total,
+.bow .total {
   font-variant-caps: normal;
   letter-spacing: 0;
   font-variant-numeric: tabular-nums lining-nums;
 }
+/* The bow sight: the sky ahead on a log tan scale, so aberration slides the
+   field toward the bow without changing its shape. Rings are round angles;
+   the accent ring holds half the sky. */
+.bow .sight {
+  position: relative;
+  width: min(100%, 22rem);
+  aspect-ratio: 1;
+  margin: 0.5rem auto 0;
+}
+.bow svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.bow .rim,
+.bow .ring {
+  stroke: var(--rule);
+  stroke-width: 1px;
+}
+.bow .star {
+  fill: var(--ink);
+  stroke: none;
+}
+.bow .half {
+  stroke: var(--accent);
+  stroke-width: 2px;
+}
+.bow .cross {
+  stroke: var(--accent);
+  stroke-width: 1.5px;
+}
+/* A ring's angle, on the ring above the bow. */
+.bow .mark {
+  position: absolute;
+  left: 50%;
+  transform: translate(0.25rem, -100%);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--quiet);
+  line-height: 1;
+}
 .map {
   position: relative;
+  overflow: hidden;
 }
 .map svg {
   display: block;
@@ -475,6 +596,11 @@ p,
 .map .ship {
   fill: var(--accent);
 }
+.map .other {
+  fill: var(--paper);
+  stroke: var(--quiet);
+  stroke-width: 1px;
+}
 /* A name sits above its point, centered on it. */
 .map .place {
   position: absolute;
@@ -488,6 +614,11 @@ p,
 .map .place.sun {
   transform: translate(-50%, 0.4rem);
 }
+.map .place.other {
+  transform: translate(-50%, calc(-100% - 0.2rem));
+  font-variant-caps: normal;
+  letter-spacing: 0.04em;
+}
 .map .name {
   color: var(--ink);
   font-weight: 500;
@@ -498,9 +629,16 @@ p,
 }
 .figures {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   margin-block: 0 1.25rem;
   font-size: 0.9375rem;
+}
+.figures th,
+.figures td {
+  overflow-wrap: anywhere;
 }
 .figures caption {
   text-align: start;
@@ -509,6 +647,7 @@ p,
   font-variant-caps: all-small-caps;
   letter-spacing: 0.06em;
   color: var(--quiet);
+  overflow-wrap: anywhere;
 }
 .figures th,
 .figures td {
@@ -543,6 +682,75 @@ p,
 }
 .effect {
   font-weight: 500;
+}
+
+/* The watch bill: one officer per item, the service number as the name. */
+.roster {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+.roster li {
+  padding-block: 0.625rem;
+  border-block-end: 1px solid var(--rule);
+}
+.roster .who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-block: 0 0.25rem;
+  font-weight: 600;
+}
+.roster .service {
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
+  letter-spacing: 0.06em;
+}
+.roster .you {
+  font-size: 0.875rem;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+  color: var(--quiet);
+  font-weight: 500;
+}
+.roster .duty {
+  margin-block: 0 0.125rem;
+}
+.roster .last {
+  margin-block: 0;
+  color: var(--quiet);
+  font-size: 0.9375rem;
+}
+.roster .when {
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+/* A service number, set as a designation rather than a word. */
+.designation {
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
+  letter-spacing: 0.1em;
+  font-weight: 500;
+}
+
+/* A link that acts as a control, for the settings menu. */
+.checkin a.control {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--quiet);
+  border-radius: 2px;
+  background: var(--paper);
+  color: var(--ink);
+  text-decoration: none;
+}
+.checkin a.control:hover {
+  border-color: var(--ink);
+}
+.checkin a.control:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* Below this width the three labels no longer fit, so only the current
@@ -656,10 +864,12 @@ p,
   color: var(--quiet);
 }
 .log .when,
-.stage .when {
+.stage .when,
+.roster .when {
   font-family: var(--font-ui);
   font-size: 0.875rem;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .pending {
   font-family: var(--font-text);
@@ -673,6 +883,7 @@ p,
    which a short viewport or 400% zoom is not. em follows the text size. */
 .pages {
   display: flex;
+  flex-wrap: wrap;
   max-width: 36rem;
   margin: 0 auto;
   padding-inline: 1rem;
@@ -681,6 +892,7 @@ p,
 }
 .pages a {
   flex: 1 1 0;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -692,6 +904,8 @@ p,
   background: var(--paper);
   color: var(--ink);
   text-decoration: none;
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 .pages a:hover {
   border-color: var(--ink);

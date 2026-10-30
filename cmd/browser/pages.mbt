@@ -24,6 +24,26 @@ fn page_from_hash(hash : String) -> @words.Page {
 }
 
 ///|
+/// An address: one of the ship's pages, or the settings menu, which is not a
+/// page of the ship and keeps no log.
+pub(all) enum Address {
+  Page(@words.Page)
+  Settings
+} derive(Eq, Debug)
+
+///|
+/// The address `hash` names. `#settings` is the settings menu; anything else
+/// is a page, with `page_from_hash`'s fallback.
+fn address_from_hash(hash : String) -> Address {
+  let slug = hash.to_lower().trim(chars="#").to_owned()
+  if slug == "settings" {
+    Settings
+  } else {
+    Page(page_from_hash(hash))
+  }
+}
+
+///|
 /// The newest story `seq` the player has viewed on each page, for the
 /// counts in the bar. Negative until known.
 struct Viewed {
@@ -105,7 +125,8 @@ fn pages_nav(model : Model) -> @rabbita.Html {
     attrs=@html.Attrs::build().aria_label("Pages"),
     all_pages.map(p => {
       let news = model.unread_on(p)
-      let attrs = if p == model.page {
+      let current = !model.settings && p == model.page
+      let attrs = if current {
         @html.Attrs::build().aria_current("page")
       } else {
         @html.Attrs::build()
@@ -124,7 +145,7 @@ fn pages_nav(model : Model) -> @rabbita.Html {
       }
       @html.a(
         href="#\{page_slug(p)}",
-        class=if p == model.page { "current" } else { "" },
+        class=if current { "current" } else { "" },
         attrs~,
         [@html.span(p.name()), ..count],
       )

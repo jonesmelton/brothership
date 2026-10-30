@@ -22,6 +22,8 @@ struct Model {
   seen : Int64?
   /// The page shown, from the address.
   page : @words.Page
+  /// The address is the settings menu, outside the ship's pages.
+  settings : Bool
   /// The newest story `seq` viewed on each page, kept in `localStorage`.
   viewed : Viewed
   /// The player's totals when this visit began, for "since you were here";
@@ -64,8 +66,8 @@ enum Msg {
   Hear(Hear)
   Sound(Sounds)
   Typeface(Face)
-  /// The address now names this page.
-  Went(@words.Page)
+  /// The address now names this page or the settings menu.
+  Went(Address)
   /// A link was followed. Rabbita stops the browser following it.
   Requested(@url.UrlRequest)
   /// The local clock moved.
@@ -231,8 +233,12 @@ fn focus_cmd(id : String) -> @rabbita.Cmd {
 }
 
 ///|
-/// The document title: the ship in English when aboard, the game otherwise.
+/// The document title: the ship in English when aboard, the settings menu
+/// when that is open, the game otherwise.
 fn page_title(model : Model) -> String {
+  if model.settings {
+    return "Settings"
+  }
   match model.ship {
     Some(ship) =>
       model.ships
@@ -319,9 +325,16 @@ fn update(
     (_, Requested(Internal(url))) =>
       (model, @nav.push_url("#" + url.fragment.unwrap_or("")))
     (_, Requested(External(href))) => (model, @nav.load(href))
-    (_, Went(page)) => {
-      let moved = model.goto(page)
-      let cmds = if moved.page != model.page {
+    (_, Went(Settings)) => {
+      guard !model.settings else { return (model, @rabbita.none) }
+      let moved = { ..model, settings: true, effect: [], }
+      (moved, @rabbita.batch([title_cmd(moved), focus_cmd("title")]))
+    }
+    (_, Went(Page(page))) => {
+      let moved = { ..model, settings: false, }.goto(page)
+      let cmds = if model.settings {
+        [title_cmd(moved), focus_cmd("page"), keep_viewed(moved)]
+      } else if moved.page != model.page {
         [focus_cmd("page"), keep_viewed(moved)]
       } else {
         []
@@ -336,6 +349,7 @@ fn update(
             @rabbita.batch([
               load(emit, ship),
               tell(emit, ship, model.told.last()),
+              list(emit),
             ]),
           )
         None => (model, list(emit))
@@ -828,6 +842,27 @@ fn ship_choices(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
 
 ///|
 fn view(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
+  if model.settings {
+    let name = match model.ship {
+      Some(ship) =>
+        model.ships
+        .iter()
+        .find_first(l => l.id == ship)
+        .map(l => l.name)
+        .unwrap_or(ship)
+      None => ""
+    }
+    let nav = match (model.ship, model.sync) {
+      (Some(_), Ready(_)) => [pages_nav(model)]
+      _ => []
+    }
+    return page(
+      model,
+      [masthead("Settings", settings=true), ..settings_page(model, emit)],
+      nav,
+      accent_style(name),
+    )
+  }
   guard model.ship is Some(ship) else {
     let body = match model.sync {
       Offline(reason~) => [@html.p("Out of contact with the fleet: \{reason}")]
@@ -959,6 +994,7 @@ fn voyage_page(
   [
     where_section(s),
     @html.section([@html.h3("Demands"), ..outlook]),
+    fleet_section(model, s, model.ships),
     reckoning_section(s),
     @html.section(
       [
@@ -1012,9 +1048,9 @@ fn ship_page(
     @html.section(
       [@html.h3("The ship"), ..sentences(@words.ship_sentences(s)), ..refit],
     ),
+    roster_section(model, s),
     away_section(model, Ship, "While you were away", []),
     log_section(model, Ship),
-    settings_section(model, emit),
     leaving_section(model, emit, s),
   ]
 }
@@ -1123,7 +1159,7 @@ fn log_section(model : Model, page : @words.Page) -> @rabbita.Html {
     .to_owned()
     .rev()
     .map(e => {
-      let line = @words.told(e.happening, you=model.officer, ship~)
+      let line = named(e.happening, you=model.officer, ship~)
       let when = @words.ago((model.now - e.at).max(0L))
       let fresh = model.seen is Some(seen) && e.seq > seen
       let voice = if e.happening is Spoke(_) { "voice" } else { "" }
@@ -1173,43 +1209,6 @@ fn[T : Eq] toggles(
 }
 
 ///|
-/// The Ship page's settings: what is read aloud as it happens, whether a
-/// tone marks it, and the typeface.
-fn settings_section(model : Model, emit : @rabbita.Emit[Msg]) -> @rabbita.Html {
-  @html.section([
-    @html.h3("Settings"),
-    toggles(
-      "hear",
-      "Read aloud as it happens",
-      [
-        (Everything, "Everything"),
-        (Urgent, "Urgent only"),
-        (Nothing, "Nothing"),
-      ],
-      model.hear,
-      h => Hear(h),
-      emit,
-    ),
-    toggles(
-      "sounds",
-      "Sounds",
-      [(On, "On"), (Off, "Off")],
-      model.sounds,
-      s => Sound(s),
-      emit,
-    ),
-    toggles(
-      "face",
-      "Type",
-      [(Book, "Book"), (Legible, "Legible")],
-      model.face,
-      f => Typeface(f),
-      emit,
-    ),
-  ])
-}
-
-///|
 /// The page: `content`, the bar of links between pages if any, and the two
 /// live regions, which are always present so that screen readers are
 /// watching them before anything is said.
@@ -1241,10 +1240,24 @@ fn page(
 }
 
 ///|
-fn[C : @html.IsChildren] masthead(heading : C) -> @rabbita.Html {
+/// The masthead, and the way to the settings menu unless `settings` says
+/// it is the page shown. The link follows the heading, so a screen reader
+/// reaches the title first; the stylesheet sets it at the top end.
+fn[C : @html.IsChildren] masthead(
+  heading : C,
+  settings~ : Bool = false,
+) -> @rabbita.Html {
+  let menu = if settings {
+    []
+  } else {
+    [@html.a(class="menu", href="#settings", "Settings")]
+  }
   @html.header(
     class="masthead",
-    @html.h1(id="title", attrs=@html.Attrs::build().tabindex(-1), heading),
+    [
+      @html.h1(id="title", attrs=@html.Attrs::build().tabindex(-1), heading),
+      ..menu,
+    ],
   )
 }
 
@@ -1262,6 +1275,7 @@ fn main {
           left: None,
           seen: None,
           page: page_from_hash(current_hash()),
+          settings: address_from_hash(current_hash()) is Settings,
           viewed: { you: -1L, voyage: -1L, ship: -1L, },
           ledger: None,
           last_watch: @string.parse_int64(stored_watch()) catch {
@@ -1295,7 +1309,7 @@ fn main {
           @sub.every(POLL_MS, emit(Poll)),
           @sub.on_url_request(emit.map(r => Requested(r))),
           @sub.on_url_changed(
-            emit.map(u => Went(page_from_hash(u.fragment.unwrap_or("")))),
+            emit.map(u => Went(address_from_hash(u.fragment.unwrap_or("")))),
           ),
         ])
       },

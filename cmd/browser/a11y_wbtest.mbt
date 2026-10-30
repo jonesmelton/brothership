@@ -1,6 +1,13 @@
 ///|
 fn listing(id : String, name : String) -> @core.Listing {
-  { id, name, crossings: 0, whereabouts: InPort(departs=0), officers: 0, }
+  {
+    id,
+    name,
+    crossings: 0,
+    whereabouts: InPort(departs=0),
+    run: 0,
+    officers: 0,
+  }
 }
 
 ///|
@@ -14,6 +21,7 @@ fn aboard() -> Model {
     left: None,
     seen: None,
     page: You,
+    settings: false,
     viewed: { you: 0L, voyage: 0L, ship: 0L, },
     ledger: None,
     last_watch: 0L,
@@ -49,6 +57,7 @@ test "the page title names the ship, or the game" {
   assert_eq(page_title(aboard()), "EF-147 The Tigress")
   assert_eq(page_title({ ..aboard(), ship: None, }), "brothership")
   assert_eq(page_title({ ..aboard(), ships: [], }), "brothership")
+  assert_eq(page_title({ ..aboard(), settings: true, }), "Settings")
 }
 
 ///|

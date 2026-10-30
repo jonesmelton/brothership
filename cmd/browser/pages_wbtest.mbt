@@ -11,6 +11,15 @@ test "a hash names a page, and anything else is You" {
 }
 
 ///|
+test "the settings menu is an address of its own, not a ship page" {
+  assert_eq(address_from_hash("#settings"), Settings)
+  assert_eq(address_from_hash("settings"), Settings)
+  assert_eq(address_from_hash("#ship"), Page(Ship))
+  assert_eq(address_from_hash("#nowhere"), Page(You))
+  assert_eq(address_from_hash(""), Page(You))
+}
+
+///|
 test "each page's link is its slug" {
   assert_eq(page_slug(You), "you")
   assert_eq(page_slug(Voyage), "voyage")

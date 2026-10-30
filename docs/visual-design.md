@@ -75,7 +75,8 @@ Small caps are always `all-small-caps` from the font (`smcp`, `c2sc`), with `fon
 - One column at every width, `max-width: 36rem`, centered, with `1rem` side padding (`1.5rem` from 40rem wide). Desktop gets the phone layout with more margin, not a second layout.
 - Sections are separated by a `--rule` hairline and `2rem` of space, not boxes.
 - The game has three pages, You, Voyage and Ship, each with its own log, reached from the [bar of pages](#bar-of-pages). The masthead is on all of them. A page opens with its `h2`, which takes focus when the page changes; its sections are `h3`.
-- The vertical order of each page is fixed and never changes with state. Every page opens, under the masthead, with [the ship says](#the-ship-says), then its own `h2`. You: rank, since you were here, your post, choices, log. Voyage: where the ship is, demands, the instruments and reckoning (collapsed), landfall, while you were away, log. Ship: the ship, while you were away, log, settings, other ships. A section with nothing to say says so in a sentence rather than disappearing.
+- [Settings](#settings) is a separate menu, reached from a quiet link at the top end of the masthead on every page, not a fourth tab. It has no log, no stage and no voice, so the ship's pages stay the ship's papers.
+- The vertical order of each page is fixed and never changes with state. Every page opens, under the masthead, with [the ship says](#the-ship-says), then its own `h2`. You: rank, since you were here, your post, choices, log. Voyage: where the ship is, demands, the fleet, the instruments and reckoning (collapsed), landfall, while you were away, log. Ship: the ship, the officers, while you were away, log, leaving. A section with nothing to say says so in a sentence rather than disappearing.
 - The bar of pages is the only fixed element, and only on viewports at least 34em tall (see below). Otherwise the page is a plain scroll, and at 400% zoom it is.
 
 ## components
@@ -110,7 +111,7 @@ The bar is `position: fixed` at the bottom edge only under `(min-height: 34em)`,
 
 The You page opens with the officer's rank in full, a `p class="rank"` in Fira Sans 600: `Lieutenant commander ●●●`. The insignia is a mark beside the title, in Noto Serif CJK TC at `--quiet`, and is `aria-hidden`, so a screen reader hears only the rank. Its glyphs ship in the CJK subset: `○`, `●`, `●●`, `●●●` and `★` for ensign through commander. Built by `rank_line` in `cmd/browser/pages.mbt`.
 
-The compact form, for a label beside a crew member, is the abbreviation and insignia for the eye, with the full rank in a visually hidden span, as in `LCDR ●●●` with `Lieutenant commander` hidden. Both the abbreviation and the insignia are `aria-hidden`. Built by `rank_compact` in `cmd/browser/pages.mbt`; no page uses it until a crew roster exists.
+The compact form, for a label beside a crew member, is the abbreviation and insignia for the eye, with the full rank in a visually hidden span, as in `LCDR ●●●` with `Lieutenant commander` hidden. Both the abbreviation and the insignia are `aria-hidden`. Built by `rank_compact` in `cmd/browser/pages.mbt`; the roster uses it.
 
 ### ship's voice
 
@@ -138,11 +139,17 @@ It is `aria-hidden` and adds nothing the sentences don't say: the phase sentence
 
 The track is a container query context. Below 13em wide, which is a narrow phone or any page at large text, only the current phase keeps its label; the others are hidden rather than allowed to collide. The threshold comes from the widest label, `approach`, which needs about 4.3em in a third of the track. Stretches may be narrower than their labels, and the current label overflows to the right but is clipped by the track.
 
+Under the phases, a second bar is the same crossing on the worlds' clock: the phases sized by the years they take at the worlds, so the burns are slivers. It carries the label "At the worlds" and no numbers, because the coarsened sentence above already says how long the crossing takes there and the Instruments table has the exact figures. It is `aria-hidden` like the track.
+
 ### log
 
 The ship's story, newest first, the latest 20 entries: one `li` per happening, its sentence, then how long ago in `--quiet` at 0.875rem. A ship's line in the log is set as the ship's voice. Each page's log holds only its own happenings (`@words.page_of`). An entry newer than the last visit has a 4px `--accent` rule at its left; the away list says the same in words, so the rule is never the only signal. The list has no markers, so it carries `role="list"`, which Safari otherwise drops. The pending sentence ("finding words", "weighing a choice") is on the stage, not in the log.
 
-On the Ship page the Settings section holds three choice groups, in this order: what is read aloud as it happens (everything, urgent only, nothing), sounds (on, off; off by default), and type (book, legible). Each is a set of native buttons with `aria-pressed`, and each is stored in `localStorage`. Legible sets `data-face="legible"` on the root, which replaces `--font-display` and `--font-ui` with Atkinson Hyperlegible Next; the hanzi keep `--font-han`. The face has no small caps, oldstyle figures or slashed zero, so labels set in small caps appear in lowercase and figures in lining. Its font files are not preloaded and load only when chosen.
+Other officers are named in the log and the away list by service number; the player is "You". Announcements say "A hand" instead, because a service number read aloud is spelled out letter by letter. The ship's model never sees either: `@words.told` keeps "A hand" for it.
+
+### settings
+
+A menu of its own at `#settings`, reached from the masthead's "Settings" link, `a.menu`. It follows the `h1` in the source, so a screen reader reaches the title first, and is set at the top end in small caps at `--quiet`. It is left by the bar of pages or its "Back to the ship" link ("Back to the fleet" before boarding). It has the plain masthead "Settings", with no ship stage, no voice and no log. Sections: **Your service number**, the officer's public id and a sentence saying the ship knows them by it; then **Preferences**, with three choice groups in this order: what is read aloud as it happens (everything, urgent only, nothing), sounds (on, off; off by default), and type (book, legible). Each is a set of native buttons with `aria-pressed`, and each is stored in `localStorage`. Legible sets `data-face="legible"` on the root, which replaces `--font-display` and `--font-ui` with Atkinson Hyperlegible Next; the hanzi keep `--font-han`. The face has no small caps, oldstyle figures or slashed zero, so labels set in small caps appear in lowercase and figures in lining. Its font files are not preloaded and load only when chosen. The page bar is shown while the player is aboard; none of its links is current on Settings.
 
 ### announcements
 
@@ -165,7 +172,7 @@ The three post buttons carry a second line, `span.effect-note` at 0.875rem in `-
 
 ### ship register
 
-The ship list ("Choose a ship", "Other ships") is the same buttons, each carrying the ship's title on one line: pennant, conventional name (Medium, `aria-hidden`), epithet. The accessible name is the English title, as in the masthead.
+The ship list ("Choose a ship") is the same buttons, each carrying the ship's title on one line: pennant, conventional name (Medium, `aria-hidden`), epithet. The accessible name is the English title, as in the masthead.
 
 ### reckoning
 
@@ -175,18 +182,27 @@ The crossing as the worlds see it follows the demands, in a native `details` tha
 
 Underway, in this order:
 
-1. **Two clocks.** The crossing's rapidity over hours aboard, drawn linearly: a ramp, a plateau, a ramp down, so it is the crossing's profile. Under it a second axis, years at the worlds, and dotted lines carry each turn down to where it falls in those years, with an `--ink` line for the ship. The burns, a fifth of the hours aboard, are a sliver of the years. The aboard axis is sized as the track is, by each phase's hours at the current setting, so it moves with the drive. Flown is a 2px `--accent` line, still to fly a dashed 1px `--quiet` one; hairlines stay hairlines at any width (`vector-effect: non-scaling-stroke`). Each axis has a small-caps label and its length, in tabular figures.
+1. **Lorentz factor over the hours aboard.** γ on a linear scale from one at the base to the coast's peak at a dotted `--rule` line, against hours aboard sized as the track is, so it moves with the drive. Rapidity rises in step with the burn's hours, so γ = cosh η stays near one for most of the burn and climbs to the peak in its last stretch; the approach mirrors it. This is the fact the track can't show. Not plotted against distance or the worlds' years: on either the burns are about 4% of the width and the drawing is a block, which the "at the worlds" bar already says. Flown is a 2px `--accent` line, still to fly a dashed 1px `--quiet` one; the ship is an `--accent` dot, HTML over the drawing so the stretched viewBox keeps it round, on an `--ink` hairline from the base. Labels give the peak and γ now above, and the forecast hours below, in tabular figures. Hairlines stay hairlines at any width (`vector-effect: non-scaling-stroke`).
 2. **The crossing**, a table: time aboard, time at the worlds, light-years run and to go, and how far the light of departure leads the ship.
 3. **Instruments**, a table: γ, η, pace, acceleration, how fast light outruns the ship, the Doppler factor ahead and behind, green light ahead as photon energy, how close to the bow aberration crowds half the sky, and the energy each atom ahead strikes with. Absent once arrived.
-4. **The map**: the four worlds in their plane, every lane between them as a `--rule` hairline, the leg flown in `--accent` and the rest dashed, the ship as an `--accent` dot, and the Sun as a hollow `--quiet` one. Names are HTML over the drawing, above each point, so they follow the text size; each star's name is under its world's in `--quiet`.
+4. **The bow sight**, under the Instruments table: the sky looking forward, as a disc with the bow at its centre, an `--accent` cross. A direction θ from the bow is drawn at a radius set by ln tan(θ/2). Aberration is tan(θ′/2) = e^−η tan(θ/2), which on that scale is a shift by −η, so a fixed field of 260 `--ink` stars, spread evenly over the sphere with a few bright ones, slides toward the bow as the ship burns and keeps its shape. The scale is fixed for the crossing: from a little behind abeam at rest to a little inside abeam at the peak. Hairline `--rule` rings mark 90°, 1°, 1′, 1″ and 0.01″ where they fall in that span, each labelled in tabular figures above the bow; the `--accent` ring is half the sky, the image of the worlds' abeam, at the reckoning's cone. The caption names the scale and gives the angle. `aria-hidden`; the Instruments row carries the figure. Rendering only, in `cmd/browser/sky.mbt`.
+5. **Next leg**, in port only: from, to, distance, years at the worlds and the hours aboard it can take.
 
-In port, the map with the next leg dashed, then **Next leg**: from, to, distance, years at the worlds and the hours aboard it can take.
+Tables are `table.figures`: a small-caps `--quiet` caption, a `th scope="row"` label at the start and its figure at the end in `tabular-nums lining-nums slashed-zero`, rows divided by `--rule` hairlines. They are what a screen reader reads; the drawings are `aria-hidden` and add nothing the tables and sentences don't say. The sentences in "Where the ship is" carry the same facts coarsened and don't tick; the tables' figures tick, as the client's clock moves every second, and are not live regions, so nothing is announced.
 
-Tables are `table.figures`: a small-caps `--quiet` caption, a `th scope="row"` label at the start and its figure at the end in `tabular-nums lining-nums slashed-zero`, rows divided by `--rule` hairlines. They are what a screen reader reads; both drawings are `aria-hidden` and add nothing the tables and sentences don't say. The sentences in "Where the ship is" carry the same facts coarsened and don't tick; the tables' figures tick, as the client's clock moves every second, and are not live regions, so nothing is announced.
+### the fleet
+
+On the Voyage page, after the demands and before the instruments. One sentence per other ship, from `@words.fleet_sentence`, naming its title and where it is, and never who or how many are aboard. The star map follows: the four worlds in their plane, every lane between them as a `--rule` hairline, the leg flown in `--accent` and the rest dashed, this ship as a larger `--accent` dot, every other ship as a small hollow `--quiet` dot labelled with its pennant, and the Sun as a hollow `--quiet` one. Names are HTML over the drawing, above each point, so they follow the text size; each star's name is under its world's in `--quiet`. The drawing is `aria-hidden`; the sentences are the list.
+
+A player aboard one ship cannot read another's snapshot or story: `GET /api/ships/:id/snapshot` and `/story` answer 403 while the session's officer is aboard a different ship. The fleet list and this map are what they may see of the rest of the fleet.
+
+### officers
+
+The Ship page's watch bill, after "The ship". One item per officer aboard: the service number as the name, a compact rank beside it, and "You" on the player's own row. Under it, where they stand ("On the hull, on watch for about 2 hours more."), the post they have spent the most time on this crossing ("3 hours on the hull this crossing."), and their newest action as a sentence with how long ago ("Took the hull 12 minutes ago."). In port, it says the post each officer will take at departure instead of the crossing's hours. Items are ordered with the player first, then by rank, then by service number, so the list is stable. The summary says how many officers are aboard and how many recruits fill out the crew. It is a `ul` with `role="list"`, not a table: the sentences, not columns, are the content.
 
 ## not yet designed
 
-- A works shelf and a crew roster. Both will be tables like the reckoning's, with tabular lining figures.
+- A works shelf, as a table like the reckoning's, with tabular lining figures.
 - An in-game scheme toggle, if players ask for one.
 
 ## Related

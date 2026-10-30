@@ -123,6 +123,7 @@ test "the reckoning and instruments mid-coast" {
     instrument_rows(s),
     content=(
       #|[
+      #|  ("Peak Lorentz factor γ", "24,000"),
       #|  ("Lorentz factor γ", "24,000"),
       #|  ("Rapidity η", "10.78"),
       #|  ("Pace", "1 ly per 21.9 min aboard"),
