@@ -17,6 +17,18 @@ async fn officer_of(store : @store.Store, req : @moonback.Request) -> String? {
 }
 
 ///|
+/// The client a request counts against: Fly's `Fly-Client-IP` if present,
+/// else the peer address. Fly's edge sets the header, so only a server
+/// reachable without it would let a client name its own key; `mint_all`
+/// bounds that case.
+fn client_of(req : @moonback.Request) -> String {
+  match req.headers.get("Fly-Client-IP") {
+    Some(ip) => ip.to_owned()
+    None => req.ips().get(0).map(ip => ip.to_owned()).unwrap_or("")
+  }
+}
+
+///|
 /// A new session token: 128 random bits as 32 hex characters.
 fn new_token() -> String {
   random_hex(16)

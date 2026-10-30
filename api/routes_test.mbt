@@ -4,8 +4,9 @@ async fn with_server(
   store : @store.Store,
   now : Int64,
   f : async (String) -> Unit,
+  mint_each~ : @api.Limiter = @api.Limiter::new(burst=1000, interval=1),
 ) -> Unit {
-  let app = @moonback.App(@api.routes(store, clock=() => now))
+  let app = @moonback.App(@api.routes(store, clock=() => now, mint_each~))
   defer app.close()
   let listener = @moonback.listen(host="127.0.0.1", port=0)
   let base = "http://127.0.0.1:\{listener.addr.port()}"
@@ -227,5 +228,59 @@ async test "the story route returns entries after a seq" {
     inspect(story.entries.length(), content="0")
     let (response, _) = @http.get("\{base}/api/ships/nobody/story")
     inspect(response.code, content="404")
+  })
+}
+
+///|
+async test "minting sessions is limited per client, not for existing sessions" {
+  let store = fleet_store()
+  defer store.close()
+  let mint_each = @api.Limiter::new(burst=2, interval=30)
+  with_server(
+    store,
+    1_800_000_000,
+    base => {
+      let (cookie, _) = new_session(base)
+      new_session(base) |> ignore
+      let (res, body) = @http.get("\{base}/api/session")
+      inspect(res.code, content="429")
+      inspect(res.headers.get("Retry-After") is Some("30"), content="true")
+      inspect(res.cookies.is_empty(), content="true")
+      json_inspect(body.json(), content={ "error": "too many new sessions" })
+      let (res, _) = @http.get(
+        "\{base}/api/session",
+        headers=cookie_header(cookie),
+      )
+      inspect(res.code, content="200")
+      let (res, _) = @http.get("\{base}/api/session", headers={
+        "Fly-Client-IP": "203.0.113.9",
+      })
+      inspect(res.code, content="200")
+    },
+    mint_each~,
+  )
+}
+
+///|
+async test "minting sessions is limited across all clients" {
+  let store = fleet_store()
+  defer store.close()
+  let app = @moonback.App(
+    @api.routes(
+      store,
+      clock=() => 1_800_000_000,
+      mint_all=@api.Limiter::new(burst=1, interval=60),
+    ),
+  )
+  defer app.close()
+  let listener = @moonback.listen(host="127.0.0.1", port=0)
+  let base = "http://127.0.0.1:\{listener.addr.port()}"
+  @async.with_task_group(group => {
+    group.spawn_bg(no_wait=true, () => app.serve(listener))
+    new_session(base) |> ignore
+    let (res, _) = @http.get("\{base}/api/session", headers={
+      "Fly-Client-IP": "203.0.113.9",
+    })
+    inspect(res.code, content="429")
   })
 }

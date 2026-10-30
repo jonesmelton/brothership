@@ -14,19 +14,36 @@
 /// line now, and `thinking` whether its mind is weighing a choice. A proposal acts as the officer in its session cookie: no
 /// session is a 401, and a proposal naming another officer is a 403.
 /// `secure` marks the session cookie `Secure`; keep it false only for
-/// plain-http development.
+/// plain-http development. A request with no session mints one only if
+/// `mint_each` has a token for its client and `mint_all` has one for the
+/// server; otherwise it is a 429 with `Retry-After`.
 pub fn routes(
   store : @store.Store,
   clock~ : () -> Int64 = unix_now,
   speaking~ : (String) -> Bool = _ => false,
   thinking~ : (String) -> Bool = _ => false,
   secure~ : Bool = true,
+  mint_each~ : Limiter = Limiter::new(burst=10, interval=30),
+  mint_all~ : Limiter = Limiter::new(burst=200, interval=1),
 ) -> @moonback.Module {
   ctx => {
     ctx.get("/api/session", (req, res) => {
       let (officer, token) = match officer_of(store, req) {
         Some(officer) => (officer, None)
         None => {
+          let wait = mint_each.take(client_of(req), now=clock())
+          let wait = if wait > 0L {
+            wait
+          } else {
+            mint_all.take("", now=clock())
+          }
+          if wait > 0L {
+            res.send_json({ "error": "too many new sessions" }, status=429, headers=[
+              ("Retry-After", wait.to_string()),
+              ("Cache-Control", "no-store"),
+            ])
+            return
+          }
           let token = new_token()
           let officer = new_officer()
           store.open_session(token, officer, now=clock())
