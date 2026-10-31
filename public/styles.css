@@ -486,10 +486,16 @@ p,
   vector-effect: non-scaling-stroke;
   fill: none;
 }
-.chart .axis,
-.map .lane {
+.chart .axis {
   stroke: var(--rule);
   stroke-width: 1px;
+}
+/* A lane another ship is bound along, dotted; idle lanes are not drawn. */
+.map .lane {
+  stroke: var(--quiet);
+  stroke-width: 2px;
+  stroke-linecap: round;
+  stroke-dasharray: 0 5;
 }
 .chart .flown,
 .map .flown {
@@ -596,10 +602,17 @@ p,
 .map .ship {
   fill: var(--accent);
 }
+/* Another ship, in its accent, or hollow when it has none. */
 .map .other {
-  fill: var(--paper);
-  stroke: var(--quiet);
+  --other: var(--ship-accent-light);
+  fill: var(--other, var(--paper));
+  stroke: var(--other, var(--quiet));
   stroke-width: 1px;
+}
+@media (prefers-color-scheme: dark) {
+  .map .other {
+    --other: var(--ship-accent-dark);
+  }
 }
 /* A name sits above its point, centered on it. */
 .map .place {

@@ -260,8 +260,38 @@ fn listing_on_map(l : @core.Listing) -> (Double, Double) {
 }
 
 ///|
-/// The worlds in their plane, every lane between them, the fleet's ships and
-/// the leg under way, and the Sun, which lies 7.6 ly off the plane.
+/// The pairs of worlds some other ship is bound between, each pair once in
+/// whichever order it first appears. The player's own leg is drawn apart,
+/// so a pair it shares is left out.
+fn voyage_lanes(
+  fleet : Array[@core.Listing],
+  own : String?,
+) -> Array[(String, String)] {
+  let same = (a : (String, String), b : (String, String)) => {
+    a == b || (a.1, a.0) == b
+  }
+  let own_leg = fleet
+    .iter()
+    .find_first(l => own == Some(l.id))
+    .bind(l => l.bound.map(to => (l.from, to)))
+  let lanes = []
+  for l in fleet {
+    guard own != Some(l.id) && l.bound is Some(to) else { continue }
+    let lane = (l.from, to)
+    if own_leg is Some(o) && same(o, lane) {
+      continue
+    }
+    if !lanes.iter().any(m => same(m, lane)) {
+      lanes.push(lane)
+    }
+  }
+  lanes
+}
+
+///|
+/// The worlds in their plane, the lanes other ships are bound along, the
+/// fleet's ships and the leg under way, and the Sun, which lies 7.6 ly off
+/// the plane.
 fn map_figure(
   s : @core.State,
   fleet : Array[@core.Listing],
@@ -282,12 +312,13 @@ fn map_figure(
     let (cx, cy) = at(p)
     @svg.circle(class~, cx~, cy~, r~)
   }
-  let lanes = []
-  for i in 0..<ws.length() {
-    for j in (i + 1)..<ws.length() {
-      lanes.push(segment("lane", ws[i].on_map(), ws[j].on_map()))
+  let lanes = voyage_lanes(fleet, own).filter_map(lane => {
+    let (a, b) = lane
+    match (@ships.world_named(a), @ships.world_named(b)) {
+      (Some(a), Some(b)) => Some(segment("lane", a.on_map(), b.on_map()))
+      _ => None
     }
-  }
+  })
   let place = (
     p : (Double, Double),
     class : String,
@@ -318,7 +349,7 @@ fn map_figure(
         .bind(profile => profile.title)
         .map(title => title.pennant)
         .unwrap_or(l.name)
-      (p, place(p, "other", [@html.span(class="star", pennant)]))
+      (p, place(p, "other", [@html.span(class="star", pennant)]), l.name)
     })
   let from = @ships.origin(s.ship)
   let leg = match (s.crossing(), @ships.bound_for(s)) {
@@ -340,7 +371,11 @@ fn map_figure(
     [
       ..lanes,
       ..ws.map(w => dot("world", w.on_map(), 8)),
-      ..others.map(o => dot("other", o.0, 6)),
+      ..others.map(o => {
+        let (cx, cy) = at(o.0)
+        // A cast ship is drawn in its accent; any other keeps the hollow dot.
+        @svg.circle(class="other", style=accent_style(o.2), cx~, cy~, r=8)
+      }),
       dot("sun", sun, 6),
       ..leg,
     ],

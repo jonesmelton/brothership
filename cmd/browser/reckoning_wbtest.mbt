@@ -143,3 +143,31 @@ test "the map frames every world and the Sun, and puts the ship on its leg" {
   // Kerala lies east of Occitan on the map, so the ship is between them.
   assert_true(sx < fx && sx > tx)
 }
+
+///|
+test "the map draws a lane only where another ship is bound, once a pair" {
+  let bound = (id : String, from : String, to : String) => {
+    ..listing(id, "a ship"),
+    from,
+    bound: Some(to),
+  }
+  let fleet = [
+    bound("own", "Kerala", "Tigray"),
+    bound("a", "Tigray", "Oaxaca"),
+    bound("b", "Oaxaca", "Tigray"),
+    bound("c", "Tigray", "Kerala"),
+    listing("d", "a ship"),
+  ]
+  debug_inspect(
+    voyage_lanes(fleet, Some("own")),
+    content=(
+      #|[("Tigray", "Oaxaca")]
+    ),
+  )
+  debug_inspect(
+    voyage_lanes(fleet, None),
+    content=(
+      #|[("Kerala", "Tigray"), ("Tigray", "Oaxaca")]
+    ),
+  )
+}
