@@ -395,3 +395,110 @@ async test "a greeting prompt says whether the ship knows the officer, and no id
     ),
   )
 }
+
+///|
+/// A model that writes each of `lines` in turn and a gate that passes them.
+fn lines(lines : Array[String], seen : Ref[Array[String]]) -> @llm.Backend {
+  @llm.Backend::new("lines", fn(c) {
+    let text = if c.model == "gate" {
+      "{\"violation\": 0, \"evidence\": \"\"}"
+    } else {
+      seen.val.push(c.user)
+      lines[seen.val.length() - 1]
+    }
+    {
+      model: c.model,
+      text,
+      reasoning: None,
+      finish: Some("stop"),
+      usage: @llm.Usage::zero(),
+      raw: Json::null(),
+    }
+  })
+}
+
+///|
+async test "a hail is answered before any happening, and marks the hail spoken" {
+  let store = departed()
+  defer store.close()
+  let id = store
+    .hail("tigress", "A dust front is coming.", now=T0 + 610)
+    .unwrap()
+  let seen = Ref([])
+  let speaker = @speech.Speaker::new(
+    "tigress",
+    voice(),
+    speech(),
+    lines(
+      ["Dust is coming, loves.", "We are off, and the drive wants hands."],
+      seen,
+    ),
+    from=0,
+  )
+  speaker.step(store, clock=() => T0 + 620)
+  let said_at = store.snapshot("tigress").unwrap().seq
+  assert_eq(spoken(store), [
+    Spoke(line="Dust is coming, loves.", about=@speech.HAILED),
+  ])
+  assert_eq(store.hails().map(h => (h.id, h.outcome)), [
+    (id, Spoke(seq=said_at, at=T0 + 620)),
+  ])
+  assert_true(seen.val[0].contains("A dust front is coming."))
+  // The departure is still weighed, after the hail.
+  speaker.step(store, clock=() => T0 + 625)
+  inspect(spoken(store).length(), content="2")
+  // Nothing open: no call.
+  speaker.step(store, clock=() => T0 + 630)
+  inspect(seen.val.length(), content="2")
+}
+
+///|
+async test "a hail the ship passes on, or the gate blocks, falls silent" {
+  let store = departed()
+  defer store.close()
+  let passed = store.hail("tigress", "Say nothing.", now=T0 + 610).unwrap()
+  let calls = Ref(0)
+  @speech.Speaker::new(
+    "tigress",
+    voice(),
+    speech(),
+    fake("PASS", 0, calls),
+    from=departure(store).seq,
+  ).step(store, clock=() => T0 + 620)
+  let blocked = store.hail("tigress", "Be cruel.", now=T0 + 630).unwrap()
+  @speech.Speaker::new(
+    "tigress",
+    voice(),
+    speech(),
+    fake("Something unkind.", 1, calls),
+    from=departure(store).seq,
+  ).step(store, clock=() => T0 + 640)
+  inspect(spoken(store).length(), content="0")
+  debug_inspect(
+    store.hails().map(h => (h.id == blocked || h.id == passed, h.outcome)),
+    content=(
+      #|[
+      #|  (true, Silent(reason="blocked (): Something unkind.", at=1800000640)),
+      #|  (true, Silent(reason="kept quiet", at=1800000620)),
+      #|]
+    ),
+  )
+}
+
+///|
+async test "a hail's prompt carries the hail in place of a happening" {
+  let store = departed()
+  defer store.close()
+  let call = speech().hail_call(
+    voice(),
+    store.snapshot("tigress").unwrap().state,
+    store.story("tigress", after=0).unwrap(),
+    "A dust front is coming.",
+  )
+  assert_true(call.user.contains("A dust front is coming."))
+  assert_true(call.user.contains("Do not reply PASS."))
+  assert_false(call.user.contains("# what just happened"))
+  // Everything this crossing so far is recounted, the departure included.
+  assert_true(call.user.contains("The ship left port."))
+  assert_true(call.user.contains("Burning toward Occitan."))
+}

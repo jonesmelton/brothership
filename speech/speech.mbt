@@ -206,13 +206,69 @@ pub fn Speech::call(
   about : @core.Entry,
   thoughts~ : Array[String] = [],
 ) -> @llm.Call raise @prompt.PromptError {
+  let officer = match about.happening {
+    Promoted(crew~, rank~, tally~) => officer_facts(state, crew, rank, tally)
+    _ => Json::null()
+  }
+  // What the ship knows of an officer signing on: only whether it has
+  // carried them before, and their rank if so.
+  let newcomer : Json = match about.happening {
+    Signed(crew~) =>
+      {
+        "returning": Json(state.ship.records.contains(crew)),
+        "rank": Json(@words.rank_name(state.rank(crew))),
+      }
+    _ => Json::null()
+  }
+  self.prompt(voice, state, story, before=Some(about.seq), thoughts~, {
+    "happening": Json(@words.told(about.happening, you="", ship=voice.epithet)),
+    "officer": officer,
+    "newcomer": newcomer,
+  })
+}
+
+///|
+/// The call asking the model for `voice`'s line answering the hail `hail`,
+/// in `state`, recounting this crossing in `story`, and the ship's recent
+/// `thoughts` from its mind.
+pub fn Speech::hail_call(
+  self : Speech,
+  voice : Voice,
+  state : @core.State,
+  story : Array[@core.Entry],
+  hail : String,
+  thoughts~ : Array[String] = [],
+) -> @llm.Call raise @prompt.PromptError {
+  self.prompt(voice, state, story, before=None, thoughts~, {
+    "hail": Json(hail),
+  })
+}
+
+///|
+/// The call for a line about what `about` sets in the user template, a
+/// `happening` (with any `officer` or `newcomer`) or a `hail`, recounting
+/// the happenings this crossing before log position `before`, or all of
+/// them.
+fn Speech::prompt(
+  self : Speech,
+  voice : Voice,
+  state : @core.State,
+  story : Array[@core.Entry],
+  before~ : Int64?,
+  thoughts~ : Array[String],
+  about : Map[String, Json],
+) -> @llm.Call raise @prompt.PromptError {
   let ship = voice.epithet
   let names = match state.crossing() {
     Some(c) => handles(c)
     None => Map([])
   }
   let earlier = this_crossing(story).filter(e => {
-    e.seq < about.seq && !(e.happening is Spoke(_))
+    let in_time = match before {
+      Some(b) => e.seq < b
+      None => true
+    }
+    in_time && !(e.happening is Spoke(_))
   })
   let recent = earlier[(earlier.length() - RECALLED).max(0):]
     .iter()
@@ -228,24 +284,11 @@ pub fn Speech::call(
     "captain": Json(voice.captain),
     "voice": Json(voice.voice),
   })
-  let officer = match about.happening {
-    Promoted(crew~, rank~, tally~) => officer_facts(state, crew, rank, tally)
-    _ => Json::null()
-  }
-  // What the ship knows of an officer signing on: only whether it has
-  // carried them before, and their rank if so.
-  let newcomer : Json = match about.happening {
-    Signed(crew~) =>
-      {
-        "returning": Json(state.ship.records.contains(crew)),
-        "rank": Json(@words.rank_name(state.rank(crew))),
-      }
-    _ => Json::null()
-  }
-  let user = self.prompts.render("user", {
-    "happening": Json(@words.told(about.happening, you="", ship~)),
-    "officer": officer,
-    "newcomer": newcomer,
+  let vars : Map[String, Json] = {
+    "happening": Json::null(),
+    "officer": Json::null(),
+    "newcomer": Json::null(),
+    "hail": Json::null(),
     "readout": Json(@words.where_sentences(state)),
     "roster": Json(roster(state, story)),
     "recent": Json(recent),
@@ -255,7 +298,11 @@ pub fn Speech::call(
       Some(post) => Json::string(post)
       None => Json::null()
     },
-  })
+  }
+  for k, v in about {
+    vars[k] = v
+  }
+  let user = self.prompts.render("user", Json::object(vars))
   @llm.Call::new(
     model=self.model,
     system=[system],
@@ -343,15 +390,48 @@ pub async fn Speech::line(
   thoughts~ : Array[String] = [],
 ) -> @llm_gate.Cleared {
   let call = self.call(voice, state, story, about, thoughts~)
-  let reply = backend.call(call)
-  guard reply.text.trim() != "PASS" else { raise Passed }
-  guard tidy(reply.text) is Some(line) else { raise Unusable(reply.text) }
+  self.clear(backend, story, backend.call(call).text)
+}
+
+///|
+/// `voice`'s line answering the hail `hail`, written and passed by the
+/// gate. Raises `Silent` if there is no line to say, or the backend's
+/// error.
+pub async fn Speech::reply(
+  self : Speech,
+  backend : @llm.Backend,
+  voice : Voice,
+  state : @core.State,
+  story : Array[@core.Entry],
+  hail : String,
+  thoughts~ : Array[String] = [],
+) -> @llm_gate.Cleared {
+  let call = self.hail_call(voice, state, story, hail, thoughts~)
+  self.clear(backend, story, backend.call(call).text)
+}
+
+///|
+/// `reply` as a line passed by the gate, unless the model passed, the line
+/// is unusable, or it repeats one of the ship's last lines in `story`.
+async fn Speech::clear(
+  self : Speech,
+  backend : @llm.Backend,
+  story : Array[@core.Entry],
+  reply : String,
+) -> @llm_gate.Cleared {
+  guard reply.trim() != "PASS" else { raise Passed }
+  guard tidy(reply) is Some(line) else { raise Unusable(reply) }
   guard !repeats(line, said(story)) else { raise Repeated(line) }
   self.gate.clear(backend, line) catch {
     @llm_gate.Blocked(evidence) => raise Blocked(line, evidence~)
     err => raise err
   }
 }
+
+///|
+/// The `about` of a line answering a hail. No happening has this log
+/// position: the hail lives beside the log, and its row names the line.
+pub const HAILED : Int64 = -1
 
 ///|
 /// Writes one ship's lines. Holds what it has considered, so each
@@ -403,16 +483,22 @@ pub fn Speaker::speaking(self : Speaker) -> Bool {
 }
 
 ///|
-/// Weigh what happened since the last step and, if something earns a
-/// line, write it, check it with the gate, and append it at `clock()`. A
-/// failed, blocked or repeated line, or the model passing, is reported on
-/// stdout and leaves nothing.
+/// Answer the oldest open hail, if any; otherwise weigh what happened
+/// since the last step and, if something earns a line, write it, check it
+/// with the gate, and append it at `clock()`. A failed, blocked or repeated
+/// line, or the model passing, is reported on stdout and leaves nothing; a
+/// hail that gets no line is marked silent with the reason. A hail is
+/// answered even within `QUIET` of the last line.
 pub async fn Speaker::step(
   self : Speaker,
   store : @store.Store,
   clock~ : () -> Int64,
 ) -> Unit {
   guard !(self.busy)() else { return }
+  if store.open_hails(self.ship).get(0) is Some(hail) {
+    self.answer(store, hail, clock~)
+    return
+  }
   guard store.story(self.ship, after=self.considered) is Some(fresh) &&
     fresh.last() is Some(newest) else {
     return
@@ -449,5 +535,44 @@ pub async fn Speaker::step(
   report("written in \{@async.now() - started} ms")
   let now = clock()
   store.speak(self.ship, line~, about=about.seq, now~)
+  self.quiet_until = now + QUIET
+}
+
+///|
+/// Write, gate and append the line answering `hail`, or mark it silent.
+async fn Speaker::answer(
+  self : Speaker,
+  store : @store.Store,
+  hail : @store.Hail,
+  clock~ : () -> Int64,
+) -> Unit {
+  guard store.snapshot(self.ship) is Some(snapshot) &&
+    store.story(self.ship, after=0) is Some(story) else {
+    return
+  }
+  self.speaking = true
+  defer {
+    self.speaking = false
+  }
+  let started = @async.now()
+  let line = self.speech.reply(
+    self.backend,
+    self.voice,
+    snapshot.state,
+    story,
+    hail.text,
+    thoughts=(self.thoughts)(),
+  ) catch {
+    err => {
+      println("speech \{self.ship} hail \{hail.id}: \{err}")
+      store.silence(hail.id, reason="\{err}", now=clock())
+      return
+    }
+  }
+  println(
+    "speech \{self.ship} hail \{hail.id}: written in \{@async.now() - started} ms",
+  )
+  let now = clock()
+  store.speak(self.ship, line~, about=HAILED, now~, hail=hail.id)
   self.quiet_until = now + QUIET
 }

@@ -133,13 +133,15 @@ pub async fn Store::commission(self : Store, berth : @ships.Berth) -> Unit {
 
 ///|
 /// Append `events`, which must apply in order to the current state, in one
-/// transaction: all of them or none.
+/// transaction: all of them or none. With `answering`, a hail id and the
+/// time, the last event answers that hail, in the same transaction.
 async fn Store::commit(
   self : Store,
   ship : String,
   v : Voyage,
   events : Array[@core.Event],
   state : @core.State,
+  answering~ : (Int64, Int64)? = None,
 ) -> Unit {
   guard !events.is_empty() else { return }
   exec(self.conn, "begin immediate")
@@ -165,6 +167,9 @@ async fn Store::commit(
 
     }
     seqs.push(seq)
+  }
+  if answering is Some((hail, now)) {
+    self.answered(hail, seq~, now~)
   }
   exec(self.conn, "commit")
   // `Commissioned` begins the state rather than applying to it.
@@ -250,14 +255,17 @@ pub fn Store::story(
 
 ///|
 /// Append the ship's line `line`, answering the happening at `about`, after
-/// the ship's own events at `now`. Does nothing for an unknown ship. The
-/// line is shown to players, so it must have passed the gate.
+/// the ship's own events at `now`. With `hail`, the line answers that hail
+/// too, and the hail is marked answered with it. Does nothing for an
+/// unknown ship. The line is shown to players, so it must have passed the
+/// gate.
 pub async fn Store::speak(
   self : Store,
   ship : String,
   line~ : @llm_gate.Cleared,
   about~ : Int64,
   now~ : Int64,
+  hail? : Int64,
 ) -> Unit {
   self.write.acquire()
   defer self.write.release()
@@ -269,7 +277,8 @@ pub async fn Store::speak(
     minded=v.minded,
   )
   let spoke : @core.Event = Spoke(line=line.text(), about~)
-  self.commit(ship, v, [..due, spoke], state)
+  let answering = hail.map(id => (id, now))
+  self.commit(ship, v, [..due, spoke], state, answering~)
 }
 
 ///|

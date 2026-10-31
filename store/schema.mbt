@@ -87,6 +87,20 @@ let migrations : Array[String] = [
     #|  recorded_at integer not null default (unixepoch())
     #|) strict
   ),
+  // A hail: a direction for a ship to speak of, outside the event log so
+  // players never see its text. `spoke` is the log position of the line
+  // that answered it; `silence` why none did.
+  (
+    #|create table hail (
+    #|  id          integer primary key,
+    #|  ship        text    not null,
+    #|  text        text    not null,
+    #|  sent_at     integer not null,
+    #|  answered_at integer,
+    #|  spoke       integer,
+    #|  silence     text
+    #|) strict
+  ),
 ]
 
 ///|

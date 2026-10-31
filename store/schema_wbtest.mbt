@@ -10,7 +10,7 @@ async test "a v1 log is kept aside as event_legacy" {
   inspect(
     query_int(conn, "pragma user_version"),
     content=(
-      #|14
+      #|15
     ),
   )
   inspect(query_int(conn, "select count(*) from event_legacy"), content="1")
@@ -33,7 +33,7 @@ async test "a log from before banking is kept aside as event_before_banking" {
   inspect(
     query_int(conn, "pragma user_version"),
     content=(
-      #|14
+      #|15
     ),
   )
   inspect(
@@ -60,7 +60,7 @@ async test "a log from before dust or officers is kept aside" {
   inspect(
     query_int(conn, "pragma user_version"),
     content=(
-      #|14
+      #|15
     ),
   )
   inspect(
@@ -88,7 +88,7 @@ async test "a log from before erosion is kept aside as event_before_erosion" {
   inspect(
     query_int(conn, "pragma user_version"),
     content=(
-      #|14
+      #|15
     ),
   )
   inspect(
@@ -108,7 +108,7 @@ async test "a log from before the launch is kept aside as event_before_launch" {
   exec(conn, "pragma user_version = 12")
   exec(conn, "insert into event (ship, body) values ('ef-147', '[\"Docked\"]')")
   migrate(conn)
-  inspect(query_int(conn, "pragma user_version"), content="14")
+  inspect(query_int(conn, "pragma user_version"), content="15")
   inspect(
     query_int(conn, "select count(*) from event_before_launch"),
     content="1",

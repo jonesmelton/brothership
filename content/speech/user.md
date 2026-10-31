@@ -1,7 +1,16 @@
+{% if hail %}
+# what you are to speak of
+
+The people who run this game ask you to speak of this now. Take it as true of your world unless it says otherwise, and tell your crew in your own voice. Do not reply PASS.
+
+{{ hail }}
+
+{% else %}
 # what just happened
 
 {{ happening }}
 
+{% endif %}
 {% if officer %}
 # the officer promoted
 

@@ -137,6 +137,12 @@ The server's speakers print each line's times.
   `ADMIN_USER` (default `admin`) and `ADMIN_PASSWORD`, and answers 404
   when `ADMIN_PASSWORD` is unset. Thoughts live in memory, so a restart
   empties them.
+- `POST /admin/hails`, with the admin's credentials, sends a hail: text
+  for each ship named to tell its crew of, in its own voice. It takes
+  `{"ships": [id, ...], "text": ...}` as JSON, or the admin page's form,
+  and refuses the whole request if any ship is unknown or does not speak
+  (`Store::minded`). A post whose `Origin` names another site is a 403,
+  since browsers send cached basic credentials with cross-site forms.
 - A session is not a seat. Nothing limits how many officers join a ship.
   An officer serves on one ship at a time: `Store::propose` refuses a
   proposal from an officer aboard another ship with `AboardAnother`, since
@@ -169,7 +175,11 @@ Logs from before the launch are kept in `event_before_launch`: their
 would have loaded.
 Sessions live in a `session` table beside the log: a random token and the
 officer it names. They are not events, do not replay, and are restored with
-the database.
+the database. Hails live in a `hail` table beside it too, so their text
+never reaches a snapshot or a story: the ship, the text, when it was sent,
+and either the log position of the line that answered it (`spoke`) or why
+none did (`silence`). `Store::speak` marks a hail answered in the same
+transaction as its line.
 Migrations live in `store/schema.mbt`, are forward-only and are tracked with
 `pragma user_version`; append new ones, never edit a shipped one. Writes are
 serialized by a mutex so validation sees the state the event will follow.
@@ -217,7 +227,15 @@ it with `GATE_MODEL`, and appends `Spoke(line, about)` through
 `Gate::clear` is the only way to make one. The model may reply `PASS`, and
 a line that opens like, or reuses most of the words of, one of the ship's
 last five is dropped (`@speech.repeats`). A failed, blocked, passed or
-repeated line leaves nothing. After a line the ship keeps quiet for 15
+repeated line leaves nothing.
+
+Before weighing happenings, the speaker answers the ship's oldest open
+hail, even within the quiet. It renders the same prompt with the hail in
+place of a happening, recounting the whole crossing, and tells the model
+not to pass. The line goes through the same tidying, repeat check and gate,
+and its `Spoke` has `about` `@speech.HAILED` (-1), a position no happening
+has, so players hear it at `Announce`. A hail that gets no line is marked
+silent with the reason, which the admin page shows; it is not retried. After a line the ship keeps quiet for 15
 minutes except for departures, arrivals, promotions, new demands, new
 officers and its choice of next world, whom it greets knowing only whether it has carried them before. The
 speaker waits while the mind is deciding, so a line can speak to the

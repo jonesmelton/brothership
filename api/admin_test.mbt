@@ -108,3 +108,122 @@ async test "the admin page shows every ship, officer and thought" {
     assert_true(html.contains("&lt;b&gt;keep the hull&lt;/b&gt;"))
   })
 }
+
+///|
+fn admin_headers(
+  extra : Array[(String, String)],
+) -> Map[@http.CaseInsensitiveString, String] {
+  let headers = basic("YWRtaW46aHVudGVyMg==")
+  for pair in extra {
+    headers[pair.0] = pair.1
+  }
+  headers
+}
+
+///|
+async test "hails are sent as json to the ships named, and refused whole if any is wrong" {
+  let store = fleet_store()
+  defer store.close()
+  with_admin(store, 1_800_000_000, base => {
+    let hail : Json = {
+      "ships": ["tigress", "scorpion"],
+      "text": "Dust ahead.",
+    }
+    let (res, _) = @http.post("\{base}/admin/hails", hail)
+    inspect(res.code, content="401")
+    let (res, body) = @http.post(
+      "\{base}/admin/hails",
+      hail,
+      headers=admin_headers([]),
+    )
+    inspect(
+      res.code,
+      content=(
+        #|400
+      ),
+    )
+    json_inspect(body.json(), content={
+      "error": "ship does not speak: tigress",
+    })
+    for
+      bad in [
+        ({ "ships": ["tigress", "nobody"], "text": "Dust ahead." } : Json),
+        { "ships": ["tigress"], "text": "  " },
+        { "ships": [], "text": "Dust ahead." },
+        { "ships": ["flea"], "text": "Dust ahead." },
+        { "text": "Dust ahead." },
+      ] {
+      let (res, _) = @http.post(
+        "\{base}/admin/hails",
+        bad,
+        headers=admin_headers([]),
+      )
+      inspect(res.code, content="400")
+    }
+    inspect(
+      store.hails().length(),
+      content=(
+        #|0
+      ),
+    )
+  })
+}
+
+///|
+async test "the admin page's form sends hails, but not from another site" {
+  let store = fleet_store()
+  defer store.close()
+  with_admin(store, 1_800_000_000, base => {
+    store.mind("tigress")
+    store.mind("flea")
+    let form = "ship=tigress&ship=flea&text=A+dust+front%2C+%E2%80%9Cthick%E2%80%9D."
+    let (res, _) = @http.post(
+      "\{base}/admin/hails",
+      form,
+      headers=admin_headers([
+        ("Content-Type", "application/x-www-form-urlencoded"),
+        ("Origin", "https://evil.example"),
+      ]),
+    )
+    inspect(res.code, content="403")
+    let (res, _) = @http.post(
+      "\{base}/admin/hails",
+      form,
+      headers=admin_headers([
+        ("Content-Type", "application/x-www-form-urlencoded"),
+        ("Origin", base),
+      ]),
+    )
+    inspect(res.code, content="303")
+    debug_inspect(res.headers.get("Location"), content="Some(\"/admin#hails\")")
+    debug_inspect(
+      store.hails().map(h => (h.ship, h.text)),
+      content=(
+        #|[
+        #|  ("flea", "A dust front, “thick”."),
+        #|  ("tigress", "A dust front, “thick”."),
+        #|]
+      ),
+    )
+  })
+}
+
+///|
+async test "the admin page shows each hail and what came of it" {
+  let store = fleet_store()
+  defer store.close()
+  let _ = store.hail("tigress", "<i>Dust</i> ahead.", now=1_800_000_000)
+  let id = store.hail("flea", "Be cruel.", now=1_800_000_010).unwrap()
+  store.silence(id, reason="blocked (cruelty): Be cruel.", now=1_800_000_020)
+  with_admin(store, 1_800_000_060, base => {
+    let (_, body) = @http.get(
+      "\{base}/admin",
+      headers=basic("YWRtaW46aHVudGVyMg=="),
+    )
+    let html = body.text()
+    assert_true(html.contains("<form method=\"post\" action=\"/admin/hails\""))
+    assert_true(html.contains("&lt;i&gt;Dust&lt;/i&gt; ahead."))
+    assert_true(html.contains("waiting"))
+    assert_true(html.contains("blocked (cruelty): Be cruel."))
+  })
+}

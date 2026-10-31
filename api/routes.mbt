@@ -54,6 +54,14 @@ async fn may_read(
 /// officers, lines, log and `thoughts`, which players never see. It asks
 /// for HTTP basic credentials matching `admin`, and is a 404 when `admin`
 /// is `None`.
+///
+/// `POST /admin/hails`, with the same credentials, sends a hail to each
+/// ship named: `{"ships": [id, ...], "text": ...}` as JSON answers with
+/// `{"hails": [{"ship", "id"}, ...]}`, and the admin page's form, `ship`
+/// fields and a `text`, is sent back to the page. Any unknown ship, or no
+/// text, or a ship that does not speak (`Store::minded`), refuses the
+/// whole request with a 400; a request whose `Origin`
+/// is another site is a 403.
 
 ///|
 pub fn routes(
@@ -129,22 +137,83 @@ pub fn routes(
     // its check fails.
     ctx.get("/healthz", (_req, res) => res.send_json({ "ok": true }))
     ctx.get("/admin", (req, res) => {
-      guard admin is Some((user, password)) else {
-        res.send_json({ "error": "no such page" }, status=404)
-        return
-      }
-      guard admin_authorized(req, user, password) else {
-        res.send_text("credentials required", status=401, headers=[
-          (
-            "WWW-Authenticate",
-            "Basic realm=\"\{ADMIN_REALM}\", charset=\"UTF-8\"",
-          ),
-          ("Cache-Control", "no-store"),
-        ])
-        return
-      }
+      guard admitted(admin, req, res) else { return }
       let page = admin_page(store, now=clock(), speaking~, thinking~, thoughts~)
       res.send_html(page, headers=[("Cache-Control", "no-store")])
+    })
+    ctx.post("/admin/hails", (req, res) => {
+      guard admitted(admin, req, res) else { return }
+      guard same_origin(req) else {
+        res.send_json({ "error": "sent from another site" }, status=403)
+        return
+      }
+      let form = req.headers.get("Content-Type") is Some(t) &&
+        t.has_prefix("application/x-www-form-urlencoded")
+      let (ships, text) = if form {
+        let fields = form_fields(req.body.text())
+        (
+          fields.filter(f => f.0 == "ship").map(f => f.1),
+          fields.iter().find_first(f => f.0 == "text").map(f => f.1),
+        )
+      } else {
+        let json = req.body.json() catch { _ => Json::null() }
+        let ships = match json {
+          { "ships": Array(ships), .. } =>
+            ships.filter_map(s => if s is String(s) { Some(s) } else { None })
+          _ => []
+        }
+        let text = match json {
+          { "text": String(text), .. } => Some(text)
+          _ => None
+        }
+        (ships, text)
+      }
+      let text = text.map(t => t.trim().to_owned()).unwrap_or("")
+      let ships = ships.fold(init=[], (out, s) => {
+        if !out.contains(s) {
+          out.push(s)
+        }
+        out
+      })
+      let problem = if text == "" {
+        Some("a hail needs text")
+      } else if text.length() > HAIL_MAX {
+        Some("a hail is at most \{HAIL_MAX} characters")
+      } else if ships.is_empty() {
+        Some("a hail needs a ship")
+      } else if ships.iter().find_first(s => store.snapshot(s) is None)
+        is Some(s) {
+        Some("no such ship: \{s}")
+      } else if ships.iter().find_first(s => !store.minded(s)) is Some(s) {
+        // A minded ship is one the server runs a mind and speaker for, so
+        // only it would answer.
+        Some("ship does not speak: \{s}")
+      } else {
+        None
+      }
+      if problem is Some(error) {
+        res.send_json({ "error": Json::string(error) }, status=400)
+        return
+      }
+      let sent : Array[Json] = []
+      for ship in ships {
+        if store.hail(ship, text, now=clock()) is Some(id) {
+          sent.push({
+            "ship": Json::string(ship),
+            "id": Json::number(id.to_double()),
+          })
+        }
+      }
+      if form {
+        res.send_void(status=303, headers=[
+          ("Location", "/admin#hails"),
+          ("Cache-Control", "no-store"),
+        ])
+      } else {
+        res.send_json({ "hails": Json::array(sent) }, headers=[
+          ("Cache-Control", "no-store"),
+        ])
+      }
     })
     ctx.get("/api/ships", (_req, res) => {
       let listings : Array[@core.Listing] = store

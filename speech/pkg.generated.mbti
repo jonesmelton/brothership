@@ -12,6 +12,8 @@ import {
 }
 
 // Values
+pub const HAILED : Int64 = -1
+
 pub const QUIET : Int64 = 900
 
 pub fn answered(Array[@core.Entry]) -> Map[String, Int64]
@@ -55,9 +57,11 @@ pub struct Speech {
   // private fields
 }
 pub fn Speech::call(Self, Voice, @core.State, Array[@core.Entry], @core.Entry, thoughts? : Array[String]) -> @llm.Call raise @prompt.PromptError
+pub fn Speech::hail_call(Self, Voice, @core.State, Array[@core.Entry], String, thoughts? : Array[String]) -> @llm.Call raise @prompt.PromptError
 pub async fn Speech::line(Self, @llm.Backend, Voice, @core.State, Array[@core.Entry], @core.Entry, thoughts? : Array[String]) -> @gate.Cleared
 pub async fn Speech::load(content~ : String, model~ : String, gate_model~ : String) -> Self
 pub fn Speech::new(system~ : String, user~ : String, setting~ : String, model~ : String, gate~ : @gate.Gate) -> Self
+pub async fn Speech::reply(Self, @llm.Backend, Voice, @core.State, Array[@core.Entry], String, thoughts? : Array[String]) -> @gate.Cleared
 
 pub(all) struct Voice {
   epithet : String

@@ -7,6 +7,48 @@ const ADMIN_REALM : String = "brothership admin"
 const ADMIN_TAIL : Int32 = 40
 
 ///|
+/// The longest hail accepted, in characters.
+const HAIL_MAX : Int32 = 2000
+
+///|
+/// Whether `req` may use the admin pages under `admin`'s credentials. If
+/// not, answers it: a 404 without credentials configured, else a 401.
+async fn admitted(
+  admin : (String, String)?,
+  req : @moonback.Request,
+  res : @moonback.Responder,
+) -> Bool {
+  guard admin is Some((user, password)) else {
+    res.send_json({ "error": "no such page" }, status=404)
+    return false
+  }
+  guard admin_authorized(req, user, password) else {
+    res.send_text("credentials required", status=401, headers=[
+      ("WWW-Authenticate", "Basic realm=\"\{ADMIN_REALM}\", charset=\"UTF-8\""),
+      ("Cache-Control", "no-store"),
+    ])
+    return false
+  }
+  true
+}
+
+///|
+/// Whether `req` comes from the admin page or from no page at all, such as
+/// curl. A browser sends cached basic credentials with a form posted from
+/// any site, so a post whose `Origin` names another host is refused.
+fn same_origin(req : @moonback.Request) -> Bool {
+  guard req.headers.get("Origin") is Some(origin) else { return true }
+  let host = match origin.strip_prefix("https://") {
+    Some(host) => Some(host)
+    None => origin.strip_prefix("http://")
+  }
+  match (host, req.headers.get("Host")) {
+    (Some(o), Some(h)) => o == h
+    _ => false
+  }
+}
+
+///|
 /// Whether `req` carries HTTP basic credentials for `user` and `password`.
 fn admin_authorized(
   req : @moonback.Request,
@@ -63,6 +105,7 @@ async fn admin_page(
     b <+
       "<nav aria-label=\"Sections\"><ul><li><a href=\"#fleet\">Fleet</a></li>"
     b <+ "<li><a href=\"#officers\">Officers</a></li>"
+    b <+ "<li><a href=\"#hails\">Hails</a></li>"
     for id in ships {
       b <+ "<li><a href=\"#ship-\{id}\">\{names[id]}</a></li>"
     }
@@ -141,6 +184,7 @@ async fn admin_page(
       b <+ "</tr>"
     }
     b <+ "</tbody></table></section>"
+    b <+ "\{hails_section(store, names, now~)}"
     for id in ships {
       b <+ "\{ship_section(store, id, names[id], now~, thoughts=thoughts(id))}"
     }
@@ -225,6 +269,59 @@ fn ship_section(
           "<li>\{told} <small>\{@words.ago(now - e.at)}, at \{e.seq.to_string()}</small></li>"
       }
       b <+ "</ol>"
+    }
+    b <+ "</section>"
+  })
+}
+
+///|
+/// The admin page's hails: a form to send one, and the latest sent, with
+/// what came of each.
+async fn hails_section(
+  store : @store.Store,
+  names : Map[String, String],
+  now~ : Int64,
+) -> @moonback.Html {
+  let hails = store.hails()
+  let latest = hails[:hails.length().min(ADMIN_TAIL)]
+  @moonback.Html(b => {
+    b <+ "<section aria-labelledby=\"hails\"><h2 id=\"hails\">Hails</h2>"
+    b <+
+      "<p>A hail asks each ship named to tell its crew of something, in its own voice. The crew hear only the line, which the gate checks like any other.</p>"
+    b <+ "<form method=\"post\" action=\"/admin/hails\">"
+    b <+ "<fieldset><legend>Ships</legend>"
+    for id, name in names {
+      b <+
+        "<label><input type=\"checkbox\" name=\"ship\" value=\"\{id}\"> \{name}</label> "
+    }
+    b <+ "</fieldset>"
+    b <+ "<p><label for=\"hail-text\">What to speak of</label><br>"
+    b <+
+      "<textarea id=\"hail-text\" name=\"text\" rows=\"3\" cols=\"60\" maxlength=\"\{HAIL_MAX.to_string()}\" required></textarea></p>"
+    b <+ "<p><button type=\"submit\">Send</button></p></form>"
+    if latest.is_empty() {
+      b <+ "<p>No hails sent.</p>"
+    } else {
+      b <+
+        "<table><caption>The latest \{@words.plural(latest.length().to_int64(), "hail", "hails")} of \{hails.length().to_string()}, newest first</caption>"
+      b <+ "<thead><tr><th scope=\"col\">Sent</th><th scope=\"col\">Ship</th>"
+      b <+
+        "<th scope=\"col\">Hail</th><th scope=\"col\">Outcome</th></tr></thead><tbody>"
+      for h in latest {
+        let outcome = match h.outcome {
+          Open => "waiting"
+          Spoke(seq~, ..) =>
+            match store.story(h.ship, after=seq - 1).unwrap_or([]).get(0) {
+              Some({ happening: Spoke(line~, ..), .. }) => "said: \{line}"
+              _ => "said at \{seq.to_string()}"
+            }
+          Silent(reason~, ..) => reason
+        }
+        b <+ "<tr><td>\{@words.ago(now - h.sent_at)}</td>"
+        b <+ "<td>\{names.get(h.ship).unwrap_or(h.ship)}</td>"
+        b <+ "<td>\{h.text}</td><td>\{outcome}</td></tr>"
+      }
+      b <+ "</tbody></table>"
     }
     b <+ "</section>"
   })
