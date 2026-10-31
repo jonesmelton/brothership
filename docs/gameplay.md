@@ -157,27 +157,30 @@ more of the crossing in the burn, and staffing stretches it past 2.5×.
 
 ## the worlds
 
-Four settled worlds, each around a real star 11 to 20 ly from the Sun,
-placed at the star's J2000 position (`ships/worlds.mbt`):
+Five settled worlds, each around a real star 11 to 24 ly from the Sun,
+placed at the star's J2000 position (`ships/worlds.mbt`). Four are named
+for places; The Three Tyrants is named for the three stars of Gliese 667.
 
-| world | star | | Kerala | Tigray | Oaxaca | Occitan |
-|---|---|---|---|---|---|---|
-| Kerala | τ Ceti | | | 24.2 | 20.0 | 15.7 |
-| Tigray | 70 Ophiuchi | | 24.2 | | 21.7 | 13.8 |
-| Oaxaca | δ Pavonis | | 20.0 | 21.7 | | 25.4 |
-| Occitan | 61 Cygni | | 15.7 | 13.8 | 25.4 | |
+| world | star | | Kerala | Tigray | Oaxaca | Occitan | Three Tyrants |
+|---|---|---|---|---|---|---|---|
+| Kerala | τ Ceti | | | 24.2 | 20.0 | 15.7 | 29.6 |
+| Tigray | 70 Ophiuchi | | 24.2 | | 21.7 | 13.8 | 15.0 |
+| Oaxaca | δ Pavonis | | 20.0 | 21.7 | | 25.4 | 15.2 |
+| Occitan | 61 Cygni | | 15.7 | 13.8 | 25.4 | | 26.3 |
+| The Three Tyrants | Gliese 667 | | 29.6 | 15.0 | 15.2 | 26.3 | |
 
-Every pair is 13.8 to 25.4 ly apart, inside the 8 to 30 ly a hop may be, so
-any leg holds the crossing's targets. The four lie within 0.4 ly of one
-plane, which is why the Voyage page can draw them on a flat map without
-lying; the Sun is 7.6 ly off it.
+Every pair is 13.8 to 29.6 ly apart, inside the 8 to 30 ly a hop may be, so
+any leg holds the crossing's targets. The five lie within 0.8 ly of one
+plane, which is why the Voyage page can draw them on a flat map, true to
+0.1 ly; the Sun is 7.6 ly off it.
 
 Ships fly the itinerary Kerala, Occitan, Tigray, Kerala, Oaxaca, Tigray,
-Occitan, Oaxaca and round again: every pair, two of them twice, since no
-tour of four worlds flies each pair once. A ship is commissioned at Kerala,
-and its leg after `crossings` dockings is `@ships.leg(crossings)`. The log
-records the plan of each departure but not its worlds, so reordering the
-itinerary renames every leg in flight.
+Occitan, Oaxaca, The Three Tyrants, Tigray, Occitan, The Three Tyrants and
+round again: every pair, with Tigray and Occitan flown three times. A ship
+is commissioned at Kerala, and its leg after `crossings` dockings is
+`@ships.leg(crossings)`. The log records the plan of each departure but not
+its worlds, so reordering the itinerary renames every leg in flight. The
+first seven legs are those of the four-world itinerary.
 
 The worlds share one rest frame, so the years a crossing takes pass alike
 at origin and destination, and come within a thousandth of a year of the

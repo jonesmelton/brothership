@@ -30,10 +30,12 @@ fn degrees(d : Double, m : Double, s : Double, south~ : Bool) -> Double {
 }
 
 ///|
-/// The four worlds, around real stars from 11 to 20 ly from the Sun that
-/// all lie 13.8 to 25.4 ly from each other, inside the 8 to 30 ly a hop
+/// The five worlds, around real stars from 11 to 24 ly from the Sun that
+/// all lie 13.8 to 29.6 ly from each other, inside the 8 to 30 ly a hop
 /// may be (`docs/gameplay.md`). Positions are from each star's Wikipedia
-/// infobox, read 2026-10-29.
+/// infobox, read 2026-10-29 and, for Gliese 667, 2026-10-30. The Three
+/// Tyrants is named for its three stars, not a place; its position is
+/// Gliese 667 AB's, with the distance of C, which is the better measured.
 pub let worlds : Array[World] = [
   {
     name: "Kerala",
@@ -63,6 +65,13 @@ pub let worlds : Array[World] = [
     dec: degrees(38, 44, 57.902, south=false),
     distance_ly: 11.404,
   },
+  {
+    name: "The Three Tyrants",
+    star: "Gliese 667",
+    ra: hours(17, 18, 57.16483),
+    dec: degrees(34, 59, 23.1416, south=true),
+    distance_ly: 23.623,
+  },
 ]
 
 ///|
@@ -87,12 +96,12 @@ pub fn World::distance_to(self : World, other : World) -> Double {
 }
 
 ///|
-/// The worlds lie within 0.4 ly of one plane, so a map of that plane is
-/// true to them. These are its axes, the two largest principal components
-/// of the four positions, worked out once offline.
+/// The worlds lie within 0.8 ly of one plane, so a map of that plane is
+/// true to them within 0.1 ly. These are its axes, the two largest
+/// principal components of the five positions, worked out once offline.
 let map_axes : ((Double, Double, Double), (Double, Double, Double)) = (
-  (0.090982, 0.326633, -0.940762),
-  (0.417355, 0.845209, 0.333820),
+  (0.408526, 0.666525, 0.623579),
+  (0.231021, 0.585437, -0.777105),
 )
 
 ///|
@@ -117,7 +126,8 @@ pub fn World::on_map(self : World) -> (Double, Double) {
 
 ///|
 /// The ports of call in order, round again: every pair of worlds, with
-/// two flown twice, as no tour of four worlds flies each pair once.
+/// Tigray and Occitan flown three times. The first seven legs are those of
+/// the four-world itinerary, so legs already in flight keep their worlds.
 pub let itinerary : Array[World] = [
   worlds[0],
   worlds[3],
@@ -127,6 +137,10 @@ pub let itinerary : Array[World] = [
   worlds[1],
   worlds[3],
   worlds[2],
+  worlds[4],
+  worlds[1],
+  worlds[3],
+  worlds[4],
 ]
 
 ///|

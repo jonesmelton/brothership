@@ -192,7 +192,7 @@ Tables are `table.figures`: a small-caps `--quiet` caption, a `th scope="row"` l
 
 ### the fleet
 
-On the Voyage page, after the demands and before the instruments. One sentence per other ship, from `@words.fleet_sentence`, naming its title and where it is, and never who or how many are aboard. The star map follows: the four worlds in their plane, every lane between them as a `--rule` hairline, the leg flown in `--accent` and the rest dashed, this ship as a larger `--accent` dot, every other ship as a small hollow `--quiet` dot labelled with its pennant, and the Sun as a hollow `--quiet` one. Names are HTML over the drawing, above each point, so they follow the text size; each star's name is under its world's in `--quiet`. The drawing is `aria-hidden`; the sentences are the list.
+On the Voyage page, after the demands and before the instruments. One sentence per other ship, from `@words.fleet_sentence`, naming its title and where it is, and never who or how many are aboard. The star map follows: the five worlds in their plane, every lane between them as a `--rule` hairline, the leg flown in `--accent` and the rest dashed, this ship as a larger `--accent` dot, every other ship as a small hollow `--quiet` dot labelled with its pennant, and the Sun as a hollow `--quiet` one. Names are HTML over the drawing, above each point, so they follow the text size; each star's name is under its world's in `--quiet`. The drawing is `aria-hidden`; the sentences are the list.
 
 A player aboard one ship cannot read another's snapshot or story: `GET /api/ships/:id/snapshot` and `/story` answer 403 while the session's officer is aboard a different ship. The fleet list and this map are what they may see of the rest of the fleet.
 

@@ -3,6 +3,15 @@
 // on demand. Units follow research/liveship-travel-math.md, section 11.
 
 ///|
+fn possessive(name : String) -> String {
+  if name.has_suffix("s") {
+    name + "’"
+  } else {
+    name + "’s"
+  }
+}
+
+///|
 /// `x` to `places` decimals, `x` at least 0.
 fn fixed(x : Double, places : Int32) -> String {
   let scale = @fmath.pow(10.0, places.to_double()).to_int64()
@@ -222,8 +231,8 @@ pub fn instrument_rows(s : @core.State) -> Array[(String, String)] {
     ("Pace", pace),
     ("Acceleration", accel),
     ("Light outruns the ship by", "\{speed_words(r.shortfall())} a second"),
-    ("\{to.name}’s clocks, ahead", "\{times} times fast"),
-    ("\{from.name}’s clocks, behind", "\{times} times slow"),
+    ("\{possessive(to.name)} clocks, ahead", "\{times} times fast"),
+    ("\{possessive(from.name)} clocks, behind", "\{times} times slow"),
     ("Green light ahead arrives at", energy_figure(GREEN * r.doppler())),
     ("Half the sky lies within", "\{angle_figure(r.cone())} of the bow"),
     ("Each atom ahead strikes at", energy_figure(r.impact())),

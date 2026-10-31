@@ -160,3 +160,9 @@ test "the next leg, from port" {
     ),
   )
 }
+
+///|
+test "a name ending in s takes only the apostrophe" {
+  inspect(possessive("Occitan"), content="Occitan’s")
+  inspect(possessive("The Three Tyrants"), content="The Three Tyrants’")
+}
