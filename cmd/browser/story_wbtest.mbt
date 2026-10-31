@@ -113,6 +113,8 @@ test "the stage holds the latest line, and nothing before the first" {
 test "an arrival is one short batch and the roll call stays in the log" {
   let landing : @core.Landing = {
     leg: 0,
+    from: None,
+    to: None,
     aboard: 50400,
     works: 3,
     plan: { burn: 0, coast: 0, eta_rate: 0, coast_rate: 0, },

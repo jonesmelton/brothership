@@ -258,12 +258,87 @@ fn voyage_wide(h : @core.Happening) -> Bool {
   | Landed(..)
   | Asked(_)
   | Loaded
-  | Cruised(_))
+  | Cruised(_)
+  | Bound(_))
 }
 
 ///|
-/// The call asking the model, in port, how fast `voice`'s ship coasts on the
-/// next crossing, and whether it asks the crew to load stores or mend.
+/// The worlds the ship has docked at, by name, with its crossings flown
+/// at each docking.
+fn calls(story : Array[@core.Entry]) -> Array[(String, Int64)] {
+  story.filter_map(e => {
+    guard e.happening is Docked(landing~, ..) else { None }
+    Some((@ships.landing_leg(landing).1.name, landing.leg + 1L))
+  })
+}
+
+///|
+/// When the ship last docked at `world`, and how often it has, as a
+/// sentence. The ship's last port is never a choice, so the last visit is
+/// always two crossings ago or more.
+fn visits(
+  world : @ships.World,
+  calls : Array[(String, Int64)],
+  crossings : Int64,
+) -> String {
+  let at = calls.filter(c => c.0 == world.name)
+  guard at.last() is Some((_, when)) else {
+    return if world == @ships.leg(0).0 {
+      "You were commissioned here, and have not docked here since."
+    } else {
+      "You have never docked here."
+    }
+  }
+  let times = match at.length() {
+    1 => "once"
+    2 => "twice"
+    n => "\{n} times"
+  }
+  "You have docked here \{times}, last \{crossings - when} crossings ago."
+}
+
+///|
+/// The name the ship knows another ship by.
+fn epithet(state : @core.State) -> String {
+  @ships.profile_named(state.profile)
+  .bind(p => p.title)
+  .map(t => t.epithet)
+  .unwrap_or(state.profile)
+}
+
+///|
+/// What the other ships of the fleet are doing at `world`, as sentences:
+/// in port there, or bound there.
+fn fleet_at(world : @ships.World, fleet : Array[@core.State]) -> Array[String] {
+  fleet.filter_map(s => {
+    let name = epithet(s)
+    let bound = @ships.bound_for(s)
+    match s.leg {
+      InPort(_) if @ships.origin(s.ship) == world => {
+        let leaves = s.launch().unwrap().ready_at - s.at
+        Some("\{name} is in port there, leaving \{@words.soon_words(leaves)}.")
+      }
+      InPort(_) if bound == Some(world) =>
+        Some(
+          "\{name} is in port at \{@ships.origin(s.ship).name}, and has chosen to go there next.",
+        )
+      Underway(crossing=c, ..) if bound == Some(world) =>
+        match c.forecast() {
+          Some(at) =>
+            Some(
+              "\{name} is bound there, arriving \{@words.in_words(at - c.t)}.",
+            )
+          None => Some("\{name} is bound there.")
+        }
+      _ => None
+    }
+  })
+}
+
+///|
+/// The call asking the model, in port, where `voice`'s ship goes next, how
+/// fast it coasts there, and whether it asks the crew to load stores or
+/// mend. `fleet` is the other ships, as they are now.
 pub fn Prompts::cruise(
   self : Prompts,
   voice : @speech.Voice,
@@ -273,34 +348,59 @@ pub fn Prompts::cruise(
   state : @core.State,
   story : Array[@core.Entry],
   thoughts~ : Array[String],
+  fleet~ : Array[@core.State],
 ) -> @llm.Call raise {
-  guard state.leg is InPort(_) else { fail("the ship is not in port") }
+  guard state.leg is InPort(port~) else { fail("the ship is not in port") }
   let ship = state.ship
+  let here = @ships.origin(ship)
   let hours = (ticks : Int64) => (ticks + 1800L) / 3600L
-  let cruises = @ships.cruises.map(cruise => {
-    let plan = profile.next_plan(
-      legs=ship.crossings,
-      coils=ship.fit.coils,
-      cruise~,
+  let load = state.launch().unwrap().load
+  let called = calls(story)
+  let courses = @ships.choices(ship).map(world => {
+    let distance_ly = here.distance_to(world)
+    let cruises = @ships.cruises.map(cruise => {
+      let plan = profile.next_plan(distance_ly~, coils=ship.fit.coils, cruise~)
+      Json::object({
+        "name": Json(cruise_word(cruise)),
+        "share": Json(cruise_share(cruise)),
+        "hands": Json(hands_even(plan.erosion(ship.fit), ship.fit.repair)),
+        "hours": Json(
+          "\{hours(plan.fastest())} to \{hours(plan.slowest())} hours",
+        ),
+        "wear": Json("\{plan.coast_wear(ship.fit) * 100L / @core.HULL_FULL}%"),
+        "current": Json::boolean(cruise == ship.cruise),
+      })
+    })
+    // What is loaded already counts toward this leg's stores.
+    let left = (port.stores + @ships.stores_for(ship, world) - port.needed).max(
+      0L,
     )
+    let tenths = (distance_ly * 10.0).round().to_int64()
     Json::object({
-      "name": Json(cruise_word(cruise)),
-      "share": Json(cruise_share(cruise)),
-      "hands": Json(hands_even(plan.erosion(ship.fit), ship.fit.repair)),
-      "hours": Json(
-        "\{hours(plan.fastest())} to \{hours(plan.slowest())} hours",
+      "name": Json(world.name),
+      "star": Json(world.star),
+      "distance": Json("\{tenths / 10L}.\{tenths % 10L} light-years"),
+      "leaves": Json(
+        "With the crew posted as they are, you would leave \{@words.soon_words((left + load - 1L) / load)}.",
       ),
-      "wear": Json("\{plan.coast_wear(ship.fit) * 100L / @core.HULL_FULL}%"),
-      "current": Json::boolean(cruise == ship.cruise),
+      "visits": Json(visits(world, called, ship.crossings)),
+      "fleet": strings(fleet_at(world, fleet)),
+      "cruises": Json::array(cruises),
+      "current": Json::boolean(ship.bound == Some(world.name)),
     })
   })
   let last = @speech.this_crossing(story)
   let user = self.prompts.render("cruise", {
-    "leg": strings(@words.next_leg_rows(state).map(r => "\{r.0}: \{r.1}")),
+    "here": Json(here.name),
+    "star": Json(here.star),
+    "came_from": match @ships.came_from(ship) {
+      Some(w) => Json::string(w.name)
+      None => Json::null()
+    },
     "hull": Json("\{ship.hull * 100L / @core.HULL_FULL}%"),
     "launch": strings(@words.where_sentences(state)[1:].to_owned()),
     "crew": Json(port_crew(state)),
-    "cruises": Json::array(cruises),
+    "courses": Json::array(courses),
     "recent": last
     .filter(e => voyage_wide(e.happening))
     .iter()
@@ -318,6 +418,38 @@ pub fn Prompts::cruise(
     max_tokens=3000,
     reasoning_effort="low",
   )
+}
+
+///|
+/// A world's name as a reply may write it: any case, with or without its
+/// article.
+fn plain(name : String) -> String {
+  let n = name.trim().to_owned().to_lower()
+  if n.has_prefix("the ") {
+    n.view(start_offset=4).to_owned()
+  } else {
+    n
+  }
+}
+
+///|
+/// The world `reply` chooses to leave for next, among `ship`'s choices.
+/// Raises `Unreadable` without one of them by name.
+pub fn decode_course(
+  reply : String,
+  ship : @core.Ship,
+) -> @ships.World raise Unreadable {
+  let o = object(reply)
+  guard o.get("course") is Some(String(name)) else {
+    raise Unreadable("no course in the reply")
+  }
+  guard @ships.choices(ship)
+    .iter()
+    .find_first(w => plain(w.name) == plain(name))
+    is Some(world) else {
+    raise Unreadable("no such course: \{name}")
+  }
+  world
 }
 
 ///|

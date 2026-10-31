@@ -862,5 +862,8 @@ pub fn Crossing::dock(self : Crossing) -> Ship? {
     recruits,
     toward_recruit: toward % WORKS_PER_RECRUIT,
     crossings: ship.crossings + 1L,
+    from: ship.bound,
+    bound: None,
+    came_from: ship.from,
   })
 }

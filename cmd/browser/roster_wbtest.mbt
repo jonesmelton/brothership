@@ -8,7 +8,10 @@ fn underway() -> (@core.State, Array[@core.Entry]) {
   records["ann"] = { regard: 0, works: 0, carry: 0, rank: Some(3L), served: 0, }
   records["bo"] = { regard: 0, works: 0, carry: 0, rank: Some(2L), served: 0, }
   ship = { ..ship, records, }
-  let mut c = @core.Crossing::new(p.next_plan(legs=0, coils=0), ship)
+  let mut c = @core.Crossing::new(
+    p.next_plan(distance_ly=@ships.hop(0), coils=0),
+    ship,
+  )
   c = c.apply(Posted(crew="ann", post=Hull)) catch { _ => panic() }
   c = c.apply(Posted(crew="bo", post=Drive)) catch { _ => panic() }
   c = c.apply(Elapsed(ticks=7200)) catch { _ => panic() }

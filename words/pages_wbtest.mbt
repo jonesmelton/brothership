@@ -78,6 +78,8 @@ fn docked(posts~ : Array[@core.Post] = [], seed~ : Int64 = 1L) -> @core.State {
 fn no_landing() -> @core.Landing {
   {
     leg: 0,
+    from: None,
+    to: None,
     aboard: 0,
     works: 0,
     plan: { burn: 0, coast: 0, eta_rate: 0, coast_rate: 0, },

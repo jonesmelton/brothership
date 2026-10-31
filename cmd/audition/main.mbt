@@ -148,7 +148,7 @@ let scenarios : Array[Scenario] = [
   },
   {
     name: "port",
-    about: "docked after the first crossing; the ship chooses how fast to coast the next",
+    about: "docked after the first crossing; the ship chooses where it goes and how fast it coasts",
     stop: (s, _) => s.leg is InPort(_) && s.ship.crossings >= 1L,
     hull: None,
   },
@@ -158,10 +158,16 @@ let scenarios : Array[Scenario] = [
     stop: (s, _) => s.leg is InPort(_) && s.ship.crossings >= 1L,
     hull: Some(45),
   },
+  {
+    name: "mended",
+    about: "the same port, with the hull mended full, so no world is the safe one",
+    stop: (s, _) => s.leg is InPort(_) && s.ship.crossings >= 1L,
+    hull: Some(100),
+  },
 ]
 
 ///|
-/// Each ship's cruise in port, sampled, with its reasons.
+/// Each ship's next world and cruise in port, sampled, with its reasons.
 async fn audition_cruise(
   backend : @llm.Backend,
   prompts : @mind.Prompts,
@@ -188,11 +194,16 @@ async fn audition_cruise(
             state,
             story,
             thoughts=[],
+            fleet=[],
           ),
           sample,
         }
-        let (cruise, why) = @mind.decode_cruise(backend.call(call).text)
-        picks.push(@words.cruise_words(cruise))
+        let reply = backend.call(call).text
+        let (cruise, why) = @mind.decode_cruise(reply)
+        let course = @mind.decode_course(reply, state.ship).name catch {
+            err => "no course (\{err})"
+          }
+        picks.push("\{course}, \{@words.cruise_words(cruise)}")
         thoughts.push(why)
       } catch {
         err => picks.push("failed (\{err})")

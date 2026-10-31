@@ -3,7 +3,10 @@
 /// it needs.
 fn first_leg() -> @core.Crossing {
   let p = @ships.profiles()[1]
-  let mut c = @core.Crossing::new(p.next_plan(legs=0, coils=0), p.ship(seed=1))
+  let mut c = @core.Crossing::new(
+    p.next_plan(distance_ly=@ships.hop(0), coils=0),
+    p.ship(seed=1),
+  )
   for i in 0..<5 {
     c = c.apply(Posted(crew=i.to_string(), post=Drive)) catch { _ => panic() }
   }

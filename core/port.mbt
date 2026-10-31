@@ -24,6 +24,9 @@ pub(all) struct Port {
   since : Int64
   /// Left to load before the ship can depart, in quarter-hand-ticks.
   stores : Int64
+  /// The stores the next leg needs in all, loaded or not: set at docking,
+  /// and again when the ship chooses its next world.
+  needed : Int64
   /// The post the ship is asking for, if any.
   ask : Post?
   /// Whether the ship has reconsidered its ask this port stay. It does once,
@@ -33,7 +36,15 @@ pub(all) struct Port {
 
 ///|
 pub fn Port::new(since : Int64, stores : Int64) -> Port {
-  { since, stores, ask: None, spoke: false, }
+  { since, stores, needed: stores, ask: None, spoke: false, }
+}
+
+///|
+/// The port with the next leg needing `needed` stores in all. What is
+/// loaded already counts toward them.
+fn Port::resize(self : Port, needed : Int64) -> Port {
+  let stores = (self.stores + needed - self.needed).max(0L)
+  { ..self, stores, needed, }
 }
 
 ///|

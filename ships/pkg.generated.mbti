@@ -22,6 +22,14 @@ pub fn arrived_at(@core.State) -> Int64?
 
 pub fn bottom_heavy(@core.Crossing, officer~ : (String) -> Bool) -> Bool
 
+pub fn bound(@core.Ship, World) -> @core.Event
+
+pub fn bound_for(@core.State) -> World?
+
+pub fn came_from(@core.Ship) -> World?
+
+pub fn choices(@core.Ship) -> Array[World]
+
 pub let cruises : Array[Int64]
 
 pub fn eligible(@core.Crossing, String) -> Bool
@@ -36,6 +44,8 @@ pub fn hop(Int64) -> Double
 
 pub let itinerary : Array[World]
 
+pub fn landing_leg(@core.Landing) -> (World, World)
+
 pub fn leg(Int64) -> (World, World)
 
 pub fn listing(String, @core.State) -> @core.Listing
@@ -43,6 +53,8 @@ pub fn listing(String, @core.State) -> @core.Listing
 pub fn on_map((Double, Double, Double)) -> (Double, Double)
 
 pub fn open_post(@core.Crossing) -> @core.Post?
+
+pub fn origin(@core.Ship) -> World
 
 pub fn profile_named(String) -> Profile?
 
@@ -54,9 +66,11 @@ pub fn reckon(@core.Crossing) -> Reckoning
 
 pub fn span_of(@core.Plan) -> Double
 
-pub fn stores(legs~ : Int64) -> Int64
-
 pub fn stores_at(Double) -> Int64
+
+pub fn stores_for(@core.Ship, World) -> Int64
+
+pub fn world_named(String) -> World?
 
 pub let worlds : Array[World]
 
@@ -86,8 +100,9 @@ pub(all) struct Profile {
   temperament : Temperament
 } derive(Eq, @debug.Debug)
 pub fn Profile::default() -> Self
+pub fn Profile::docked(Self, @core.State) -> @core.Event
 pub fn Profile::due(Self, @core.State, Int64, officer~ : (String) -> Bool, minded? : Bool) -> (Array[@core.Event], @core.State)
-pub fn Profile::next_plan(Self, legs~ : Int64, coils~ : Int64, cruise? : Int64) -> @core.Plan
+pub fn Profile::next_plan(Self, distance_ly~ : Double, coils~ : Int64, cruise? : Int64) -> @core.Plan
 pub fn Profile::respond(Self, @core.State, minded? : Bool) -> (Array[@core.Event], @core.State)
 pub fn Profile::ship(Self, seed~ : Int64) -> @core.Ship
 pub fn Profile::wake(Self, @core.State, minded? : Bool) -> Int64
@@ -130,6 +145,7 @@ pub(all) enum Temperament {
   Sly
 } derive(Compare, Eq, Hash, ToJson, @debug.Debug, @json.FromJson)
 pub fn Temperament::ask(Self, @core.Crossing) -> @core.Post?
+pub fn Temperament::course(Self, @core.Ship) -> World
 pub fn Temperament::cruise(Self, @core.Ship, distance_ly~ : Double) -> Int64
 pub fn Temperament::name(Self) -> String
 pub fn Temperament::port_ask(Self, @core.State) -> @core.Post?

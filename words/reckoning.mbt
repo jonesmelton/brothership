@@ -157,9 +157,9 @@ const GREEN : Double = 2.3
 ///|
 /// The distance and the time at the worlds, as sentences, for
 /// `where_sentences`. Nothing once arrived.
-fn reckoning_sentences(c : @core.Crossing, crossings : Int64) -> Array[String] {
+fn reckoning_sentences(c : @core.Crossing, s : @core.State) -> Array[String] {
   guard c.phase != Arrived else { [] }
-  let (from, to) = @ships.leg(crossings)
+  let (from, to) = (@ships.origin(s.ship), destination(s))
   let r = @ships.reckon(c)
   [
     "\{fixed(r.to_go(), 1)} of the \{fixed(r.length, 1)} light-years from \{from.name} still to go.",
@@ -187,7 +187,7 @@ fn turn_sentence(c : @core.Crossing) -> Array[String] {
 /// clocks, the distance, and the light of departure. Empty in port.
 pub fn reckoning_rows(s : @core.State) -> Array[(String, String)] {
   guard s.crossing() is Some(c) else { [] }
-  let (from, to) = @ships.leg(s.ship.crossings)
+  let (from, to) = (@ships.origin(s.ship), destination(s))
   let r = @ships.reckon(c)
   [
     ("Aboard", aboard_figure(c.arrived_at.unwrap_or(c.t))),
@@ -206,7 +206,7 @@ pub fn reckoning_rows(s : @core.State) -> Array[(String, String)] {
 /// and once arrived.
 pub fn instrument_rows(s : @core.State) -> Array[(String, String)] {
   guard s.crossing() is Some(c) && c.phase != Arrived else { [] }
-  let (from, to) = @ships.leg(s.ship.crossings)
+  let (from, to) = (@ships.origin(s.ship), destination(s))
   let r = @ships.reckon(c)
   let pace = r.pace()
   let pace = if pace > 2.0 * @ships.MINUTES_PER_YEAR {
@@ -240,19 +240,23 @@ pub fn instrument_rows(s : @core.State) -> Array[(String, String)] {
 }
 
 ///|
-/// The leg the ship departs on next, as label and figure. Empty underway.
+/// The leg the ship departs on next, as label and figure. Empty underway;
+/// only where it leaves from until the ship chooses where it goes.
 pub fn next_leg_rows(s : @core.State) -> Array[(String, String)] {
   guard s.leg is InPort(_) else { [] }
-  let crossings = s.ship.crossings
-  let (from, to) = @ships.leg(crossings)
+  let from = @ships.origin(s.ship)
+  guard @ships.bound_for(s) is Some(to) else {
+    [("From", "\{from.name}, \{from.star}"), ("To", "not chosen yet")]
+  }
+  let distance_ly = from.distance_to(to)
   let rows = [
     ("From", "\{from.name}, \{from.star}"),
     ("To", "\{to.name}, \{to.star}"),
-    ("Distance", "\{fixed(@ships.hop(crossings), 3)} ly"),
+    ("Distance", "\{fixed(distance_ly, 3)} ly"),
   ]
   guard @ships.profile_named(s.profile) is Some(p) else { rows }
   let plan = p.next_plan(
-    legs=crossings,
+    distance_ly~,
     coils=s.ship.fit.coils,
     cruise=s.ship.cruise,
   )

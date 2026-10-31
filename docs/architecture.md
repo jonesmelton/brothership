@@ -6,7 +6,7 @@
 | ------------- | --------- | --------------------------------------------------------------------- |
 | `core/math`   | js native | Verified arithmetic kernels (`moon prove`). Proof-friendly code only. |
 | `core`        | js native | Events, state, the transition function, wire types, optimistic sync.  |
-| `ships`       | js native | Routes and their float plans, ship profiles, the worlds and itinerary, the reckoning in the worlds' frame, the ship's scripted turn. |
+| `ships`       | js native | Routes and their float plans, ship profiles, the worlds, the choice of next world and the itinerary older logs flew, the reckoning in the worlds' frame, the ship's scripted turn. |
 | `sim`         | js native | The crossing simulator: scenarios, crew policies, batches, voyages.   |
 | `store`       | native    | sqlite event log; replays through `core` on open.                     |
 | `api`         | native    | Moonback routes over `store`.                                         |
@@ -52,7 +52,7 @@ the server.
 
 Only the server moves game time. Clients propose an `Intent`; the log holds
 `Event`, which adds the server's `Tick(at)` in Unix seconds, `Departed`,
-`Docked`, and the ship's `Asked`, `Refitting`, `Promoted`, `Cruising` and `Spoke`. Before anything it writes,
+`Docked`, and the ship's `Asked`, `Refitting`, `Promoted`, `Cruising`, `Bound` and `Spoke`. Before anything it writes,
 the store appends a tick at the wall clock, so a receipt's snapshot may
 include a tick and the ship's response to the proposal as well as the
 proposal itself; `seq` counts them all. Between receipts the client applies
@@ -114,7 +114,8 @@ The server's speakers print each line's times.
   `secure=false` for plain-http development. The token never appears in a
   snapshot or the log, because both publish crew ids.
 - `GET /api/ships` returns `Array[@core.Listing]`, in order of commission:
-  each ship's whereabouts, how far along its leg it is (`run`, in
+  each ship's whereabouts, the world it is at or left from and the one it
+  is bound for, if chosen, how far along its leg it is (`run`, in
   thousandths), and how many officers are aboard (`@ships.listing`), which
   `@words.listing_sentence` renders. The fleet map on the Voyage page uses
   `run` to place every ship.
@@ -145,7 +146,7 @@ The server's speakers print each line's times.
 
 Every accepted event is a row in `event` with the ship's id and a json
 body: crew intents, ticks, departures and dockings, and the ship's asks, refits,
-promotions and spoken lines. Each ship's log begins with `Commissioned`, which carries the ship
+promotions, cruises, chosen worlds and spoken lines. Each ship's log begins with `Commissioned`, which carries the ship
 and the name of the profile it flies by, so replay needs nothing outside
 the log. The server commissions every berth in `@ships.fleet()` that isn't
 in service yet when it starts. A tick is written for each ship at least once
@@ -217,8 +218,8 @@ it with `GATE_MODEL`, and appends `Spoke(line, about)` through
 a line that opens like, or reuses most of the words of, one of the ship's
 last five is dropped (`@speech.repeats`). A failed, blocked, passed or
 repeated line leaves nothing. After a line the ship keeps quiet for 15
-minutes except for departures, arrivals, promotions, new demands and new
-officers, whom it greets knowing only whether it has carried them before. The
+minutes except for departures, arrivals, promotions, new demands, new
+officers and its choice of next world, whom it greets knowing only whether it has carried them before. The
 speaker waits while the mind is deciding, so a line can speak to the
 choice. The runtime image copies `content/` for this.
 
@@ -235,13 +236,18 @@ crossing's happenings and its own last thoughts, asks `MIND_MODEL` for
 thought. At arrival it renders `content/mind/muster.md` and appends the
 promotions the model names, as far as `@ships.allowed` lets them stand,
 then docks with the stores for the next leg, through `Store::muster`. Once
-each port stay it renders `content/mind/cruise.md` with the next leg, the
-launch as players read it, the hull, the officers' named posts, the last
-crossing's happenings and, for each of `@ships.cruises`, the hours aboard,
-the coast's unmended erosion and the hull hands that hold it even, asks for
-`{"cruise", "ask", "thought"}`, and appends `Cruising` and the port's
-`Asked` through `Store::cruise`, which does nothing once the ship has
-departed. An unreadable ask falls back to `Temperament::port_ask`. The
+each port stay, soon after docking, it renders `content/mind/cruise.md`
+with the launch as players read it, the hull, the officers' named posts,
+the last crossing's happenings and, for each world in `@ships.choices`,
+its distance, when the ship would leave for it, the ship's past dockings
+there (from its story), the other ships in port there or bound there, and
+for each of `@ships.cruises` the hours aboard, the coast's unmended erosion
+and the hull hands that hold it even. It asks for
+`{"course", "cruise", "ask", "thought"}`, and appends `Bound`, `Cruising`
+and the port's `Asked` through `Store::cruise`, which does nothing once the
+ship has departed and drops a world not in `@ships.choices`. An unreadable
+course falls back to `Temperament::course`, and an unreadable ask to
+`Temperament::port_ask`. The
 thought is never shown to players; the speaker hears it.
 
 While underway, a ship whose officers are bottom-heavy
@@ -253,8 +259,10 @@ which never docks, and falls back to the longest-serving ensign.
 
 A failed, unreadable or late reply (2 minutes for a turn or a cruise, 3
 for a muster) falls back to the temperament and `@ships.promotions`. An
-unminded ship's clock sets the temperament's cruise just before it
-departs. If the mind never
+unminded ship's clock chooses the temperament's world as it docks and sets
+its cruise just before it departs. A minded ship still unbound when its
+stores are loaded is bound by temperament, which can resize the stores and
+delay departure. If the mind never
 musters, the clock promotes by script and docks `MIND_WAIT` (5 minutes)
 after arrival. Until a turn lands the ship asks for nothing, and the Log
 says it is weighing a choice (`Story.thinking`). Replay reads only the

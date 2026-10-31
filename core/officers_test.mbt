@@ -167,6 +167,8 @@ test "signing on and discharge are told" {
       #|    recruits=0,
       #|    landing={
       #|      leg: 0,
+      #|      from: None,
+      #|      to: None,
       #|      aboard: 53855,
       #|      works: 0,
       #|      plan: {

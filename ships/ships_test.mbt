@@ -11,7 +11,10 @@ test "every ship in the fleet has a title that agrees with its name" {
 ///|
 test "the ship asks once per moment and refits only on change" {
   let p = @ships.profiles()[1]
-  let c = @core.Crossing::new(p.next_plan(legs=0, coils=0), p.ship(seed=1))
+  let c = @core.Crossing::new(
+    p.next_plan(distance_ly=@ships.hop(0), coils=0),
+    p.ship(seed=1),
+  )
   let first = p.temperament.turn(c, None)
   debug_inspect(
     first,
@@ -23,7 +26,7 @@ test "the ship asks once per moment and refits only on change" {
 }
 
 ///|
-test "left alone, the ship clock flies the itinerary and its log replays" {
+test "left alone, the ship clock chooses its course and its log replays" {
   let p = @ships.profiles()[1]
   let ship = p.ship(seed=1)
   let commission = @core.Event::Commissioned(ship~, profile=p.name)
@@ -47,6 +50,13 @@ test "left alone, the ship clock flies the itinerary and its log replays" {
     now = p.wake(s).max(now + 1L)
   }
   debug_inspect((departed, docked, s.ship.crossings), content="(2, 2, 2)")
+  // The Tigress is social: its seed picks among the worlds it may reach.
+  debug_inspect(
+    log.filter_map(e => if e is Bound(world~, ..) { Some(world) } else { None }),
+    content=(
+      #|["Occitan", "The Three Tyrants", "Tigray"]
+    ),
+  )
   // The first session is in port, loading the first stores.
   debug_inspect(
     log[:2],
@@ -74,6 +84,9 @@ test "left alone, the ship clock flies the itinerary and its log replays" {
       #|        crossings: 0,
       #|        seed: 1,
       #|        cruise: 1000,
+      #|        from: None,
+      #|        bound: None,
+      #|        came_from: None,
       #|      },
       #|      profile="EF-147 The Tigress",
       #|    ),
@@ -136,18 +149,117 @@ test "a docked ship loads stores for its next leg, and asks in its temperament" 
     docked.collect(),
     content=(
       #|[
-      #|  ("social", 19832, Some(Hull)),
-      #|  ("bold", 19832, Some(Drive)),
-      #|  ("sly", 19832, Some(Drive)),
+      #|  ("social", 37933, Some(Hull)),
+      #|  ("bold", 37933, Some(Drive)),
+      #|  ("sly", 21555, Some(Drive)),
       #|]
     ),
   )
-  debug_inspect(
-    [0L, 1L, 2L, 3L].map(legs => @ships.stores(legs~)),
+}
+
+///|
+test "stores are sized by the hop to the world chosen, but the first are fixed" {
+  let ship = @ships.profiles()[1].ship(seed=1)
+  let oaxaca = @ships.world_named("Oaxaca").unwrap()
+  inspect(@ships.stores_for(ship, oaxaca), content="2400")
+  let ship = { ..ship, crossings: 1, from: Some("Kerala"), }
+  inspect(@ships.stores_for(ship, oaxaca), content="28753")
+  let ship = { ..ship, from: Some("Tigray"), }
+  inspect(
+    @ships.stores_for(ship, oaxaca),
     content=(
-      #|[22612, 19832, 34801, 28753]
+      #|31226
     ),
   )
+}
+
+///|
+test "a ship may leave for any world but where it is and where it came from" {
+  let names = (ws : Array[@ships.World]) => ws.map(w => w.name)
+  let ship = @ships.profiles()[1].ship(seed=1)
+  // A ship entering service is at the itinerary's first world.
+  debug_inspect(
+    names(@ships.choices(ship)),
+    content=(
+      #|["Tigray", "Oaxaca", "Occitan", "The Three Tyrants"]
+    ),
+  )
+  // A ship from before ships chose: its worlds are the itinerary's.
+  let legacy = { ..ship, crossings: 2, }
+  debug_inspect(
+    (
+      @ships.origin(legacy).name,
+      @ships.came_from(legacy).map(w => w.name),
+      names(@ships.choices(legacy)),
+    ),
+    content=(
+      #|("Tigray", Some("Occitan"), ["Kerala", "Oaxaca", "The Three Tyrants"])
+    ),
+  )
+  let chosen = {
+    ..ship,
+    crossings: 5,
+    from: Some("Oaxaca"),
+    came_from: Some("The Three Tyrants"),
+  }
+  debug_inspect(
+    names(@ships.choices(chosen)),
+    content=(
+      #|["Kerala", "Tigray", "Occitan"]
+    ),
+  )
+}
+
+///|
+test "each temperament's course over many legs, never straight back" {
+  let courses = @ships.profiles().map(p => {
+    let mut ship = p.ship(seed=1)
+    let flown = [@ships.origin(ship).name]
+    for _ in 0..<8 {
+      let to = p.temperament.course(ship)
+      assert_true(@ships.choices(ship).contains(to))
+      flown.push(to.name)
+      ship = {
+        ..ship,
+        crossings: ship.crossings + 1L,
+        came_from: Some(@ships.origin(ship).name),
+        from: Some(to.name),
+      }
+    }
+    "\{p.temperament.name()}: \{flown.join(", ")}"
+  })
+  debug_inspect(
+    courses,
+    content=(
+      #|[
+      #|  "careful: Kerala, Occitan, Tigray, The Three Tyrants, Oaxaca, Kerala, Occitan, Tigray, The Three Tyrants",
+      #|  "social: Kerala, Occitan, The Three Tyrants, Tigray, Oaxaca, Kerala, Tigray, The Three Tyrants, Occitan",
+      #|  "bold: Kerala, The Three Tyrants, Occitan, Oaxaca, Tigray, Kerala, The Three Tyrants, Occitan, Oaxaca",
+      #|  "sly: Kerala, Tigray, The Three Tyrants, Occitan, Kerala, Tigray, The Three Tyrants, Occitan, Kerala",
+      #|]
+    ),
+  )
+}
+
+///|
+test "a minded ship's clock chooses its next world only once the stores are loaded" {
+  let p = @ships.profiles()[1]
+  let s = first_port(p)
+  let s = {
+    ..s,
+    ship: { ..s.ship, bound: None, },
+    leg: InPort(port=@core.Port::new(s.at, 100)),
+  }
+  let (events, _) = p.due(s, s.at + 1L, officer=_ => true, minded=true)
+  inspect(events.iter().any(e => e is Bound(..)), content="false")
+  let (events, after) = p.due(s, s.at + 1000L, officer=_ => true, minded=true)
+  let world = p.temperament.course(s.ship).name
+  inspect(
+    events.iter().any(e => e is Bound(world=w, ..) && w == world),
+    content="true",
+  )
+  // The world is farther than the stores loaded, so the ship waits for more.
+  inspect(after.leg is InPort(_), content="true")
 }
 
 ///|
@@ -176,6 +288,16 @@ test "each berth advances on its own second of the minute" {
 test "a berth acts its lag after the ship's instant" {
   let b = @ships.fleet()[2]
   let s = first_port(b.profile)
+  // Shifted in time so the stores are loaded at second 50 of a minute,
+  // when the berth's next slot is later than its lag after them.
+  let r = s.launch().unwrap().ready_at
+  let d = (50L - r % 60L + 60L) % 60L
+  guard s.leg is InPort(port~) else { panic() }
+  let s = {
+    ..s,
+    at: s.at + d,
+    leg: InPort(port={ ..port, since: port.since + d, }),
+  }
   let ready = s.launch().unwrap().ready_at
   // The slot in the minute comes first until the stores are loaded.
   let early = b.next_advance(s, ready - 30L)
@@ -247,9 +369,12 @@ test "left alone, a ship sets its temperament's cruise before it departs" {
   )
   let s = p.due(s, 1_800_000_000L, officer=_ => true).1
   let (events, s) = p.due(s, s.launch().unwrap().ready_at, officer=_ => true)
-  let cruise = p.temperament.cruise(s.ship, distance_ly=@ships.hop(0))
+  let distance_ly = @ships.origin(s.ship).distance_to(
+    @ships.bound_for(s).unwrap(),
+  )
+  let cruise = p.temperament.cruise(s.ship, distance_ly~)
   assert_true(cruise < @core.CRUISE_FULL)
   assert_true(events.contains(Cruising(cruise~)))
   guard s.crossing() is Some(c) else { fail("not underway") }
-  assert_eq(c.plan, p.next_plan(legs=0, coils=0, cruise~))
+  assert_eq(c.plan, p.next_plan(distance_ly~, coils=0, cruise~))
 }

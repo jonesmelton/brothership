@@ -3,7 +3,10 @@
 /// `hours` aboard.
 fn bench(crew : Array[(String, Int64, Int64)]) -> @core.Crossing {
   let p = @ships.profiles()[1]
-  let c = @core.Crossing::new(p.next_plan(legs=0, coils=0), p.ship(seed=1))
+  let c = @core.Crossing::new(
+    p.next_plan(distance_ly=@ships.hop(0), coils=0),
+    p.ship(seed=1),
+  )
   let hands : Map[String, @core.Hand] = Map([])
   let records : Map[String, @core.Record] = Map([])
   for entry in crew {

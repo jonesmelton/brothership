@@ -55,6 +55,8 @@ test "a crossing told from departure to docking" {
       #|    recruits=0,
       #|    landing={
       #|      leg: 0,
+      #|      from: None,
+      #|      to: None,
       #|      aboard: 53526,
       #|      works: 0,
       #|      plan: {
@@ -139,4 +141,29 @@ test "a launch told: the ask, then the stores loaded" {
       #|[Asked(post=Some(Hull)), Loaded]
     ),
   )
+}
+
+///|
+test "choosing the next world is told, once, and the landing names its worlds" {
+  let (said, s) = told(ready(ship()), [
+    Bound(world="Oaxaca", stores=0),
+    Bound(world="Oaxaca", stores=0),
+    Departed(plan=plan20()),
+  ])
+  debug_inspect(
+    said,
+    content=(
+      #|[Bound(world="Oaxaca"), Departed]
+    ),
+  )
+  let c = s.crossing().unwrap()
+  let (said, _) = told(s, [
+    Tick(at=s.at + c.forecast().unwrap()),
+    Docked(stores=0),
+  ])
+  guard said.iter().find_first(h => h is Docked(..))
+    is Some(Docked(landing~, ..)) else {
+    panic()
+  }
+  debug_inspect((landing.from, landing.to), content="(None, Some(\"Oaxaca\"))")
 }

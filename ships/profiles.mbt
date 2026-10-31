@@ -239,9 +239,12 @@ pub fn stores_at(distance_ly : Double) -> Int64 {
 }
 
 ///|
-/// The stores to load in port for the leg after `legs` crossings.
-pub fn stores(legs~ : Int64) -> Int64 {
-  stores_at(hop(legs))
+/// The stores `ship` loads in port to leave for `world`. A ship entering
+/// service loads `FIRST_STORES` wherever it goes, so officers can sign on
+/// before it leaves.
+pub fn stores_for(ship : @core.Ship, world : World) -> Int64 {
+  guard ship.crossings > 0L else { @core.FIRST_STORES }
+  stores_at(origin(ship).distance_to(world))
 }
 
 ///|
@@ -269,15 +272,55 @@ pub fn Temperament::port_ask(
 }
 
 ///|
-/// The plan for the leg after `legs` crossings, for a ship with `coils`
-/// coasting at `cruise`.
+/// The plan for a leg of `distance_ly`, for a ship with `coils` coasting at
+/// `cruise`.
 pub fn Profile::next_plan(
   self : Profile,
-  legs~ : Int64,
+  distance_ly~ : Double,
   coils~ : Int64,
   cruise~ : Int64 = @core.CRUISE_FULL,
 ) -> @core.Plan {
-  { ..self.route, distance_ly: hop(legs), }.plan_with(coils~, cruise~)
+  { ..self.route, distance_ly, }.plan_with(coils~, cruise~)
+}
+
+///|
+/// The world the ship leaves for next from port, among `choices`: a bold
+/// ship the farthest, a careful one the nearest, a sly one the second
+/// farthest, and a social one any, picked by the ship's seed and crossings.
+pub fn Temperament::course(self : Temperament, ship : @core.Ship) -> World {
+  let options = choices(ship)
+  let here = origin(ship)
+  let by_distance = options.copy()
+  by_distance.sort_by((a, b) => here.distance_to(a).compare(here.distance_to(b)))
+  let n = options.length().to_int64()
+  match self {
+    Bold => by_distance[by_distance.length() - 1]
+    Careful => by_distance[0]
+    Sly => by_distance[(by_distance.length() - 2).max(0)]
+    Social => {
+      let mixed = (ship.seed * 6_364_136_223_846_793_005L +
+        ship.crossings * 1_442_695_040_888_963_407L).reinterpret_as_uint64() >>
+        33
+      options[(mixed % n.reinterpret_as_uint64()).to_int()]
+    }
+  }
+}
+
+///|
+/// The ship's choice of `world` as an event, with the stores that leg needs.
+pub fn bound(ship : @core.Ship, world : World) -> @core.Event {
+  Bound(world=world.name, stores=stores_for(ship, world))
+}
+
+///|
+/// Docking `state`'s arrived crossing, with stores sized for the world the
+/// temperament would choose next. Choosing another resizes them.
+pub fn Profile::docked(self : Profile, state : @core.State) -> @core.Event {
+  let docked = state.apply(Docked(stores=0)) catch {
+    err => abort("ship clock: \{err.to_json().stringify()}")
+  }
+  let ship = docked.ship
+  Docked(stores=stores_for(ship, self.temperament.course(ship)))
 }
 
 ///|

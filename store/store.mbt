@@ -361,9 +361,7 @@ pub async fn Store::muster(
     }
     events.push(e)
   }
-  let docked : @core.Event = Docked(
-    stores=@ships.stores(legs=s.ship.crossings + 1L),
-  )
+  let docked = v.profile.docked(s)
   s = s.apply(docked) catch {
     err => abort("store: docking refused: \{err.to_json().stringify()}")
   }
@@ -418,14 +416,18 @@ pub fn Store::close(self : Store) -> Unit raise {
 }
 
 ///|
-/// Append the cruise and the port ask `ship`'s mind chose, after the ship's
-/// own events at `now`, if the ship is still in port; no `Cruising` if the
-/// cruise is unchanged. Returns whether the ship was in port to take them.
+/// Append the next world, the cruise and the port ask `ship`'s mind chose,
+/// after the ship's own events at `now`, if the ship is still in port; no
+/// `Bound` once the ship has chosen this port stay, as after a restart, so
+/// the crew are never told of a second world, and no `Cruising` if the
+/// cruise is unchanged. A world the ship may not leave for is dropped.
+/// Returns whether the ship was in port to take them.
 pub async fn Store::cruise(
   self : Store,
   ship : String,
   cruise : Int64,
   ask~ : @core.Post?,
+  bound~ : @ships.World,
   now~ : Int64,
 ) -> Bool {
   self.write.acquire()
@@ -442,6 +444,9 @@ pub async fn Store::cruise(
     return false
   }
   let events = [..due]
+  if state.ship.bound is None && @ships.choices(state.ship).contains(bound) {
+    events.push(@ships.bound(state.ship, bound))
+  }
   if cruise != state.ship.cruise {
     events.push(Cruising(cruise~))
   }

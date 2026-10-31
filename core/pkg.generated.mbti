@@ -180,6 +180,7 @@ pub(all) enum Event {
   Refitting(refit~ : Refit?)
   Promoted(crew~ : String, rank~ : Int64)
   Cruising(cruise~ : Int64)
+  Bound(world~ : String, stores~ : Int64)
   Spoke(line~ : String, about~ : Int64)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
@@ -228,6 +229,7 @@ pub(all) enum Happening {
   Made(crew~ : String, craft~ : Craft, units~ : Int64, percent~ : Int64)
   Promoted(crew~ : String, rank~ : Int64, tally~ : Tally)
   Cruised(cruise~ : Int64)
+  Bound(world~ : String)
   Spoke(line~ : String, about~ : Int64)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
@@ -252,6 +254,8 @@ pub(all) enum Intent {
 
 pub(all) struct Landing {
   leg : Int64
+  from : String?
+  to : String?
   aboard : Int64
   works : Int64
   plan : Plan
@@ -273,6 +277,8 @@ pub(all) struct Listing {
   id : String
   name : String
   crossings : Int64
+  from : String
+  bound : String?
   whereabouts : Whereabouts
   run : Int64
   officers : Int64
@@ -335,6 +341,7 @@ pub fn Plan::slowest(Self) -> Int64
 pub(all) struct Port {
   since : Int64
   stores : Int64
+  needed : Int64
   ask : Post?
   spoke : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
@@ -390,6 +397,9 @@ pub(all) struct Ship {
   crossings : Int64
   seed : Int64
   cruise : Int64
+  from : String?
+  bound : String?
+  came_from : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn Ship::new(Values, Fit, seed~ : Int64) -> Self
 pub fn Ship::rank(Self, String) -> Int64

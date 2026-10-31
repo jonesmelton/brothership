@@ -150,6 +150,15 @@ test "the next leg, from port" {
   debug_inspect(
     next_leg_rows(s),
     content=(
+      #|[("From", "Kerala, τ Ceti"), ("To", "not chosen yet")]
+    ),
+  )
+  let s = s.apply(@ships.bound(s.ship, @ships.world_named("Occitan").unwrap())) catch {
+    _ => panic()
+  }
+  debug_inspect(
+    next_leg_rows(s),
+    content=(
       #|[
       #|  ("From", "Kerala, τ Ceti"),
       #|  ("To", "Occitan, 61 Cygni"),

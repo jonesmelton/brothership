@@ -84,9 +84,9 @@ test "the map is drawn in the worlds' plane, true to within 0.1 ly" {
 }
 
 ///|
-test "the next plan flies the itinerary's hop" {
+test "the next plan flies the distance it is given" {
   let p = @ships.profiles()[1]
-  let plan = p.next_plan(legs=0, coils=0)
+  let plan = p.next_plan(distance_ly=@ships.hop(0), coils=0)
   let flown = { ..p.route, distance_ly: @ships.hop(0), }.plan()
   assert_eq(plan, flown)
 }

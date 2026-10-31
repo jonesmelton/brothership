@@ -73,7 +73,7 @@ test "a voyage departs, arrives, docks and departs again" {
   debug_inspect(
     s.leg,
     content=(
-      #|InPort(port={ since: 1800053855, stores: 0, ask: None, spoke: false })
+      #|InPort(port={ since: 1800053855, stores: 0, needed: 0, ask: None, spoke: false })
     ),
   )
   inspect(s.ship.crossings, content="1")
@@ -315,7 +315,7 @@ fn loading(
   let mut s : @core.State = {
     ..s,
     at: DEPART_AT,
-    leg: InPort(port={ since: DEPART_AT, stores, ask: None, spoke: false, }),
+    leg: InPort(port=@core.Port::new(DEPART_AT, stores)),
   }
   for i, post in posts {
     s = s.apply(Crew(crew="crew \{i + 1}", intent=Posted(post~))) catch {
@@ -461,4 +461,67 @@ test "the ship's ask in port" {
   guard s.leg is InPort(port~) else { panic() }
   debug_inspect(port.ask, content="Some(Drive)")
   inspect(port.spoke, content="true")
+}
+
+///|
+test "the ship chooses its next world in port, and its stores follow" {
+  let s = loading(28_800, [])
+  let s = tick(s, 1800)
+  inspect(stores_of(s), content="21600")
+  // A longer leg: what was loaded counts toward the new stores.
+  let s = s.apply(Bound(world="Oaxaca", stores=36_000)) catch { _ => panic() }
+  debug_inspect(s.ship.bound, content="Some(\"Oaxaca\")")
+  inspect(stores_of(s), content="28800")
+  // A shorter one than has been loaded already: nothing left to load.
+  let s = s.apply(Bound(world="Occitan", stores=5000)) catch { _ => panic() }
+  debug_inspect(s.ship.bound, content="Some(\"Occitan\")")
+  inspect(stores_of(s), content="0")
+  let s = s.apply(Departed(plan=plan20())) catch { _ => panic() }
+  let refused : Result[_, @core.Rejected] = Ok(
+    s.apply(Bound(world="Kerala", stores=0)),
+  ) catch {
+    e => Err(e)
+  }
+  inspect(refused is Err(@core.NotInPort(_)), content="true")
+}
+
+///|
+test "docking moves the ship to the world it was bound for" {
+  let s = ready(ship())
+  let s = s.apply(Bound(world="Oaxaca", stores=0)) catch { _ => panic() }
+  let s = s.apply(Departed(plan=plan20())) catch { _ => panic() }
+  debug_inspect(crossing_of(s).ship.bound, content="Some(\"Oaxaca\")")
+  let c = crossing_of(s)
+  let s = s.apply(Tick(at=s.at + c.forecast().unwrap())) catch { _ => panic() }
+  let s = s.apply(Docked(stores=0)) catch { _ => panic() }
+  debug_inspect(
+    (s.ship.came_from, s.ship.from, s.ship.bound),
+    content="(None, Some(\"Oaxaca\"), None)",
+  )
+  let s = s.apply(Bound(world="Tigray", stores=0)) catch { _ => panic() }
+  let s = s.apply(Departed(plan=plan20())) catch { _ => panic() }
+  let c = crossing_of(s)
+  let s = s.apply(Tick(at=s.at + c.forecast().unwrap())) catch { _ => panic() }
+  let s = s.apply(Docked(stores=0)) catch { _ => panic() }
+  debug_inspect(
+    (s.ship.came_from, s.ship.from, s.ship.bound),
+    content="(Some(\"Oaxaca\"), Some(\"Tigray\"), None)",
+  )
+}
+
+///|
+test "a ship written before ships chose its course still decodes" {
+  let written = ToJson::to_json({
+    ..ship(),
+    crossings: 3,
+    from: Some("Oaxaca"),
+  })
+  guard written is Object(fields) else { panic() }
+  fields.remove("from")
+  fields.remove("bound")
+  fields.remove("came_from")
+  let decoded : @core.Ship = @json.from_json(Json::object(fields)) catch {
+    e => fail("\{e}")
+  }
+  assert_eq(decoded, { ..ship(), crossings: 3, })
 }

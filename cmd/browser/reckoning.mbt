@@ -233,9 +233,13 @@ fn MapFrame::place(self : MapFrame, p : (Double, Double)) -> (Int64, Int64) {
 }
 
 ///|
-/// Where the ship is on the map: the share of the leg run, along it.
-fn ship_on_map(c : @core.Crossing, crossings : Int64) -> (Double, Double) {
-  let (from, to) = @ships.leg(crossings)
+/// Where the ship is on the map: the share of the leg from `from` to `to`
+/// run, along it.
+fn ship_on_map(
+  c : @core.Crossing,
+  from : @ships.World,
+  to : @ships.World,
+) -> (Double, Double) {
   let r = @ships.reckon(c)
   let f = r.run / r.length
   let (fx, fy) = from.on_map()
@@ -245,9 +249,10 @@ fn ship_on_map(c : @core.Crossing, crossings : Int64) -> (Double, Double) {
 
 ///|
 /// Where a ship in the fleet list is on the map: the share of its leg it has
-/// run, along it.
+/// run, along it, or at its world in port.
 fn listing_on_map(l : @core.Listing) -> (Double, Double) {
-  let (from, to) = @ships.leg(l.crossings)
+  guard @ships.world_named(l.from) is Some(from) else { (0.0, 0.0) }
+  guard l.bound.bind(@ships.world_named) is Some(to) else { from.on_map() }
   let f = (l.run.to_double() / 1000.0).max(0.0).min(1.0)
   let (fx, fy) = from.on_map()
   let (tx, ty) = to.on_map()
@@ -315,17 +320,19 @@ fn map_figure(
         .unwrap_or(l.name)
       (p, place(p, "other", [@html.span(class="star", pennant)]))
     })
-  let (from, to) = @ships.leg(s.ship.crossings)
-  let leg = match s.crossing() {
-    Some(c) => {
-      let ship = ship_on_map(c, s.ship.crossings)
+  let from = @ships.origin(s.ship)
+  let leg = match (s.crossing(), @ships.bound_for(s)) {
+    (Some(c), Some(to)) => {
+      let ship = ship_on_map(c, from, to)
       [
         segment("flown", from.on_map(), ship),
         segment("ahead", ship, to.on_map()),
         dot("ship", ship, 9),
       ]
     }
-    None => [segment("ahead", from.on_map(), to.on_map())]
+    (None, Some(to)) => [segment("ahead", from.on_map(), to.on_map())]
+    // In port before the ship chooses, no leg is drawn.
+    (_, None) => []
   }
   let sun = @ships.on_map((0.0, 0.0, 0.0))
   let svg = @svg.svg(

@@ -1,7 +1,10 @@
 ///|
 fn tigress_crossing() -> @core.Crossing {
   let p = @ships.profiles()[1]
-  @core.Crossing::new(p.next_plan(legs=0, coils=0), p.ship(seed=1))
+  @core.Crossing::new(
+    p.next_plan(distance_ly=@ships.hop(0), coils=0),
+    p.ship(seed=1),
+  )
 }
 
 ///|

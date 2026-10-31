@@ -80,7 +80,7 @@ pub fn landfall_sentences(
   guard last_landfall(story) is Some((crossing, docked, recruits, landing)) else {
     return ["No landfall yet. The ship has not finished a crossing."]
   }
-  let (from, to) = @ships.leg(landing.leg)
+  let (from, to) = @ships.landing_leg(landing)
   let lines = [
     "Made \{to.name} from \{from.name}: \{aboard_span(landing.aboard)} aboard, \{years_span(@ships.span_of(landing.plan))} at the worlds.",
     "Landfall was \{ago((now - docked.at).max(0L))}.",
@@ -153,6 +153,6 @@ pub fn landfall_away(
 ) -> Array[String] {
   guard last_landfall(story) is Some((_, docked, _, landing)) else { return [] }
   guard docked.seq > after && docked.seq <= upto else { return [] }
-  let (_, to) = @ships.leg(landing.leg)
+  let (_, to) = @ships.landing_leg(landing)
   ["Landfall at \{to.name}. The account is under Landfall on this page."]
 }

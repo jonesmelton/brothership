@@ -161,6 +161,7 @@ async test "the story tells what happened, after a given seq" {
       #|[
       #|  Asked(post=Some(Hull)),
       #|  Loaded,
+      #|  Bound(world="Occitan"),
       #|  Departed,
       #|  Asked(post=Some(Drive)),
       #|  Signed(crew="ann"),

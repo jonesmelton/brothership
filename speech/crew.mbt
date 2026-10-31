@@ -105,6 +105,7 @@ pub fn recount(
       "You asked for hands on \{@words.post_name(post)}."
     Asked(post=None) => "You stopped asking for hands."
     Spoke(line~, ..) => "You said: \{line}"
+    Bound(world~) => "You chose to leave for \{world} next."
     h => @words.told(h, you="", ship~)
   }
 }

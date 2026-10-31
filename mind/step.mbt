@@ -367,6 +367,10 @@ async fn Mind::course(
     self.thinking = false
   }
   let started = @async.now()
+  let fleet = store
+    .ships()
+    .filter(id => id != self.ship)
+    .filter_map(id => store.snapshot(id).map(s => s.state))
   let chosen = try {
     let call = self.prompts.cruise(
       self.voice,
@@ -376,17 +380,26 @@ async fn Mind::course(
       state,
       story,
       thoughts=self.recalled(),
+      fleet~,
     )
     match @async.with_timeout_opt(TURN_MS, () => self.backend.call(call)) {
-      Some(reply) =>
+      Some(reply) => {
+        let course = Some(decode_course(reply.text, state.ship)) catch {
+          err => {
+            self.report("course fell back to its temperament: \{err}")
+            None
+          }
+        }
         Some(
           (
             decode_cruise(reply.text),
             Some(decode_port_ask(reply.text)) catch {
               _ => None
             },
+            course,
           ),
         )
+      }
       None => {
         self.report("no cruise in \{TURN_MS} ms")
         None
@@ -399,20 +412,32 @@ async fn Mind::course(
     }
   }
   let by_temperament = self.profile.temperament.port_ask(state)
-  let (cruise, ask, why, how) = match chosen {
-    Some(((cruise, why), ask)) =>
-      (cruise, ask.unwrap_or(by_temperament), why, "set its cruise and ask")
-    None => {
-      let distance_ly = @ships.hop(state.ship.crossings)
+  let course_by_temperament = self.profile.temperament.course(state.ship)
+  let (course, cruise, ask, why, how) = match chosen {
+    Some(((cruise, why), ask, course)) =>
       (
+        course.unwrap_or(course_by_temperament),
+        cruise,
+        ask.unwrap_or(by_temperament),
+        why,
+        "set its course, cruise and ask",
+      )
+    None => {
+      let distance_ly = @ships.origin(state.ship).distance_to(
+        course_by_temperament,
+      )
+      (
+        course_by_temperament,
         self.profile.temperament.cruise(state.ship, distance_ly~),
         by_temperament,
         "",
-        "set its cruise and ask by its temperament",
+        "set its course, cruise and ask by its temperament",
       )
     }
   }
-  guard store.cruise(self.ship, cruise, ask~, now=clock()) else {
+  // A world chosen earlier this port stay, as before a restart, stands.
+  let course = @ships.bound_for(state).unwrap_or(course)
+  guard store.cruise(self.ship, cruise, ask~, bound=course, now=clock()) else {
     self.report("departed before the cruise landed")
     return
   }
@@ -426,7 +451,7 @@ async fn Mind::course(
     Some(Hull) => " You asked for hands on the hull, to work the yard."
     _ => " You asked for nothing in particular."
   }
-  let line = "In port you chose to coast at \{at}.\{asked}"
+  let line = "In port you chose to leave for \{course.name} next, and to coast at \{at}.\{asked}"
   self.remember(line, why)
   self.report("\{how} in \{@async.now() - started} ms: \{line} \{why}")
 }

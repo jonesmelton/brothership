@@ -70,8 +70,11 @@ pub(all) struct Listing {
   id : String
   /// The profile's name, which is the ship's name in English.
   name : String
-  /// Crossings flown; `@ships.leg` names the worlds of the one in hand.
   crossings : Int64
+  /// The world the ship is in port at, or left from underway.
+  from : String
+  /// The world it is bound for: `None` in port until the ship chooses.
+  bound : String?
   whereabouts : Whereabouts
   /// How much of the leg is behind the ship, in thousandths: 0 in port and
   /// 1000 once arrived. Enough to place it on the star map and no more.

@@ -7,8 +7,12 @@
 /// ticks aboard until arrival, the works it delivered and the plan it flew,
 /// from which the years at the worlds follow.
 pub(all) struct Landing {
-  /// Crossings flown before this one: names the leg in the itinerary.
+  /// Crossings flown before this one: names the leg in the itinerary when
+  /// `from` or `to` is `None` (`@ships.landing_leg`).
   leg : Int64
+  /// The worlds the leg ran between, as `Ship.from` and `Ship.bound`.
+  from : String?
+  to : String?
   /// Ticks aboard until arrival.
   aboard : Int64
   /// Works delivered across the crew.
@@ -56,6 +60,8 @@ pub(all) enum Happening {
   Promoted(crew~ : String, rank~ : Int64, tally~ : Tally)
   /// The ship chose to coast at `cruise` thousandths of its cap.
   Cruised(cruise~ : Int64)
+  /// The ship chose the world it leaves for next.
+  Bound(world~ : String)
   Spoke(line~ : String, about~ : Int64)
 } derive(Debug, Eq, ToJson, FromJson)
 
@@ -85,6 +91,12 @@ pub fn happenings(
     Spoke(line~, about~) => return [Happening::Spoke(line~, about~)]
     Cruising(cruise~) =>
       return if before.ship.cruise == cruise { [] } else { [Cruised(cruise~)] }
+    Bound(world~, ..) =>
+      return if before.ship.bound == Some(world) {
+        []
+      } else {
+        [Happening::Bound(world~)]
+      }
     Promoted(crew~, rank~) => {
       let tally = match before.crossing() {
         Some(c) => c.tallies.get(crew).unwrap_or(no_tally)
@@ -106,6 +118,8 @@ pub fn happenings(
       out.push(
         Docked(recruits=after.ship.recruits - before.ship.recruits, landing={
           leg: before.ship.crossings,
+          from: before.ship.from,
+          to: before.ship.bound,
           aboard,
           works,
           plan,

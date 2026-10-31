@@ -4,6 +4,8 @@ fn listing(id : String, name : String) -> @core.Listing {
     id,
     name,
     crossings: 0,
+    from: "Kerala",
+    bound: None,
     whereabouts: InPort(departs=0),
     run: 0,
     officers: 0,

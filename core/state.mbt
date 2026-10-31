@@ -48,6 +48,10 @@ pub(all) enum Event {
   /// The ship chooses, in port, the γ it coasts at from its next departure,
   /// in thousandths of its cap.
   Cruising(cruise~ : Int64)
+  /// The ship chooses, in port, the world it leaves for next, by name, with
+  /// `stores` the leg needs in all, sized by the server. What is loaded
+  /// already counts toward them.
+  Bound(world~ : String, stores~ : Int64)
   /// The ship said `line`, in answer to the happening at log position
   /// `about`. Written by a model and passed by the content gate; changes no
   /// state, so replay never needs the model.
@@ -226,6 +230,14 @@ pub fn State::apply(self : State, event : Event) -> State raise Rejected {
       }
       guard self.leg is InPort(_) else { raise NotInPort(event~) }
       { ..self, ship: { ..self.ship, cruise, }, }
+    }
+    Bound(world~, stores~) => {
+      guard self.leg is InPort(port~) else { raise NotInPort(event~) }
+      {
+        ..self,
+        ship: { ..self.ship, bound: Some(world), },
+        leg: InPort(port=port.resize(stores.max(0L))),
+      }
     }
     Promoted(crew~, rank~) => forward(Promoted(crew~, rank~), false)
     Asked(post~) =>

@@ -125,8 +125,9 @@ pub fn World::on_map(self : World) -> (Double, Double) {
 }
 
 ///|
-/// The ports of call in order, round again: every pair of worlds, with
-/// Tigray and Occitan flown three times. The first seven legs are those of
+/// The ports of call ships flew in order before they chose their own, round
+/// again: every pair of worlds, with Tigray and Occitan flown three times.
+/// Logs from before then name their worlds by it. The first seven legs are those of
 /// the four-world itinerary, so legs already in flight keep their worlds.
 pub let itinerary : Array[World] = [
   worlds[0],
@@ -144,10 +145,10 @@ pub let itinerary : Array[World] = [
 ]
 
 ///|
-/// The worlds of the leg after `crossings` dockings: where the ship docked
-/// last, or was commissioned, and where it goes next. A leg is named by
-/// its place in the itinerary, so reordering the itinerary renames every
-/// leg in flight.
+/// The worlds of the itinerary's leg after `crossings` dockings: where a
+/// ship flying it docked last, or was commissioned, and where it went next.
+/// Such a leg is named by its place in the itinerary, so reordering the
+/// itinerary renames it.
 pub fn leg(crossings : Int64) -> (World, World) {
   let n = itinerary.length().to_int64()
   let i = (crossings % n).to_int()
@@ -159,4 +160,56 @@ pub fn leg(crossings : Int64) -> (World, World) {
 pub fn hop(crossings : Int64) -> Double {
   let (from, to) = leg(crossings)
   from.distance_to(to)
+}
+
+///|
+/// The world named `name`, if any.
+pub fn world_named(name : String) -> World? {
+  worlds.iter().find_first(w => w.name == name)
+}
+
+///|
+/// The world `name` names, or `or` for none: the itinerary's.
+fn named_or(name : String?, or : World) -> World {
+  name.bind(world_named).unwrap_or(or)
+}
+
+///|
+/// The world `ship` is in port at, or left from underway.
+pub fn origin(ship : @core.Ship) -> World {
+  named_or(ship.from, leg(ship.crossings).0)
+}
+
+///|
+/// The world the ship is bound for. `None` in port until it chooses;
+/// underway on a leg of the itinerary, that leg's end.
+pub fn bound_for(state : @core.State) -> World? {
+  let ship = state.ship
+  match state.leg {
+    Underway(_) => Some(named_or(ship.bound, leg(ship.crossings).1))
+    InPort(_) => ship.bound.bind(world_named)
+  }
+}
+
+///|
+/// The world the ship's last leg left from, if it has flown one.
+pub fn came_from(ship : @core.Ship) -> World? {
+  guard ship.crossings > 0L else { None }
+  Some(named_or(ship.came_from, leg(ship.crossings - 1L).0))
+}
+
+///|
+/// The worlds the ship may leave for from port: any but the one it is at
+/// and the one it came from, so it never flies straight back.
+pub fn choices(ship : @core.Ship) -> Array[World] {
+  let here = origin(ship)
+  let back = came_from(ship)
+  worlds.filter(w => w != here && Some(w) != back)
+}
+
+///|
+/// The worlds a landing's leg ran between.
+pub fn landing_leg(l : @core.Landing) -> (World, World) {
+  let (from, to) = leg(l.leg)
+  (named_or(l.from, from), named_or(l.to, to))
 }

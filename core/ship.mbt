@@ -216,6 +216,16 @@ pub(all) struct Ship {
   /// The γ the ship coasts at on its next crossing, in thousandths of its
   /// cap. The ship chooses it in port.
   cruise : Int64
+  /// The world the ship is in port at, or left from underway, by name.
+  /// `None` for the itinerary's, as in logs from before ships chose their
+  /// course: `@ships.origin` resolves it.
+  from : String?
+  /// The world the ship is bound for, chosen in port (`Bound`). `None` in
+  /// port until it chooses, and underway on a leg of the itinerary.
+  bound : String?
+  /// The world the last leg left from, so the ship does not fly straight
+  /// back. `None` for the itinerary's, or before the first leg.
+  came_from : String?
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
@@ -234,6 +244,9 @@ pub fn Ship::new(values : Values, fit : Fit, seed~ : Int64) -> Ship {
     crossings: 0,
     seed,
     cruise: CRUISE_FULL,
+    from: None,
+    bound: None,
+    came_from: None,
   }
 }
 

@@ -36,6 +36,8 @@ pub fn listing(id : String, state : @core.State) -> @core.Listing {
     id,
     name: state.profile,
     crossings: state.ship.crossings,
+    from: origin(state.ship).name,
+    bound: bound_for(state).map(w => w.name),
     whereabouts,
     run,
     officers: state.officers.length().to_int64(),
@@ -45,13 +47,15 @@ pub fn listing(id : String, state : @core.State) -> @core.Listing {
 ///|
 /// The ship's own events at `now`, in Unix seconds, applied in order to
 /// `state`: the tick, the promotions an arrived crossing has earned (of the
-/// hands for which `officer` holds) and then docking with the stores for
-/// the next hop, departure once they are loaded, and the ship's turn. Returns the
+/// hands for which `officer` holds), docking, and choosing the next world,
+/// departure once the stores for it are loaded, and the ship's turn. Returns the
 /// events and the state after them.
 ///
 /// A `minded` ship's mind, a model on the server, makes its turn and
-/// chooses promotions instead: the clock leaves the turn out, and docks an
-/// arrived ship by script only `MIND_WAIT` after arrival.
+/// chooses promotions and the next world instead: the clock leaves the turn
+/// out, docks an arrived ship by script only `MIND_WAIT` after arrival, and
+/// chooses the world by temperament only if the mind has not by the time
+/// the stores are loaded.
 pub fn Profile::due(
   self : Profile,
   state : @core.State,
@@ -75,19 +79,31 @@ pub fn Profile::due(
     for pair in promotions(s.crossing().unwrap(), officer~) {
       push(Promoted(crew=pair.0, rank=pair.1))
     }
-    push(Docked(stores=stores(legs=s.ship.crossings + 1L)))
+    push(self.docked(s))
+    if !minded {
+      push(bound(s.ship, self.temperament.course(s.ship)))
+    }
+  }
+  // A ship whose mind never chose leaves where its temperament would, once
+  // the stores are loaded. A farther world can need more stores.
+  if s.launch() is Some(l) && l.ready_at <= s.at && s.ship.bound is None {
+    push(bound(s.ship, self.temperament.course(s.ship)))
   }
   if s.launch() is Some(l) && l.ready_at <= s.at {
-    let legs = s.ship.crossings
+    let distance_ly = origin(s.ship).distance_to(bound_for(s).unwrap())
     if !minded {
-      let cruise = self.temperament.cruise(s.ship, distance_ly=hop(legs))
+      let cruise = self.temperament.cruise(s.ship, distance_ly~)
       if cruise != s.ship.cruise {
         push(Cruising(cruise~))
       }
     }
     push(
       Departed(
-        plan=self.next_plan(legs~, coils=s.ship.fit.coils, cruise=s.ship.cruise),
+        plan=self.next_plan(
+          distance_ly~,
+          coils=s.ship.fit.coils,
+          cruise=s.ship.cruise,
+        ),
       ),
     )
   }

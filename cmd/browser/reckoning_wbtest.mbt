@@ -137,7 +137,7 @@ test "the map frames every world and the Sun, and puts the ship on its leg" {
     c = c.apply(Elapsed(ticks=600))
   }
   let (from, to) = @ships.leg(0)
-  let (sx, _) = frame.place(ship_on_map(c, 0))
+  let (sx, _) = frame.place(ship_on_map(c, from, to))
   let (fx, _) = frame.place(from.on_map())
   let (tx, _) = frame.place(to.on_map())
   // Kerala lies east of Occitan on the map, so the ship is between them.

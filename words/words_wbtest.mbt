@@ -73,7 +73,7 @@ test "a voyage from port to its first moments, in sentences" {
     where_sentences(s),
     content=(
       #|[
-      #|  "In port at Kerala, bound for Occitan, 15.7 light-years away.",
+      #|  "In port at Kerala. The ship has not chosen where it goes next.",
       #|  "Stores load in about 10 minutes, and the ship departs then.",
       #|  "Hull at 100%.",
       #|]
@@ -430,11 +430,39 @@ test "a post's effect on a hull that wears" {
 ///|
 test "a listing in one sentence" {
   let at = (whereabouts : @core.Whereabouts, crossings : Int64) => {
+    let (from, to) = @ships.leg(crossings)
     listing_sentence(
-      { id: "x", name: "x", crossings, whereabouts, run: 0, officers: 2, },
+      {
+        id: "x",
+        name: "x",
+        crossings,
+        from: from.name,
+        bound: Some(to.name),
+        whereabouts,
+        run: 0,
+        officers: 2,
+      },
       now=1000,
     )
   }
+  inspect(
+    listing_sentence(
+      {
+        id: "x",
+        name: "x",
+        crossings: 3,
+        from: "Oaxaca",
+        bound: None,
+        whereabouts: InPort(departs=1300),
+        run: 0,
+        officers: 2,
+      },
+      now=1000,
+    ),
+    content=(
+      #|In port at Oaxaca, leaving in about 5 minutes for a world it has not chosen yet. 2 officers aboard.
+    ),
+  )
   inspect(
     at(InPort(departs=1300), 0),
     content="In port at Kerala, leaving for Occitan in about 5 minutes. 2 officers aboard.",
@@ -457,6 +485,8 @@ test "a listing in one sentence" {
         id: "x",
         name: "x",
         crossings: 0,
+        from: "Kerala",
+        bound: Some("Occitan"),
         whereabouts: InPort(departs=0),
         run: 0,
         officers: 0,
@@ -473,6 +503,8 @@ test "the fleet list says where a ship is, and not who is aboard" {
     id: "flea",
     name: "EF-287 The Flea on the Drum",
     crossings: 0,
+    from: "Kerala",
+    bound: Some("Occitan"),
     whereabouts: InPort(departs=600),
     run: 0,
     officers: 3,
@@ -533,7 +565,7 @@ fn launching(post : @core.Post?) -> @core.State {
     ..s,
     at: 1_800_000_000,
     leg: InPort(port={
-      ..@core.Port::new(1_800_000_000, @ships.stores(legs=0)),
+      ..@core.Port::new(1_800_000_000, @ships.stores_at(@ships.hop(0))),
       ask: Some(Drive),
     }),
   }
@@ -552,10 +584,20 @@ test "in port, the launch in sentences" {
     where_sentences(launching(Some(Drive))),
     content=(
       #|[
-      #|  "In port at Kerala, bound for Occitan, 15.7 light-years away.",
+      #|  "In port at Kerala. The ship has not chosen where it goes next.",
       #|  "Stores load in about 45 minutes, and the ship departs then.",
       #|  "The yard has the hull at 50%, and 60% by then.",
       #|]
+    ),
+  )
+  let s = launching(Some(Drive))
+  let s = s.apply(@ships.bound(s.ship, @ships.world_named("Occitan").unwrap())) catch {
+    _ => panic()
+  }
+  inspect(
+    where_sentences(s)[0],
+    content=(
+      #|In port at Kerala, bound for Occitan, 15.7 light-years away.
     ),
   )
   debug_inspect(

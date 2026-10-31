@@ -174,13 +174,30 @@ any leg holds the crossing's targets. The five lie within 0.8 ly of one
 plane, which is why the Voyage page can draw them on a flat map, true to
 0.1 ly; the Sun is 7.6 ly off it.
 
-Ships fly the itinerary Kerala, Occitan, Tigray, Kerala, Oaxaca, Tigray,
-Occitan, Oaxaca, The Three Tyrants, Tigray, Occitan, The Three Tyrants and
-round again: every pair, with Tigray and Occitan flown three times. A ship
-is commissioned at Kerala, and its leg after `crossings` dockings is
-`@ships.leg(crossings)`. The log records the plan of each departure but not
-its worlds, so reordering the itinerary renames every leg in flight. The
-first seven legs are those of the four-world itinerary.
+Each ship chooses where it goes next, in port (`Bound`), from any world but
+the one it is at and the one it came from, so it never flies straight back
+(`@ships.choices`). A minded ship's model chooses in its cruise turn, soon
+after docking, from each world's distance, how soon the ship would leave
+for it, how often and how lately it has docked there, which other ships
+are in port there or bound there, and the hours aboard and hull worn at
+each cruise. The ship then tells the crew. An unminded ship chooses by
+temperament at docking: a bold ship the farthest world, a careful one the
+nearest, a sly one the second farthest, and a social one any, by its seed.
+A minded ship whose mind never chose leaves by temperament once its stores
+are loaded.
+
+Stores are sized by the leg chosen. Docking loads them for the world the
+temperament would choose, and choosing another resizes them; what is
+loaded already counts toward any leg. A ship entering service is at Kerala
+and loads its first ten minutes of stores wherever it goes.
+
+The log records each world chosen by name, and the ship carries where it
+is, where it is bound and where it came from (`Ship.from`, `bound`,
+`came_from`). Before ships chose, they flew the itinerary Kerala, Occitan,
+Tigray, Kerala, Oaxaca, Tigray, Occitan, Oaxaca, The Three Tyrants, Tigray,
+Occitan, The Three Tyrants and round again, and their logs name no worlds:
+`None` in those fields resolves to the itinerary's leg after `crossings`
+dockings (`@ships.leg`).
 
 The worlds share one rest frame, so the years a crossing takes pass alike
 at origin and destination, and come within a thousandth of a year of the
@@ -280,8 +297,8 @@ The ship is the language model. It:
 
 - **asks** for volunteers in character. Its character decides when and for
   what: a bold ship asks for the drive, a careful one for the hull.
-- **proposes** two or three destinations within reach, with its reasons. The
-  crew choose among them.
+- **chooses** where it goes next, in port, and tells the crew. See
+  [the worlds](#the-worlds).
 - **remembers** who answered. Each crew member's **regard** is computed in
   core from what they did, weighted by values authored per ship from its
   faces. Regard decides whom the ship may promote. Rank is public and spoken,
@@ -352,8 +369,8 @@ Arrival docks the crossing into the ship that leaves (`Crossing::dock`):
   Recruits work ship posts only and make no works, so recruits do not breed
   recruits;
 - refits stay fitted, and coils change the next crossing's plan;
-- the ship proposes destinations and the crew choose. How several players
-  choose is still open, and none of it is built.
+- the ship chooses its next world and tells the crew; the crew have no
+  say yet.
 
 Not built yet: works raising their makers' standing at a world, and
 gathering inputs for the next works.

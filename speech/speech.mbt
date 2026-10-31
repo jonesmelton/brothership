@@ -44,8 +44,8 @@ const MAX_WORDS : Int32 = 60
 
 ///|
 /// How long after a line the ship keeps quiet about anything but a
-/// departure, an arrival, a promotion, a new demand or a new officer, in
-/// seconds.
+/// departure, an arrival, a promotion, a new demand, a new officer or its
+/// next world, in seconds.
 pub const QUIET : Int64 = 900
 
 ///|
@@ -54,7 +54,9 @@ fn weight(h : @core.Happening) -> Int32? {
   match h {
     Opened(_) => Some(7)
     Missed(_) | Promoted(..) => Some(6)
-    Began(phase=Arrived) | Departed | Signed(_) => Some(5)
+    // A choice of world made as the ship departs is told by the departure,
+    // which comes later and so wins the tie.
+    Began(phase=Arrived) | Departed | Signed(_) | Bound(_) => Some(5)
     Began(_) | Cruised(_) => Some(4)
     Met(_) | Loaded => Some(3)
     Landed(..) | Made(..) => Some(2)
@@ -72,9 +74,16 @@ fn weight(h : @core.Happening) -> Int32? {
 ///|
 /// Spoken even within `QUIET` of the last line. A promotion lands with the
 /// arrival, which is urgent anyway, and must not be lost to the quiet. A
-/// new officer is greeted when they come aboard or not at all.
+/// new officer is greeted when they come aboard or not at all. The next
+/// world is chosen soon after docking, and the crew hear it from the ship.
 fn urgent(h : @core.Happening) -> Bool {
-  h is (Opened(_) | Departed | Began(phase=Arrived) | Promoted(..) | Signed(_))
+  h
+  is (Opened(_)
+  | Departed
+  | Began(phase=Arrived)
+  | Promoted(..)
+  | Signed(_)
+  | Bound(_))
 }
 
 ///|

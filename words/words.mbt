@@ -32,7 +32,7 @@ pub fn in_words(seconds : Int64) -> String {
 ///|
 /// A wait in port in words: the nearest 5 minutes, never ticking by the
 /// minute.
-fn soon_words(seconds : Int64) -> String {
+pub fn soon_words(seconds : Int64) -> String {
   let fives = (seconds + 150L) / 300L
   if fives <= 0L {
     "any moment"
@@ -47,14 +47,18 @@ fn soon_words(seconds : Int64) -> String {
 /// Where a ship in the list is, at `now` in Unix seconds, without saying who
 /// is aboard.
 pub fn whereabouts_sentence(l : @core.Listing, now~ : Int64) -> String {
-  let (from, to) = @ships.leg(l.crossings)
-  match l.whereabouts {
-    InPort(departs~) =>
-      "In port at \{from.name}, leaving for \{to.name} \{soon_words(departs - now)}."
-    Underway(arrives=Some(at)) if at <= now => "Arrived at \{to.name}, docking."
-    Underway(arrives=Some(at)) =>
-      "Between \{from.name} and \{to.name}, arriving \{in_words(at - now)}."
-    Underway(arrives=None) => "Between \{from.name} and \{to.name}."
+  let from = l.from
+  // Underway, a listing always names where the ship is bound.
+  let to = l.bound.unwrap_or("its next world")
+  match (l.whereabouts, l.bound) {
+    (InPort(departs~), Some(to)) =>
+      "In port at \{from}, leaving for \{to} \{soon_words(departs - now)}."
+    (InPort(departs~), None) =>
+      "In port at \{from}, leaving \{soon_words(departs - now)} for a world it has not chosen yet."
+    (Underway(arrives=Some(at)), _) if at <= now => "Arrived at \{to}, docking."
+    (Underway(arrives=Some(at)), _) =>
+      "Between \{from} and \{to}, arriving \{in_words(at - now)}."
+    (Underway(arrives=None), _) => "Between \{from} and \{to}."
   }
 }
 
@@ -214,12 +218,18 @@ pub fn plural(n : Int64, one : String, many : String) -> String {
 }
 
 ///|
+/// Where the ship underway is bound.
+fn destination(s : @core.State) -> @ships.World {
+  guard @ships.bound_for(s) is Some(w) else { abort("the ship is in port") }
+  w
+}
+
+///|
 /// Where the ship is: the first thing the check-in says.
 pub fn where_sentences(s : @core.State) -> Array[String] {
   match s.leg {
     InPort(_) => {
-      let (at, next) = @ships.leg(s.ship.crossings)
-      let hop = fixed(@ships.hop(s.ship.crossings), 1)
+      let at = @ships.origin(s.ship)
       let l = s.launch().unwrap()
       let hull = pct(s.ship.hull, @core.HULL_FULL)
       let then = pct(l.hull, @core.HULL_FULL)
@@ -228,14 +238,22 @@ pub fn where_sentences(s : @core.State) -> Array[String] {
       } else {
         "The yard has the hull at \{hull}%, and \{then}% by then."
       }
+      let bound = match @ships.bound_for(s) {
+        Some(next) => {
+          let hop = fixed(at.distance_to(next), 1)
+          "In port at \{at.name}, bound for \{next.name}, \{hop} light-years away."
+        }
+        None =>
+          "In port at \{at.name}. The ship has not chosen where it goes next."
+      }
       [
-        "In port at \{at.name}, bound for \{next.name}, \{hop} light-years away.",
+        bound,
         "Stores load \{soon_words(l.ready_at - s.at)}, and the ship departs then.",
         yard,
       ]
     }
     Underway(crossing=c, ..) => {
-      let to = @ships.leg(s.ship.crossings).1.name
+      let to = destination(s).name
       let phase = match c.phase {
         Burn => "Burning toward \{to}."
         Coast => "Coasting toward \{to} at the cap."
@@ -266,7 +284,7 @@ pub fn where_sentences(s : @core.State) -> Array[String] {
       }
       [
         phase,
-        ..reckoning_sentences(c, s.ship.crossings),
+        ..reckoning_sentences(c, s),
         ..arrival,
         ..turn_sentence(c),
         "Hull at \{pct(c.hull, @core.HULL_FULL)}%.",
@@ -289,7 +307,7 @@ pub fn where_sentences(s : @core.State) -> Array[String] {
 /// already opens with the news.
 pub fn readout(s : @core.State) -> String {
   guard s.crossing() is Some(c) else { "" }
-  let to = @ships.leg(s.ship.crossings).1.name
+  let to = destination(s).name
   let hull = "Hull \{pct(c.hull, @core.HULL_FULL)}%."
   guard c.phase != Arrived else { "Arrived at \{to}. Docking. \{hull}" }
   let phase = match c.phase {
@@ -321,7 +339,7 @@ pub fn where_rest(s : @core.State) -> Array[String] {
     "\{plural(c.count(Drive), "hand", "hands")} on the drive, \{c.count(Hull)} on the hull, \{c.count(Craft)} at crafts."
   }
   [
-    ..reckoning_sentences(c, s.ship.crossings),
+    ..reckoning_sentences(c, s),
     ..turn_sentence(c),
     hands,
     ..c.demands.filter(d => d.status == Open).map(demand_sentence),
@@ -487,14 +505,17 @@ fn demand_sentence(d : @core.Demand) -> String {
 /// aboard.
 pub fn leaving_sentences(s : @core.State, crew : String) -> Array[String] {
   guard s.officers.get(crew) is Some(officer) else { [] }
-  let to = @ships.leg(s.ship.crossings).1.name
   match (s.leg, officer.leaving) {
     (InPort(_), _) =>
       ["You may leave the ship before it departs, and choose another."]
     (Underway(_), true) =>
-      ["You leave the ship when it docks at \{to}, and choose another then."]
+      [
+        "You leave the ship when it docks at \{destination(s).name}, and choose another then.",
+      ]
     (Underway(_), false) =>
-      ["You are aboard until the ship docks at \{to}, and may leave then."]
+      [
+        "You are aboard until the ship docks at \{destination(s).name}, and may leave then.",
+      ]
   }
 }
 
@@ -572,7 +593,8 @@ pub fn priority(
     | Met(_)
     | Missed(_)
     | Landed(..)
-    | Cruised(_) => Announce
+    | Cruised(_)
+    | Bound(_) => Announce
     // Your own making is announced by its effect sentence already.
     Made(_) => Quiet
     Stood(crew~) | Finished(crew~) | Discharged(crew~) =>
@@ -642,6 +664,11 @@ pub fn told_by(
       "\{who(crew)} \{if crew == you { "were" } else { "was" }} promoted to \{rank_name(rank)}."
     Spoke(line~, ..) => "\{ship}: \{line}"
     Cruised(cruise~) => "The ship will coast at \{cruise_words(cruise)}."
+    Bound(world~) =>
+      match @ships.world_named(world) {
+        Some(w) => "The ship has chosen to leave for \{w.name}, at \{w.star}."
+        None => "The ship has chosen to leave for \{world}."
+      }
   }
 }
 
