@@ -26,7 +26,7 @@ another path, and `WARREN_HOST` / `WARREN_PORT` to change the address.
 ## Deploy
 
 The game runs at https://brothership.fly.dev: one machine in `ord`, with its
-sqlite log replicated to Tigris by Litestream every 30 s.
+sqlite log replicated to Tigris by Litestream every 5 min.
 
 ```sh
 make deploy  # ships HEAD; refuses uncommitted tracked changes

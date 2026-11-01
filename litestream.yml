@@ -5,6 +5,17 @@
 #   AWS_ENDPOINT_URL_S3      Tigris S3 endpoint (also injected by Fly)
 # Litestream 0.5 dropped multi-replica support: `replica:` is singular, not the
 # 0.3-era `replicas:` list (which 0.5 rejects).
+# Tigris bills PUT/COPY/POST/LIST together, and the 0.5 defaults (L1 every 30s,
+# L2 every 5m, L0 retention sweep every 15s) cost far more requests than the
+# sync does. The ship clocks write every minute, so every timer finds work.
+# Slower compaction only makes a restore replay more small files.
+levels:
+  - interval: 5m
+  - interval: 1h
+  - interval: 24h
+l0-retention: 10m
+l0-retention-check-interval: 2m
+
 dbs:
   - path: ${BROTHERSHIP_DB}
     replica:
@@ -12,4 +23,4 @@ dbs:
       endpoint: ${AWS_ENDPOINT_URL_S3}
       # A crash loses at most this much log. The volume survives ordinary
       # restarts and deploys, so only volume loss costs anything.
-      sync-interval: 30s
+      sync-interval: 5m

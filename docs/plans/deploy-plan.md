@@ -67,7 +67,7 @@ These were checked on 2026-10-27 against the repo at `0c107aa`.
 | Machine | `shared-cpu-1x`, 256 MB | The server holds a small snapshot in memory. Move to 512 MB if it OOMs at boot. |
 | Volume | 1 GB, named `brothership_data`, mounted at `/data` | Smallest Fly allows. |
 | Machines | exactly one, never autostopped | sqlite has one writer and `Store` keeps the snapshot in memory; a second machine would diverge. Autostop would put a cold boot in front of the demo. |
-| Litestream | 0.5, `sync-interval: 30s` | The sunwise config. A crash loses at most 30 s of events; the volume survives ordinary restarts and deploys, so only volume loss costs anything. |
+| Litestream | 0.5, `sync-interval: 5m` | The sunwise config. A crash loses at most 5 min of events; the volume survives ordinary restarts and deploys, so only volume loss costs anything. |
 | Health check | `GET /api/snapshot` | It reads the in-memory snapshot, so it is cheap and proves the store opened. Add no `/health` route. |
 | Deployed source | `git archive HEAD` | The working tree has untracked docs; uncommitted work must not ship. Mirrors `just deploy` in magic_game. |
 
@@ -112,7 +112,7 @@ infrastructure: print the commands for the user to run, the way
        replica:
          url: ${LITESTREAM_REPLICA_URL}
          endpoint: ${AWS_ENDPOINT_URL_S3}
-         sync-interval: 30s
+         sync-interval: 5m
    ```
 
 4. Add `entrypoint.sh`, executable:

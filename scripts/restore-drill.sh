@@ -123,8 +123,8 @@ local_drill() {
     exit 1
   fi
 
-  # The restore may trail by up to one sync interval (30 s) of events. The LTX
-  # listing above should show a file from the last couple of minutes; older
+  # The restore may trail by up to one sync interval (5 min) of events. The LTX
+  # listing above should show a file from the last ten minutes; older
   # means replication has stopped and the seq gap is not explainable by lag.
   echo "  (a gap is fine only if the newest LTX file above is recent)"
 }
@@ -135,7 +135,7 @@ full_drill() {
   echo "minute or two of downtime, and run it once the local drill passes."
   wait
 
-  paste "Seed events, wait 30 s, then run the local drill" \
+  paste "Seed events, wait 5 min, then run the local drill" \
     "scripts/restore-drill.sh local"
 
   paste "Record the live seq" \
@@ -160,7 +160,7 @@ full_drill() {
 
   paste "Confirm the seq you recorded is back" \
     "curl -fsS ${SNAPSHOT}" \
-    "A lost tail of up to 30 s of events is expected; anything more is a failure."
+    "A lost tail of up to 5 min of events is expected; anything more is a failure."
 }
 
 case "${1:-}" in
