@@ -21,9 +21,6 @@ moon run cmd/gate -- path/to/message.md
 
 # cache only; a miss fails
 moon run cmd/gate -- --replay
-
-# the contributor SKU: much cheaper, about twice as slow; fine for sweeps
-moon run cmd/gate -- --model meta:muse-spark-1.3-contributor
 ```
 
 Each line of output is the file, how long the call took (or `cached`),

@@ -6,7 +6,7 @@
 //   moon run cmd/cast -- status [pennant...]
 //
 // A pennant with no ship directory yet gets entry drafts from a seed built
-// out of pennants.tsv, starting-cast.md and other ships' entries; approve
+// out of pennants.tsv and other ships' entries; approve
 // one as its entry.md, then run again for the portrait. A pennant that is
 // not in pennants.tsv at all fails in `run` rather than drafting an entry
 // for a ship that does not exist.

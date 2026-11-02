@@ -40,9 +40,9 @@ The officers are the same in every run:
 
 | flag | default | meaning |
 | --- | --- | --- |
-| `--mind M` | `meta:muse-spark-1.3-contributor` | model that makes choices |
+| `--mind M` | `meta:muse-spark-1.3` | model that makes choices |
 | `--writer M` | the `--mind` model | model that writes the line |
-| `--gate M` | `meta:muse-spark-1.3-contributor` | model that gates the line |
+| `--gate M` | `meta:muse-spark-1.3` | model that gates the line |
 | `--samples N` | 3 | choices sampled per ship and moment |
 | `--replay` | off | use only cached replies; a miss is an error |
 | scenario names | all eight | which moments to run |
@@ -53,8 +53,7 @@ sample's private reason, and its line. The line follows the first sample's
 ask. A line the gate blocks, the model passes on, or that repeats is shown
 in parentheses with the reason. The last line is the estimated spend.
 
-All eight scenarios on the contributor tier take about 10 minutes and cost a
-few cents:
+All eight scenarios take about 10 minutes and cost a few cents:
 
 ```sh
 moon run cmd/audition --target native -- > _build/audition-spark.md
@@ -66,7 +65,7 @@ Run this on Muse Wonder before accepting a prompt change, since smaller models c
 moon run cmd/audition --target native -- --mind meta:muse-wonder-1.0 --samples 3 > _build/audition-wonder.md
 ```
 
-The demo setup, with choices on the contributor tier and lines on Wonder:
+The demo setup, with choices on Muse Spark and lines on Wonder:
 
 ```sh
 moon run cmd/audition --target native -- --writer meta:muse-wonder-1.0 arrival demand
@@ -94,13 +93,12 @@ it neglects, whom it favours, whether it repeats itself.
 | argument | default | meaning |
 | --- | --- | --- |
 | ship | `tigress` | berth id: `tigress`, `scorpion` or `flea` |
-| `--mind M` | `meta:muse-spark-1.3-contributor` | model that makes choices |
+| `--mind M` | `meta:muse-spark-1.3` | model that makes choices |
 | `--writer M` | the `--mind` model | model that writes lines |
 | `--replay` | off | use only cached replies |
 
-The gate is always `meta:muse-spark-1.3-contributor`. A crossing takes 10
-to 20 minutes on the contributor tier, since every choice and line waits on
-the model in turn.
+The gate is always `meta:muse-spark-1.3`. A crossing takes 10
+to 20 minutes, since every choice and line waits on the model in turn.
 
 ```sh
 moon run cmd/speak --target native -- flea > _build/speak-flea.txt

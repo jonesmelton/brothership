@@ -81,9 +81,9 @@ A feature is done when:
 
 ## testing, and its limits
 
-We may not have a blind playtester during the event. Testing is done by a sighted, competent screen reader user on iOS, with the screen off, and by automated checks. This catches broken controls, missing labels, bad focus order, and announcements that are dropped or garbled.
+The game is playtested by blind and low vision users and by automated checks. Author testing is done as a sighted, competent screen reader user on iOS, with the screen off. This catches broken controls, missing labels, bad focus order, and announcements that are dropped or garbled.
 
-It does not reliably catch what daily screen reader users would notice: experienced users listen at much higher speech rates, have different tolerance for verbosity, navigate faster and by different routes, and are quicker to notice repetition. We correct for this by erring towards brevity and by following established conventions rather than inventing interaction patterns. After the event, we'll ask for feedback from blind players directly, such as the AudioGames.net community.
+That does not cover the range of daily screen reader use: screen readers, speech rates, tolerance for verbosity, navigation routes and sensitivity to repetition all differ between users. We correct for this by erring towards brevity and by following established conventions rather than inventing interaction patterns.
 
 Known risk: live region announcements in Safari on iOS are unreliable. They can be dropped, cut off, or queued badly when several arrive together. The announcement system is the core of the game for screen reader players, so it gets tested on a real device first, before the game is built around it.
 

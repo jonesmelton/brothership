@@ -14,9 +14,9 @@ Three Meta models sit in the path from a player's input to the text they read. I
 
 | model | role | where it sits |
 | --- | --- | --- |
-| `meta:muse-spark-1.3-contributor` (`MIND_MODEL`) | the ship's choices: what it asks for, which refit it proposes, whom it promotes, its next world and cruise | the ship's mind on the server (`mind`), polled between ticks |
+| `meta:muse-spark-1.3` (`MIND_MODEL`) | the ship's choices: what it asks for, which refit it proposes, whom it promotes, its next world and cruise | the ship's mind on the server (`mind`), polled between ticks |
 | `meta:muse-wonder-1.0` (`WRITER_MODEL`) | the lines players read | the speaker (`speech`), writing a line for a happening that earns one |
-| `meta:muse-spark-1.3-contributor` (`GATE_MODEL`) | checks every line against `content/gate/policy.md` before a player sees it | `llm/gate`, after the writer and before the line is appended as a `Spoke` event; only its `Cleared` type can reach the log |
+| `meta:muse-spark-1.3` (`GATE_MODEL`) | checks every line against `content/gate/policy.md` before a player sees it | `llm/gate`, after the writer and before the line is appended as a `Spoke` event; only its `Cleared` type can reach the log |
 
 The cast that gives each ship its character is also drafted on `meta:muse-wonder-1.0` (see [cast](docs/cast.md)). A call that fails, is blocked, or is passed on leaves no message; the event that prompted it still stands, and a scripted temperament covers any choice the model would have made. These assignments are the `fly.toml` values the deployed server runs; `cmd/speak` and `cmd/audition` run the same path in memory so ships can be heard before players are (see [tools](docs/tools.md)).
 
@@ -33,7 +33,7 @@ make sim    # crossing simulator at http://127.0.0.1:4311
 make deploy # ships HEAD to Fly.io; refuses uncommitted tracked changes
 ```
 
-Ships speak only if a `MODEL_API_KEY` is set (a Fly secret in production); without one the server starts and logs that ships will not speak.
+No model is required to run the game. Ships speak only if a `MODEL_API_KEY` is set (a Fly secret in production); without one the server starts, scripted temperaments make the ships' choices, and the server logs that ships will not speak.
 
 ## Docs
 

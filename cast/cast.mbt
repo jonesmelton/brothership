@@ -82,8 +82,8 @@ pub(all) struct StageStatus {
 } derive(Debug, Eq)
 
 ///|
-/// A cast directory: `cast.json`, `prompts/`, `pennants.tsv`,
-/// `starting-cast.md`, and `ships/<pennant>/` holding `entry.md`, an
+/// A cast directory: `cast.json`, `prompts/`, `pennants.tsv`, and
+/// `ships/<pennant>/` holding `entry.md`, an
 /// optional `notes.md`, canon files, `record.json` and `drafts/`. Drafts
 /// are regenerated freely; canon files are only written by `approve`, or
 /// by hand. A ship with no directory yet still drafts an entry: the draft
@@ -94,7 +94,7 @@ pub struct Cast {
   priv prompts : @prompt.Prompts
   priv backend : @llm.Backend
   /// Every ship in `pennants.tsv`, in file order. The seed an entry draft
-  /// is made from is built from this, `starting-cast.md` and other entries.
+  /// is made from is built from this and other entries.
   priv crew : Array[Crew]
   priv starting : String
 }
@@ -130,8 +130,8 @@ pub fn crew(line : String) -> Crew? {
 ///|
 /// The seed an entry draft is made from: what this repo already knows about
 /// the ship, before the model fills the entry in from the source novel.
-/// `starting` is the whole of `starting-cast.md`; `references` is every line
-/// naming the pennant in other ships' entries.
+/// `starting` is the optional `starting-cast.md` blurb file; `references` is
+/// every line naming the pennant in other ships' entries.
 pub fn seed(
   pennant~ : String,
   crew~ : Array[Crew],
@@ -160,7 +160,7 @@ pub fn seed(
 }
 
 ///|
-/// The ship's section of `starting-cast.md`, without its heading.
+/// The ship's section of the `starting-cast.md` blurb, without its heading.
 fn starting_note(
   starting : String,
   pennant : String,
