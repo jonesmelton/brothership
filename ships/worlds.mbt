@@ -199,12 +199,39 @@ pub fn came_from(ship : @core.Ship) -> World? {
 }
 
 ///|
+/// The longest crossing that counts as short, in light-years. The four
+/// shortest hops between the worlds run 13.8 to 15.7 ly and the next is
+/// 20.0, so 18 divides neighbours from the rest of the map.
+pub const SHORT_CROSSING : Double = 18.0
+
+///|
+/// Whether the crossing `ship` has just flown was short, so its next must
+/// be a long one: a ship does not make two short crossings running. False
+/// before its first crossing.
+pub fn flew_short(ship : @core.Ship) -> Bool {
+  match came_from(ship) {
+    Some(from) => from.distance_to(origin(ship)) < SHORT_CROSSING
+    None => false
+  }
+}
+
+///|
 /// The worlds the ship may leave for from port: any but the one it is at
-/// and the one it came from, so it never flies straight back.
+/// and the one it came from, so it never flies straight back, and after a
+/// short crossing none short of `SHORT_CROSSING`, so it does not make two
+/// short crossings running. A map with no long world open offers them all
+/// rather than keeping the ship in port.
 pub fn choices(ship : @core.Ship) -> Array[World] {
   let here = origin(ship)
   let back = came_from(ship)
-  worlds.filter(w => w != here && Some(w) != back)
+  let open = worlds.filter(w => w != here && Some(w) != back)
+  guard flew_short(ship) else { return open }
+  let long = open.filter(w => here.distance_to(w) >= SHORT_CROSSING)
+  if long.is_empty() {
+    open
+  } else {
+    long
+  }
 }
 
 ///|

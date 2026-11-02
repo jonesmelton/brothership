@@ -54,7 +54,7 @@ test "left alone, the ship clock chooses its course and its log replays" {
   debug_inspect(
     log.filter_map(e => if e is Bound(world~, ..) { Some(world) } else { None }),
     content=(
-      #|["Occitan", "The Three Tyrants", "Tigray"]
+      #|["Occitan", "Oaxaca", "Tigray"]
     ),
   )
   // The first session is in port, loading the first stores.
@@ -149,7 +149,7 @@ test "a docked ship loads stores for its next leg, and asks in its temperament" 
     docked.collect(),
     content=(
       #|[
-      #|  ("social", 37933, Some(Hull)),
+      #|  ("social", 36631, Some(Hull)),
       #|  ("bold", 37933, Some(Drive)),
       #|  ("sly", 21555, Some(Drive)),
       #|]
@@ -174,7 +174,7 @@ test "stores are sized by the hop to the world chosen, but the first are fixed" 
 }
 
 ///|
-test "a ship may leave for any world but where it is and where it came from" {
+test "the worlds a ship may leave for: not back, and not two short crossings running" {
   let names = (ws : Array[@ships.World]) => ws.map(w => w.name)
   let ship = @ships.profiles()[1].ship(seed=1)
   // A ship entering service is at the itinerary's first world.
@@ -184,7 +184,8 @@ test "a ship may leave for any world but where it is and where it came from" {
       #|["Tigray", "Oaxaca", "Occitan", "The Three Tyrants"]
     ),
   )
-  // A ship from before ships chose: its worlds are the itinerary's.
+  // A ship from before ships chose: its worlds are the itinerary's. It came
+  // from Occitan, 13.8 ly off, so the near world is closed this time.
   let legacy = { ..ship, crossings: 2, }
   debug_inspect(
     (
@@ -193,7 +194,7 @@ test "a ship may leave for any world but where it is and where it came from" {
       names(@ships.choices(legacy)),
     ),
     content=(
-      #|("Tigray", Some("Occitan"), ["Kerala", "Oaxaca", "The Three Tyrants"])
+      #|("Tigray", Some("Occitan"), ["Kerala", "Oaxaca"])
     ),
   )
   let chosen = {
@@ -211,13 +212,50 @@ test "a ship may leave for any world but where it is and where it came from" {
 }
 
 ///|
-test "each temperament's course over many legs, never straight back" {
+test "a short crossing closes the near worlds until the ship has ranged" {
+  let names = (ws : Array[@ships.World]) => ws.map(w => w.name)
+  // Kerala to Occitan is 15.7 ly: the near worlds are closed at Occitan.
+  let short = {
+    ..@ships.profiles()[1].ship(seed=1),
+    crossings: 1,
+    from: Some("Occitan"),
+    came_from: Some("Kerala"),
+  }
+  inspect(@ships.flew_short(short), content="true")
+  debug_inspect(
+    names(@ships.choices(short)),
+    content=(
+      #|["Oaxaca", "The Three Tyrants"]
+    ),
+  )
+  // The Three Tyrants to Occitan is 26.3 ly, so the near worlds are open.
+  let long = { ..short, came_from: Some("The Three Tyrants"), }
+  inspect(@ships.flew_short(long), content="false")
+  debug_inspect(
+    names(@ships.choices(long)),
+    content=(
+      #|["Kerala", "Tigray", "Oaxaca"]
+    ),
+  )
+}
+
+///|
+test "each temperament's course over many legs, never straight back, never a short one after a short one" {
   let courses = @ships.profiles().map(p => {
     let mut ship = p.ship(seed=1)
     let flown = [@ships.origin(ship).name]
+    let mut last = -1.0
     for _ in 0..<8 {
       let to = p.temperament.course(ship)
       assert_true(@ships.choices(ship).contains(to))
+      let distance_ly = @ships.origin(ship).distance_to(to)
+      if last >= 0.0 && last < @ships.SHORT_CROSSING {
+        assert_true(
+          distance_ly >= @ships.SHORT_CROSSING,
+          msg="\{p.temperament.name()} flew \{distance_ly} after \{last}",
+        )
+      }
+      last = distance_ly
       flown.push(to.name)
       ship = {
         ..ship,
@@ -232,8 +270,8 @@ test "each temperament's course over many legs, never straight back" {
     courses,
     content=(
       #|[
-      #|  "careful: Kerala, Occitan, Tigray, The Three Tyrants, Oaxaca, Kerala, Occitan, Tigray, The Three Tyrants",
-      #|  "social: Kerala, Occitan, The Three Tyrants, Tigray, Oaxaca, Kerala, Tigray, The Three Tyrants, Occitan",
+      #|  "careful: Kerala, Occitan, Oaxaca, The Three Tyrants, Occitan, Tigray, Oaxaca, The Three Tyrants, Occitan",
+      #|  "social: Kerala, Occitan, Oaxaca, Tigray, Occitan, Oaxaca, Kerala, The Three Tyrants, Occitan",
       #|  "bold: Kerala, The Three Tyrants, Occitan, Oaxaca, Tigray, Kerala, The Three Tyrants, Occitan, Oaxaca",
       #|  "sly: Kerala, Tigray, The Three Tyrants, Occitan, Kerala, Tigray, The Three Tyrants, Occitan, Kerala",
       #|]

@@ -145,7 +145,12 @@ plane, which is why the Voyage page can draw them on a flat map, true to
 
 Each ship chooses where it goes next, in port (`Bound`), from any world but
 the one it is at and the one it came from, so it never flies straight back
-(`@ships.choices`). A minded ship's model chooses in its cruise turn, soon
+(`@ships.choices`). After a crossing under eighteen light-years it ranges:
+worlds nearer than that are not choices, so it never makes two short
+crossings running. Eighteen divides the map's neighbours, 13.8 to 15.7 ly
+apart, from the next hop at 20.0.
+
+A minded ship's model chooses in its cruise turn, soon
 after docking, from each world's distance, how soon the ship would leave
 for it, how often and how lately it has docked there, which other ships
 are in port there or bound there, and the hours aboard and hull worn at

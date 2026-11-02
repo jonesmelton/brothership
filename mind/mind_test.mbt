@@ -556,8 +556,12 @@ async test "the authored cruise prompt renders, after a crossing" {
   assert_true(user.contains("## Oaxaca, by the star δ Pavonis\n\n"), msg=user)
   assert_true(
     user.contains(
-      "`course`: one of \"Tigray\", \"Oaxaca\", \"The Three Tyrants\".",
+      "You have just flown a short crossing, under eighteen light-years",
     ),
+    msg=user,
+  )
+  assert_true(
+    user.contains("`course`: one of \"Oaxaca\", \"The Three Tyrants\"."),
     msg=user,
   )
   assert_false(user.contains("## Kerala"), msg=user)

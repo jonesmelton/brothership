@@ -56,6 +56,9 @@
   where works bring recruits.
 - **recruit**: an NPC who joins at port for works delivered and works ship
   posts only.
+- **short crossing**: a crossing under eighteen light-years. A ship does not
+  make two short crossings running: after one, the worlds nearer than that
+  are not choices (`@ships.choices`, `SHORT_CROSSING`).
 - **docking**: settling an arrived crossing into the ship that leaves port
   (`Crossing::dock`).
 - **launch**: the port stay, from docking until the stores are loaded and

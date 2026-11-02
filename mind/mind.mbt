@@ -397,6 +397,7 @@ pub fn Prompts::cruise(
       Some(w) => Json::string(w.name)
       None => Json::null()
     },
+    "short": Json::boolean(@ships.flew_short(ship)),
     "hull": Json("\{ship.hull * 100L / @core.HULL_FULL}%"),
     "launch": strings(@words.where_sentences(state)[1:].to_owned()),
     "crew": Json(port_crew(state)),
