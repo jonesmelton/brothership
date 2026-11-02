@@ -1,4 +1,4 @@
-/* Fonts, from scripts/fonts.mbtx. Choices in docs/typography.md. */
+/* Fonts, from scripts/fonts.mbtx. Choices in docs/design.md. */
 @font-face {
   font-family: "EB Garamond";
   src: url("./fonts/eb-garamond.woff2") format("woff2");
@@ -84,7 +84,7 @@
   font-display: swap;
 }
 
-/* Palette and faces. Values and contrast in docs/visual-design.md. */
+/* Palette and faces. Values and contrast in docs/design.md. */
 :root {
   color-scheme: light dark;
   --paper: #f0e7d5;
@@ -231,7 +231,7 @@ p,
   cursor: pointer;
 }
 
-/* The check-in. One column at any size; see docs/visual-design.md. */
+/* The check-in. One column at any size; see docs/design.md. */
 .checkin {
   max-width: 36rem;
   margin: 0 auto;
@@ -442,7 +442,7 @@ p,
 .ages .age .bar {
   height: 100%;
 }
-/* A bar beside the sentence it repeats; see docs/visual-design.md. */
+/* A bar beside the sentence it repeats; see docs/design.md. */
 .measure {
   flex: 1 0 100%;
   margin-block: 0.25rem 0.75rem;
@@ -456,7 +456,7 @@ p,
   color: var(--quiet);
 }
 /* The reckoning: speed over the voyage and tables of figures. The drawings
-   are hairlines and repeat the tables; see docs/visual-design.md. */
+   are hairlines and repeat the tables; see docs/design.md. */
 .chart,
 .bow,
 .map {

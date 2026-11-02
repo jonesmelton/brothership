@@ -60,7 +60,7 @@ few cents:
 moon run cmd/audition --target native -- > _build/audition-spark.md
 ```
 
-Run this on Muse Wonder before accepting a prompt change, since weaker models converge:
+Run this on Muse Wonder before accepting a prompt change, since smaller models converge:
 
 ```sh
 moon run cmd/audition --target native -- --mind meta:muse-wonder-1.0 --samples 3 > _build/audition-wonder.md
@@ -124,23 +124,9 @@ were dropped, as they would be on the server.
 
 ## the server's models
 
-The server reads the same choices from its environment, set in `fly.toml`:
-
-| variable | used for |
-| --- | --- |
-| `MIND_MODEL` | the ship's choices: asks, refits, promotions |
-| `WRITER_MODEL` | the lines players read |
-| `GATE_MODEL` | the content gate on every line |
-
-Each falls back to `MODEL`, then to `meta:muse-spark-1.3-contributor`.
-`make deploy` ships the committed `fly.toml`, so to put Wonder on the lines:
-
-1. Set `WRITER_MODEL = "meta:muse-wonder-1.0"` under `[env]` in `fly.toml`.
-2. Commit it and run `make deploy`.
-3. Check the boot log for the models in use:
-
-   ```sh
-   fly logs | grep "models:"
-   ```
-
-   It prints `models: mind meta:muse-spark-1.3-contributor, writer meta:muse-wonder-1.0, gate meta:muse-spark-1.3-contributor`.
+The deployed server's model assignments are the `fly.toml` values in the
+table in the [README](../README.md#meta-models); how they sit in the path
+from input to shown text, and the fallback when a call fails, are in
+"model latency", "story and speech" and "the ship's mind" in
+[architecture](architecture.md). The boot log prints the models in use
+(`fly logs | grep "models:"`).

@@ -3,6 +3,15 @@
 Each ship's cast entry becomes a private **portrait**, and the portrait
 becomes the ship's **faces**: the files the running game reads. The prompts are under `content/cast/prompts/`.
 
+Terms used only here: a **draft** is a generated entry, portrait or face,
+kept in a ship's `drafts/` with its generation record and regenerated
+freely; **canon** is the approved file for a stage, beside the entry,
+written only by approving a draft or by hand and never overwritten by a
+run; a **portrait** is the ship's private third-person character study,
+made from its entry, that every face is made from; a **face** is a
+first-person file made from the portrait for one reader in the running
+game (`captain.md`, `voice.md`, `voyage.md`).
+
 | file | written by | read by | players see it |
 |---|---|---|---|
 | `entry.md` | model, from the source; checked and edited by the author | portrait, faces | never |
@@ -31,36 +40,22 @@ of every face it has no canon file for.
 ## the entry stage
 
 A ship starts from its pennant alone. `run <pennant>` on a pennant with no
-directory drafts its `entry.md` from a seed the code builds out of what the
-repo already knows: the pennant's row in `pennants.tsv` (conventional name,
-epithet, and the tier its prefix names), every line naming the pennant in
-other ships' canon entries. The draft also gets all 108 pennants and
-epithets, so its relationship lines carry the right pennants. Everything
-else, the source figure's life, episodes, kinships and star, the model
-writes from its knowledge of the Water Margin.
-
-The entry prompt keeps the draft in the novel: no liveships, no setting
-translation, heroes named by conventional name outside the relationship
-lines. That is what makes the author's check possible. The entry is a
-canon file like the others, so the check is the approval step: read the
+directory drafts its `entry.md` from a seed the code builds out of what
+the repo already knows (its row in `pennants.tsv`, and every line naming
+the pennant in other ships' canon entries) plus all 108 pennants and
+epithets; everything else, the source figure's life, episodes, kinships
+and star, the model writes from its knowledge of the Water Margin. The
+entry prompt keeps the draft in the novel: no liveships, no setting
+translation. That is what makes the author's check possible: read the
 drafts, correct one against the novel, `approve <pennant> entry <sample>`,
-then edit `entry.md` by hand where the model got the book wrong. `status`
-shows the result as `edited from <n>`, and portrait and faces made from an
-earlier entry go `stale` when it changes, the same as any other stage.
-`notes.md` can be written before the first run, as before; it still goes
-to the portrait, not the entry.
+then edit `entry.md` by hand where the model got the book wrong.
 
-Drafts live in `ships/<pennant>/drafts/` as `<stage>.<n>.md`, each with a
-`.json` record of model, settings, input hashes, usage and the raw response.
-They are rewritten freely. Canon files sit beside `entry.md` and are written
-only by `approve`, or by hand. `approve` also moves the draft's record into
-`record.json`. That file is the ship's generation record, so you can tell which
-model wrote what.
-
-Replies are cached in `.cache/llm` by a hash of the whole call. Rerunning
-after a failure, or after changing one prompt, only calls the model for calls
-whose inputs changed. Faces read the canon portrait, so editing it changes
-every face's key and the next `run` drafts new faces from it.
+Drafts live in `ships/<pennant>/drafts/`, each with a `.json` record;
+`approve` moves the chosen record into `record.json`, the ship's
+generation record. Replies are cached in `.cache/llm` by a hash of the
+whole call, so rerunning after a failure, or after changing one prompt,
+only calls the model for calls whose inputs changed. Editing a canon
+entry or portrait marks what was made from it `stale` in `status`.
 
 ## where the author steers
 
@@ -82,37 +77,19 @@ In order of leverage. Nothing a player writes reaches these models (see
    approved, `status` marks the file `stale` and names the input that changed.
    Delete the canon file to have `run` draft it again.
 
-Not built yet: a judge stage to rank drafts, screening drafts against
-[content.md](content.md) with `llm/gate` (the cheap checks only catch fixed
-phrases), promoting
-interview answers into the portrait, a dry run that counts cache misses
-before spending, and world events answered by every ship's faces at runtime.
-
 ## prompts
 
-`content/cast/prompts/`, rendered with minijinja in strict mode: an undefined
-variable is an error that names the template and line.
-
-| template | renders |
-|---|---|
-| `entry.system.md` | entry task, then `setting.md` |
-| `entry.user.md` | `seed`, and `ships` (all 108 pennants and epithets) |
-| `portrait.system.md` | portrait task, then `setting.md`, then `world.md` |
-| `portrait.user.md` | `entry`, and `notes` if any |
-| `face.system.md` | the shared face preamble, `faces/<face>.md`, setting, world rules |
-| `face.user.md` | `entry` and `portrait` |
-
-The setting, world rules, portrait task, face preamble and `voice` task are kept as written, apart from the game's name, the portrait's mention of notes, and the naming rule: a ship's title is its
-pennant, Chinese conventional name and English epithet together, but
-generated ship text uses epithets only. `captain` merges the `self` and `command` tasks.
-`voyage` is the crossing-role task: it says the role is fixed for the crossing
-and that the readout is in words, and it takes the entry and portrait instead
-of earlier files.
+`content/cast/prompts/`, rendered with minijinja in strict mode: an
+undefined variable is an error that names the template and line. The
+system template for each stage composes its task with `setting.md` (and,
+for the portrait and faces, `world.md`); the user template carries the
+canon text of the stage before it. A ship's title is its pennant, Chinese
+conventional name and English epithet together, but generated ship text
+uses epithets only. The templates themselves are the
+record; `cast/cast.mbt` lists which file feeds which stage.
 
 ## model
 
-`meta:muse-wonder-1.0` for every stage, configurable per stage. The earlier
-two-ship run (2 portrait drafts and 2 drafts of each face per ship) used
-49,256 input tokens and 44,832 output tokens, reasoning included. At Muse
-Wonder list rates ($4 input, $20 output per million tokens) that is $1.09
-for two ships, about $0.55 per ship, or $59 for all 108.
+Every stage runs on `meta:muse-wonder-1.0`, configurable per stage in
+`cast.json`. List rates are in `llm/llm.mbt`; reply caching is under
+[the loop](#the-loop).

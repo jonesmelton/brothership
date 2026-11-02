@@ -1,5 +1,26 @@
 # architecture
 
+## the three claims
+
+1. **One transition function, shared by client and server.** `core` owns
+   `State::apply`; the client predicts with it and the server validates and
+   commits with it. A proposal is applied locally at once and sent on its
+   own, and each receipt carries the authoritative snapshot, so predicted
+   and confirmed state cannot diverge in kind, only in timing.
+2. **Replay never calls a model.** Model output enters the game only as
+   events already in the log (`Asked`, `Spoke`, `Bound`, and the rest), so
+   reopening the store replays the same voyage with no model calls. Every
+   model-driven choice has a scripted temperament as fallback, which is
+   also the whole policy in the simulator and the tests.
+3. **An `Int64`-only core, with proved arithmetic.** Every quantity in
+   `core` is `Int64`, fixed-point where fractional, so the js client and
+   the native server compute bit-identical results; floats live only in
+   rendering. The arithmetic kernels sit in `core/math`, a
+   `proof_enabled` package checked by `moon prove`.
+
+The package table and the sections after it are the reference form of those
+three claims.
+
 ## packages
 
 | Package       | Targets   | Role                                                                  |
@@ -161,18 +182,9 @@ transaction. A snapshot's `seq` is the log position of the ship's latest
 row, so it rises but skips. Each ship's in-memory snapshot is its rows
 replayed through `State::apply` and is rebuilt on open. So is its story:
 the happenings `@core.happenings` derives from each row and the states
-either side of it, kept in memory and never written. Logs from before
-commissioning are kept in `event_legacy` and not replayed, and logs from
-before banked craft work are kept in `event_before_banking`, because banking
-changes when refits land and so when ships arrive. Logs from before
-officers stayed aboard through port are kept in `event_before_officers`,
-because officers taking their posts at departure changes arrivals too.
-Logs from before dust replaced salvage are kept in `event_before_dust`, and
-logs from before the coast eroded the hull in `event_before_erosion`, whose
-`Commissioned` ships also lack the `cruise` field and no longer decode.
-Logs from before the launch are kept in `event_before_launch`: their
-`Docked` carries no stores and their departures come before any stores
-would have loaded.
+either side of it, kept in memory and never written. Logs that predate a change to when events land are kept aside in
+`event_before_*` tables and not replayed, since replaying them would give
+different arrivals; the current `event` table is the only log replayed.
 Sessions live in a `session` table beside the log: a random token and the
 officer it names. They are not events, do not replay, and are restored with
 the database. Hails live in a `hail` table beside it too, so their text

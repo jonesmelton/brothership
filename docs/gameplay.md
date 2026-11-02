@@ -1,7 +1,6 @@
 # gameplay
 
-The player's loop, and the rules core it implies. Numbers here are starting
-points for the harness to tune, not targets; the targets are in each section.
+How the game plays: the player loop, posts, crossings, crafts, the ship, demands and port. Tuning tables and survey results are in [simulator](simulator.md); the rules core that makes the crossing computable is under [rules core](#rules-core).
 
 ## the player
 
@@ -46,7 +45,7 @@ Nothing the player built compounded.
 Posts move the interaction into the economy, which always runs. Interaction
 is as frequent as the crossing's phases and the crew's own choices, not as
 frequent as events. Events still happen, but as demands on the same hours
-(see [events](#events)).
+(see [demands](#demands)).
 
 ## a check-in
 
@@ -66,10 +65,8 @@ works finished. Then they have up to six choices, each on its own timescale:
 Demands set deadlines on posts between check-ins, and docking carries each
 crossing into the next.
 
-In the simulator a player checking in every 3 hours, give or take 2, came
-back to something new on about 80% of returns. About 90% of check-ins
-offered two or more choices that no other choice beat on arrival, hull,
-works, regard and refits together (`moon run cmd/survey --target native`).
+How often a check-in offers a real choice is measured, not asserted: see
+"check-ins" in [simulator](simulator.md).
 
 ## the crossing
 
@@ -83,21 +80,10 @@ Proper time aboard is wall-clock time. A crossing has three phases:
 
 So each phase change is a reason to check in and change post.
 
-Targets: a typical crossing takes 6 to 16 hours, the longest about 30. Staffing
-should change a crossing's length by at most 2.5×. The first session happens in
-port, because no crossing is shorter than its burn.
-
-At 40,000 g, these hold. Crossing hours by drive setting:
-
-| | setting 0.35 | 0.65 | 1.0 |
-|---|---|---|---|
-| 5 ly, cap 24k | 13.7h | 8.2h | 6.0h |
-| 20 ly, cap 24k | 19.2h | 13.7h | 11.5h |
-| 60 ly, cap 50k | 23.3h | 17.4h | 15.0h |
-
-Staffing matters about 2.3× on short hops and 1.4× on long ones, where the
-coast dominates. Time at home is about one year per light-year whatever the
-crew do.
+A typical crossing takes 6 to 16 hours. Staffing changes its length by at
+most about 2.5×, and time at home is about one year per light-year whatever
+the crew do. The measured tables are under "crossings" in
+[simulator](simulator.md).
 
 The drive setting comes from staffing, with diminishing returns so that one
 crew member matters on a small ship:
@@ -126,16 +112,8 @@ and the approach that follows burns at the lower cap.
 The ship chooses its cruise in port for the next crossing (`Cruising`), from
 `@ships.cruises`: its full γ cap, four fifths or three fifths. A slower
 cruise arrives later, erodes less, and gives crafters more hours before
-port. Time at home does not change. A solo player with two NPCs on 20 ly
-(`moon run cmd/survey --target native cruises`):
-
-| ship | cruise | hours, median | lowest hull | works, tenths |
-|---|---|---|---|---|
-| a plain ship | full | 12.0 | 62% | 29.7 |
-| a plain ship | 4/5 | 13.6 | 65% | 39.4 |
-| a plain ship | 3/5 | 16.4 | 71% | 55.2 |
-| HS-212 The Twin-Tailed Scorpion | full | 10.9 | 50% | 14.0 |
-| HS-212 The Twin-Tailed Scorpion | 3/5 | 14.8 | 53% | 46.1 |
+port. Time at home does not change. Measured cruise outcomes are under
+"cruises" in [simulator](simulator.md).
 
 A minded ship chooses by model (see "the ship's mind" in
 [architecture](architecture.md)); otherwise, and when the model fails, by
@@ -152,8 +130,7 @@ the band's edge and rises again only 5% above it (`BAND_MARGIN`). Without
 the margin a ship mending at an edge dropped a band, wore less at the lower
 cap, climbed back over the edge, and repeated every tick.
 
-The map's hops run 8 to 30 ly. Below 8 ly, a ship with coils fitted spends
-more of the crossing in the burn, and staffing stretches it past 2.5×.
+The map's hops run 8 to 30 ly, so every leg holds those targets.
 
 ## the worlds
 
@@ -161,18 +138,10 @@ Five settled worlds, each around a real star 11 to 24 ly from the Sun,
 placed at the star's J2000 position (`ships/worlds.mbt`). Four are named
 for places; The Three Tyrants is named for the three stars of Gliese 667.
 
-| world | star | | Kerala | Tigray | Oaxaca | Occitan | Three Tyrants |
-|---|---|---|---|---|---|---|---|
-| Kerala | τ Ceti | | | 24.2 | 20.0 | 15.7 | 29.6 |
-| Tigray | 70 Ophiuchi | | 24.2 | | 21.7 | 13.8 | 15.0 |
-| Oaxaca | δ Pavonis | | 20.0 | 21.7 | | 25.4 | 15.2 |
-| Occitan | 61 Cygni | | 15.7 | 13.8 | 25.4 | | 26.3 |
-| The Three Tyrants | Gliese 667 | | 29.6 | 15.0 | 15.2 | 26.3 | |
-
-Every pair is 13.8 to 29.6 ly apart, inside the 8 to 30 ly a hop may be, so
-any leg holds the crossing's targets. The five lie within 0.8 ly of one
+Every pair is 13.8 to 29.6 ly apart. The five lie within 0.8 ly of one
 plane, which is why the Voyage page can draw them on a flat map, true to
-0.1 ly; the Sun is 7.6 ly off it.
+0.1 ly; the Sun is 7.6 ly off it. The full distance table is under
+"worlds" in [simulator](simulator.md).
 
 Each ship chooses where it goes next, in port (`Bound`), from any world but
 the one it is at and the one it came from, so it never flies straight back
@@ -193,11 +162,7 @@ and loads its first ten minutes of stores wherever it goes.
 
 The log records each world chosen by name, and the ship carries where it
 is, where it is bound and where it came from (`Ship.from`, `bound`,
-`came_from`). Before ships chose, they flew the itinerary Kerala, Occitan,
-Tigray, Kerala, Oaxaca, Tigray, Occitan, Oaxaca, The Three Tyrants, Tigray,
-Occitan, The Three Tyrants and round again, and their logs name no worlds:
-`None` in those fields resolves to the itinerary's leg after `crossings`
-dockings (`@ships.leg`).
+`came_from`).
 
 The worlds share one rest frame, so the years a crossing takes pass alike
 at origin and destination, and come within a thousandth of a year of the
@@ -211,11 +176,10 @@ change it at any time. Smoothly taking in new players matters more than
 guarding against switching craft to optimize. Crafters of the same craft at
 work together each make a quarter more for every other one, up to double.
 
-| craft | makes | benefits | built |
-|---|---|---|---|
-| engineer | refits | the whole ship, for good | yes |
-| artist | works of 6 crew-hours, delivered at port | the maker's record; recruits for the ship | yes |
-| navigator | charts that add reachable destinations | the whole ship's choices | not yet |
+| craft | makes | benefits |
+|---|---|---|
+| engineer | refits | the whole ship, for good |
+| artist | works of 6 crew-hours, delivered at port | the maker's record; recruits for the ship |
 
 Hours at the craft post accrue to a personal bank, counted in the same work
 units as refits and works. Nothing is built while the player is away. On
@@ -236,8 +200,8 @@ Their banks are made at 100% when the ship docks, so the refit is fitted for
 the next crossing.
 
 Each payoff belongs to a different person, so crew depend on each other.
-Works do not yet take inputs gathered in port: core counts crew-hours. The
-model will write a work's title and description and decides nothing.
+Core counts crew-hours for a work; the model will write a work's title and
+description and decides nothing.
 
 Engineers build one refit at a time. The ship proposes which, by
 temperament, and engineers can choose another. Each refit has three levels,
@@ -254,11 +218,8 @@ The first three land mid-crossing and change rates at once. Coils change the
 plan, which is fixed when the ship leaves port, so they pay off only on later
 crossings and most on long hauls. They raise the erosion of a coast at full
 cruise by the same fifth, so a ship with coils that will not mend coasts
-slower and keeps less of their gain. On the Flea, which proposes coils first, a
-solo engineer's six-leg voyage took about 79 hours aboard against 96 for a
-solo artist, both at the Flea's three-fifths cruise, not counting port.
-On the plain ship, which proposes baffles and plating, engineers bought hull
-and no time.
+slower and keeps less of their gain. Measured engineer and artist voyages
+are under "crafts and refits" in [simulator](simulator.md).
 
 ## watches
 
@@ -312,10 +273,8 @@ The ship is the language model. It:
   commander 1, lieutenant commander 2, lieutenant 3, lieutenant junior grade
   4 and ensign uncapped, counted among the officers aboard. The caps are
   fixed for now, whatever the officer count. Nobody is demoted, so a ship
-  that loses junior officers can stay topheavy. Rank grants nothing yet: no
-  authority, and no longer any limit on a watch. Add authority, such as
-  setting the drive within the ship's tolerance, when a good candidate turns
-  up.
+  that loses junior officers can stay topheavy. Rank grants no authority
+  and no longer any limit on a watch.
   Regard accrues for each quarter-hand-tick on a useful post: the drive
   while it fires, the hull while it is short of full or a breach is open,
   and any craft. It is weighted by the ship's values, doubled on the post
@@ -352,8 +311,8 @@ and grows with the drive rather than with the clock.
 
 A demand in a firing phase ends with the phase, so driving harder leaves less
 time to meet it. Posts held while away count, so nothing depends on being
-present at the right moment. In the simulator, crews missed 44 to 56% of
-demands, fewest on the Scorpion and most on the Flea.
+present at the right moment. Miss rates are under "demands" in
+[simulator](simulator.md).
 
 The coast's demand is a hazard, not something found on the way, because at
 a γ of tens of thousands the ship can match velocity with nothing. A
@@ -370,10 +329,7 @@ Arrival docks the crossing into the ship that leaves (`Crossing::dock`):
   recruits;
 - refits stay fitted, and coils change the next crossing's plan;
 - the ship chooses its next world and tells the crew; the crew have no
-  say yet.
-
-Not built yet: works raising their makers' standing at a world, and
-gathering inputs for the next works.
+  say in the choice.
 
 Then the **launch**. The ship departs once its **stores** for the next leg
 are loaded: two crew-hours for every 20 light-years. Officers stay on their
@@ -396,16 +352,8 @@ sly ships for stores, careful ones for the yard while the hull is short,
 social ones for the emptier post. A newly commissioned ship loads ten
 minutes of stores before its first departure.
 
-At 20 ly from half a hull, on every ship (`cmd/survey launches`):
-
-| crew in port | minutes in port | hull at departure |
-|---|---|---|
-| nobody | 120 | 75% |
-| 1 on the drive | 60 | 63% |
-| 1 on the hull | 120 | 90 to 98% |
-| 4 on the drive | 24 | 55% |
-| 3 on the drive, 1 on the hull | 30 | 60 to 62% |
-| 2 on the drive, 2 on the hull | 40 | 68 to 74% |
+Measured port stays by crew in port are under "port" in
+[simulator](simulator.md).
 
 The ship's launch line reads the forecast, which moves at once when a post
 changes: "Stores load in about 45 minutes, and the ship departs then. The
@@ -417,20 +365,8 @@ Then the ship departs, and the new world gives everything a new meaning.
 
 Which ship a player crews changes the crossing. A ship's kinematics and
 fittings come from its character, and its values decide which work it
-notices. Starting profiles, from `ships/profiles.mbt`:
-
-| ship | accel, g | γ cap | drive hands | wear | repair | values: drive, hull, craft | temperament |
-|---|---|---|---|---|---|---|---|
-| a plain ship | 40,000 | 24,000 | 4 | 30,000 | 28,000 | 2, 2, 1 | careful |
-| EF-147 The Tigress | 38,000 | 24,000 | 5 | 24,000 | 32,000 | 1, 3, 2 | social |
-| HS-212 The Twin-Tailed Scorpion | 46,000 | 26,000 | 3 | 42,000 | 24,000 | 3, 1, 1 | bold |
-| EF-287 The Flea on the Drum | 42,000 | 20,000 | 3 | 34,000 | 20,000 | 1, 1, 3 | sly |
-
-The same solo crew on a 20 ly crossing at full cruise arrived in 11.0 hours
-on the Scorpion with the hull down to 50%, and in 13.0 hours on the Tigress
-with the hull at 80%. The Flea made the most works
-and twice the regard for crafters: its crafters reached rank 3 within six
-crossings while its drivers stayed at rank 1.
+notices. The starting profiles and the same crew flown on each ship are
+under "starting profiles" in [simulator](simulator.md).
 
 ## rules core
 

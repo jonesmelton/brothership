@@ -59,4 +59,3 @@ themselves use epithets only, in any language. `moon run
 scripts/pennants.mbtx` rebuilds the file, keeps every pennant already in it,
 and warns about directories that are not in it.
 
-Asking a ship a question isn't built yet.

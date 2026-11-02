@@ -33,6 +33,4 @@ Replies are cached in `.cache/llm` by a hash of the whole call, so editing
 is free. To see why the model decided as it did, read `reply.reasoning` in
 the cache entry for that call.
 
-Not built yet: the cheap checks (length, conventional names from
-`pennants.tsv`), the one rewrite after a block, and logging verdicts to the event
-log. The server's speakers (`speech`) gate every line they write.
+The server's speakers (`speech`) gate every line they write.

@@ -11,14 +11,6 @@
 - **title**: a ship's full identifier, pennant plus conventional name plus
   epithet (`EF-147 顧大嫂 The Tigress`). What a ship is formally called;
   shorter references use the name that matches the language of the text.
-- **portrait**: a ship's private third-person character study, made from its
-  cast entry. Every face is made from it.
-- **face**: a first-person file made from the portrait for one reader in the
-  running game: `captain.md`, `voice.md`, `voyage.md`.
-- **draft**: a generated portrait or face, kept in a ship's `drafts/` with
-  its generation record. Regenerated freely.
-- **canon**: the approved file for a stage, beside the cast entry. Written by
-  approving a draft, or by hand; never overwritten by a run.
 - **gate**: the check that model text passes before a player sees it. A
   classifier model reads the text against `content/gate/policy.md` and
   returns a verdict, clean or violation, with the quote that decided it.
@@ -27,9 +19,8 @@
   crew members but not officers.
 - **service number**: an officer's public crew id, minted once as `OF-` and
   seven base32 characters (`OF-7K2M9QX`) and stable for the life of the
-  session cookie. It is how the ship knows the officer. Display names are
-  not shipped yet, so it is also the name other officers see in the roster.
-  It is never the session token.
+  session cookie. It is how the ship knows the officer, and the name other
+  officers see in the roster. It is never the session token.
 - **session**: a random token in an HttpOnly cookie, mapped to an officer.
   Not an account: clearing the cookie starts a new officer.
 - **handle**: the server-issued identifier a ship's model uses for one
@@ -38,8 +29,7 @@
   the order hands joined (`@speech.handles`); the model is told never to
   say it aloud.
 - **display name**: an officer's name shown to other players. Interface
-  text only; a ship's model never sees it, and there is no interface to
-  change one yet.
+  text only; a ship's model never sees it.
 - **post**: a crew member's current assignment: ship work (drive, hull) or
   their craft. Held while away. See [gameplay](gameplay.md).
 - **craft**: what a crew member's hours on the craft post make: refits for

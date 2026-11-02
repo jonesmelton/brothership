@@ -1,15 +1,12 @@
 # design
 
-How the game looks and is set in type. `public/styles.css` implements this, and `scripts/fonts.mbtx` fetches the faces and subsets them into `public/fonts`. The rules every screen obeys are in [accessibility](accessibility.md).
-
-
-How the game looks, concretely enough to build from. Fonts and their features are in [typography](#typography); the rules every screen obeys are in [accessibility](accessibility.md). This doc covers the rest: palette, type scale, layout and components. `public/styles.css` implements it.
+How the game looks and is set in type: palette, type scale, layout and components, and how the hanzi are set. `public/styles.css` implements it, and `scripts/fonts.mbtx` fetches the faces and subsets them into `public/fonts`; the stylesheet and that script are the record for font features and CSS values. The rules every screen obeys are in [accessibility](accessibility.md).
 
 ## direction
 
-The screen is a ship's papers: a registry entry and a log, typeset. The design is done with type, rules and space. It has no panels, glows, gradients, shadows, textures, rounded cards, icons or animated readouts, because those are the science-fiction interface trope the typography already refuses. The only graphics are the voyage track, the progress bars and the reckoning's two drawings, and each repeats a sentence or a table (see [the voyage track](#the-voyage-track), [bars](#bars) and [reckoning](#reckoning)). The reckoning's figures change in place every second, set as an almanac's table, not a readout: no counter rolls, nothing glows, and nothing moves but the digits.
+The screen is a ship's papers: a registry entry and a log, typeset. The design is done with type, rules and space. It has no panels, glows, gradients, shadows, textures, rounded cards, icons or animated readouts, because those are the science-fiction interface trope the type already refuses. The only graphics are the voyage track, the progress bars and the reckoning's two drawings, and each repeats a sentence or a table (see [the voyage track](#the-voyage-track), [bars](#bars) and [reckoning](#reckoning)). The reckoning's figures change in place every second, set as an almanac's table, not a readout: no counter rolls, nothing glows, and nothing moves but the digits.
 
-Two voices, as in [typography](#typography): the book (EB Garamond for names and headings, Newsreader for the ship's own words at text size) and the system (Fira Sans for telemetry sentences, labels, controls and figures).
+Two voices in type: the book (EB Garamond for names and headings, Newsreader for the ship's own words at text size) and the system (Fira Sans for telemetry sentences, labels, controls and figures).
 
 ## palette
 
@@ -66,7 +63,7 @@ Sizes are in `rem`, so the whole page follows the system text size. The root sta
 | label, legend | Fira Sans 500 | 1rem | `all-small-caps`, tracked 0.06em, `--quiet` |
 | voyage track label | Fira Sans 500 | 0.875rem | `all-small-caps`, tracked 0.06em, `--quiet`; `aria-hidden` and repeats a sentence |
 | control | Fira Sans 400 | 1rem | pressed 600; `text-autospace: normal` on ship titles |
-| conventional name in a control | Noto Serif TC 500 | 0.95em | Medium at text sizes, per [typography](#typography) |
+| conventional name in a control | Noto Serif TC 500 | 0.95em | Medium at text sizes |
 | figures in a table | Fira Sans 400 | 0.9375rem | `tabular-nums lining-nums slashed-zero` |
 
 Small caps are always `all-small-caps` from the font (`smcp`, `c2sc`), with `font-synthesis: none`, and only on EB Garamond and Fira Sans. Newsreader has no small caps, so the serif text never asks for them. Labels stay at 1rem because small caps already read about a third smaller.
@@ -205,111 +202,31 @@ The Ship page's watch bill, after "The ship". One item per officer aboard: the s
 
 ## typography
 
+Four faces, all open-licensed: EB Garamond for display (masthead epithet,
+headings, small caps), Newsreader for the ship's own lines at about 19px
+with `font-optical-sizing: auto`, Fira Sans for labels, controls, table
+text and every number that must line up, and Noto Serif CJK TC for the
+hanzi. EB Garamond and Newsreader carry tabular lining figures by default;
+Fira Sans gives the full figure set and a slashed zero. Which face does
+what is in the type scale above; the exact feature settings and stacks are
+in `public/styles.css`, and `scripts/fonts.mbtx` subsets the faces into
+`public/fonts`.
 
-EB Garamond for display, Newsreader for the ship's running text, Fira Sans for the interface and data, and Noto Serif CJK TC for the hanzi. Everything here is open-licensed, and the OpenType features were checked in the font files.
+Two voices: a book voice for the novel the game comes from (EB Garamond,
+Newsreader), and a system voice for a ship that runs on telemetry (Fira
+Sans). Do not use Eurostile, Microgramma or Bank Gothic; that is the
+science-fiction trope the pairing refuses. `font-synthesis: none` keeps a
+missing small-cap or italic from being faked, and small caps are
+`all-small-caps` (`smcp`, `c2sc`) only on EB Garamond and Fira Sans, which
+have them; Newsreader has neither, so serif text never asks for them.
 
-## Latin
+Night watch (`prefers-color-scheme: dark`) raises the serif weights to
+450, since light type on a dark ground reads thinner; the sans keeps its
+400, 500 and 600 design weights in both schemes.
 
-The game has two voices: a book voice for the novel it comes from, and a system voice for a ship that runs on telemetry. Pair them. A single family can do both, but the pairing below gives the anachronism more room and avoids the wide geometric sans that science-fiction interfaces default to. Do not use Eurostile, Microgramma or Bank Gothic; that is the trope.
+### Legible type
 
-### EB Garamond + Newsreader + Fira Sans
-
-| role | font | what it gives you |
-| --- | --- | --- |
-| display | EB Garamond | true small caps in roman and italic; tabular lining by default; oldstyle in tabular and proportional sets; wght 400 to 800 |
-| running text | Newsreader | optical size axis (opsz 6 to 72) and wght 200 to 800 in roman and italic; tabular lining by default; `pnum` for proportional lining; no oldstyle, no small caps |
-| UI, labels and data | Fira Sans | true small caps in roman and italic; all four figure sets; slashed zero |
-
-EB Garamond is a Renaissance book face; Fira Sans is a humanist technical sans from the 2010s. They share a humanist skeleton, so the pairing reads as a decision rather than a collision. Use EB Garamond for the masthead epithet and the headings, where its small caps are used. The ship's own lines are running text at about 19px, so they take Newsreader, whose optical size axis is set to the size of the text by `font-optical-sizing: auto`. Use Fira Sans where the ship speaks as a system: labels, buttons, table text, warnings, and every number that must line up. Tabular lining figures in Fira Sans carry the crossing readouts; a monospace is unnecessary until code or fixed-column editing demands one.
-
-Figure and small-caps behaviour, checked in the Google Fonts builds:
-
-| family | default | tabular lining | tabular oldstyle | proportional oldstyle | small caps |
-| --- | --- | --- | --- | --- | --- |
-| EB Garamond | tabular lining | default or `tnum` | `onum` | `onum` + `pnum` | `smcp`, `c2sc` in roman and italic |
-| Newsreader | tabular lining | default or `tnum` | none | none | none |
-| Fira Sans | proportional lining | `tnum` | `onum` + `tnum` | `onum` | `smcp`, `c2sc` in roman and italic |
-
-The table is the reason for the pairing. EB Garamond's default figures are already tabular, so data can use it without a switch; Newsreader's are too, and `pnum` gives it proportional lining for prose. Fira Sans gives you the full set for labels and prose in the UI. Fira Sans's tabular oldstyle is rare and useful for a table that should feel typeset rather than computed, but use lining figures for telemetry: oldstyle figures in a column of changing numbers make the digits harder to scan.
-
-### CSS
-
-The stack below is EB Garamond + Newsreader + Fira Sans. Change the Latin families together if you pick the Source superfamily; the feature settings stay the same.
-
-```css
-:root {
-  --font-display: "EB Garamond", Georgia, serif;
-  --font-text: "Newsreader", "EB Garamond", Georgia, serif;
-  --font-ui: "Fira Sans", system-ui, sans-serif;
-  --font-han: "Noto Serif CJK TC", "Noto Serif TC", "Songti TC", "PMingLiU", serif;
-  --weight-display: 400;
-  --weight-text: 400;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --weight-display: 450;
-    --weight-text: 450;
-  }
-}
-
-body {
-  font-family: var(--font-ui);
-  font-synthesis: none;
-}
-
-p,
-.log li {
-  text-wrap: pretty;
-}
-
-.masthead h1 {
-  font-family: var(--font-display);
-  font-weight: var(--weight-display);
-  text-autospace: normal;
-}
-
-.prose {
-  font-family: var(--font-text);
-  font-optical-sizing: auto;
-  font-weight: var(--weight-text);
-  font-variant-numeric: proportional-nums;
-}
-
-.data {
-  font-family: var(--font-ui);
-  font-variant-numeric: tabular-nums lining-nums slashed-zero;
-}
-
-.label {
-  font-family: var(--font-ui);
-  font-variant-caps: all-small-caps;
-  letter-spacing: 0.04em;
-}
-
-.smallcaps {
-  font-family: var(--font-display);
-  font-variant-caps: all-small-caps;
-}
-
-.han {
-  font-family: var(--font-han);
-  font-size: 0.95em;
-  font-style: normal;
-  font-synthesis: none;
-  letter-spacing: 0;
-  line-height: 1.5;
-  white-space: nowrap;
-}
-```
-
-`font-synthesis: none` is what keeps a missing small-cap or italic from being faked. `font-variant-caps: all-small-caps` uses `smcp` and `c2sc`; with synthesis off, a font that lacks the feature will not get a synthetic one. Newsreader has neither feature, so small caps on Newsreader text render as typed. Check `smcp` and `c2sc` in the build you ship.
-
-Night watch (`prefers-color-scheme: dark`) raises the serif weights to 450. Light type on a dark ground looks thinner, and both EB Garamond and Newsreader have the weight range to take 450. Fira Sans ships at 400, 500 and 600 only, so the sans keeps its design weights. The page heading uses `--weight-display` too.
-
-## Legible type
-
-The Type setting on the Ship page replaces both Latin faces with Atkinson Hyperlegible Next (Braille Institute, OFL, variable weight 200 to 800, roman and italic), subset to the same Latin range by `scripts/fonts.mbtx`. The stylesheet sets `data-face="legible"` on the root, which redefines `--font-display` and `--font-ui`. `--font-han` is untouched, so hanzi keep Noto Serif CJK TC. The font has `tnum`, `pnum`, `case` and `frac` but no `smcp`, `c2sc`, `onum`, `lnum` or `zero`, so small-caps labels display in lowercase and figures are lining without a slashed zero. The two files, 40 KB and 44 KB, are not preloaded and download only when the choice is made.
+The Type setting in Settings replaces both Latin faces with Atkinson Hyperlegible Next (Braille Institute, OFL, variable weight 200 to 800, roman and italic), subset to the same Latin range by `scripts/fonts.mbtx`. The stylesheet sets `data-face="legible"` on the root, which redefines `--font-display` and `--font-ui`. `--font-han` is untouched, so hanzi keep Noto Serif CJK TC. The font has `tnum`, `pnum`, `case` and `frac` but no `smcp`, `c2sc`, `onum`, `lnum` or `zero`, so small-caps labels display in lowercase and figures are lining without a slashed zero. The two files, 40 KB and 44 KB, are not preloaded and download only when the choice is made.
 
 ## Chinese
 
