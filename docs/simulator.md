@@ -1,4 +1,4 @@
-# crossing simulator
+# simulator
 
 A browser page that flies one crossing many times under different crews and
 shows where the results land against the design's targets. It runs the game's
@@ -85,59 +85,3 @@ Add an entry to `scenarios()` in `sim/scenarios.mbt`. A scenario names a ship
 profile from `profiles()` in `ships/profiles.mbt`. An `Actor` is a name, a policy,
 a craft, a cadence and a joining time; `Reactive` is an NPC that acts whenever a
 rate changes, `Every` is a player that checks in on an interval with jitter.
-
-## what it found so far
-
-Before watches, orders, demands and refits, at 40,000 g and 24,000 γ cap:
-
-- spread stays under 2.5× from about 4.5 ly out; a 2 ly hop reaches 2.74×, and
-  at 300 ly staffing changes nothing (1.07×). The spread is a short-hop
-  phenomenon, and the floor setting of 0.35 is what sets its size;
-- only 20 ly falls wholly inside 6–16 hours. A 60 ly crossing at full burn is
-  26 hours, so either the target or the map has to move;
-- a full crew saturates the drive: with `drive_needed = 4`, eight crew on the
-  drive is past the point of any further gain, and a quarter of player
-  check-ins in the mixed scenario cannot move arrival at all;
-- the hull barely registers in a mixed scenario: crew repair outruns wear, and
-  the lowest hull reached is 54%. The worn-hull scenario is what makes it
-  matter.
-
-With them, from `cmd/survey` at 20 seeds:
-
-- every scenario on every ship, and every policy checking in every 10
-  minutes, arrives inside its envelope (`sim/sim_test.mbt`);
-- with four NPCs on the drive, a solo player's choices moved arrival by at most 4%.
-  The solo scenario now has two NPCs, and recruits fill the drive as works
-  are delivered, which is the relief the research calls for;
-- a single player moves a 20 ly crossing by about 7% (11.6 to 12.3 hours),
-  because the coast, where crew make no difference, is most of it. Their
-  choices add up over a voyage: six legs took 60.7 to 68.4 hours on the Flea
-  depending on the player's policy and craft (before the launch; see below);
-- about half of check-ins cannot move arrival by five minutes, once standing
-  orders take care of turnover, but about 90% still offer a real trade
-  between arrival, hull, works, regard and refits;
-- coils push the spread past 2.5× on hops under 8 ly, so the map's shortest
-  hop is 8 ly;
-- two feedback loops made a crossing take thousands of steps until they were
-  fixed: the hull band rising and falling at an edge, and a social ship
-  chasing recruits who follow its asks. The voyage test now fails any leg of
-  200 instants or more.
-
-With the launch (`cmd/survey launches` and `voyages`, 2026-10-30):
-
-- at 20 ly an idle ship waits 120 minutes and the dockhands mend 25% of the
-  hull; one officer on the drive halves the wait; four on the drive leave in
-  24 minutes with 5% from the yard, three and one in 30, two and two in 40.
-  The figures are the same on every ship except the yard's, which follows
-  each ship's repair rate: one officer on the hull from half a hull leaves
-  at 90% on the Flea and 98% on the Tigress;
-- in the solo voyages, with recruits following the port ask, stays ran 5 to
-  90 minutes. The Flea, sly and asking for stores, with six recruits, left
-  its fifth port in 5 minutes; the plain careful ship, asking for the yard,
-  took 60 to 90 minutes and left at full hull;
-- six-leg careers took 77 to 96 hours aboard on the Flea, about an hour more
-  than with the flat quarter-hull repair, and the lowest hull fell by up to
-  7 points, because a ship asking for stores leaves with less than a quarter
-  mended;
-- single crossings are unchanged, so the check-in figures in
-  `docs/gameplay.md` still hold.

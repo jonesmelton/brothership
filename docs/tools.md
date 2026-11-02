@@ -53,15 +53,14 @@ sample's private reason, and its line. The line follows the first sample's
 ask. A line the gate blocks, the model passes on, or that repeats is shown
 in parentheses with the reason. The last line is the estimated spend.
 
-All five scenarios on the contributor tier take about 10 minutes and cost a
+All eight scenarios on the contributor tier take about 10 minutes and cost a
 few cents:
 
 ```sh
 moon run cmd/audition --target native -- > _build/audition-spark.md
 ```
 
-The same on Muse Wonder cost $0.92 with 3 samples, on 2026-10-28. Run this
-before accepting a prompt change, since weaker models converge:
+Run this on Muse Wonder before accepting a prompt change, since weaker models converge:
 
 ```sh
 moon run cmd/audition --target native -- --mind meta:muse-wonder-1.0 --samples 3 > _build/audition-wonder.md

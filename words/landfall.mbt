@@ -1,6 +1,6 @@
 // The account of a docking, built from the story alone, so replay never
 // calls a model. The roll call is pulled from this page, never pushed as an
-// announcement. See docs/visual-design.md.
+// announcement. See docs/design.md.
 
 ///|
 /// Time at the worlds, coarse once it is over: days under a tenth of a

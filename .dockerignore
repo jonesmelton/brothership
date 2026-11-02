@@ -6,7 +6,6 @@
 _build
 _harness
 dist
-research
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm

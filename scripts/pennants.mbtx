@@ -106,12 +106,11 @@ fn read_heroes(path : String) -> Array[Hero] raise {
   .iter()
   .map(line => {
     let cells = line.split("\t").map(c => c.to_owned()).to_array()
-    // Shapiro's list is a forum transcription; research/water-margin/README.md
-    // records these typos.
+    // Shapiro's list is a forum transcription, with these typos in it.
     let epithet = match cells[epithet] {
       "The Tigres" => "The Tigress"
       "The Black-Eyed tiger" => "The Black-Eyed Tiger"
-      // starting-cast.md chose "The Prodigal" for 浪子燕青: the wanderer
+      // "The Prodigal" for 浪子燕青, not Shapiro's "The Prodigy": the wanderer
       // who spends freely and leaves, not Shapiro's "The Prodigy".
       "The Prodigy" => "The Prodigal"
       s => s
@@ -224,7 +223,7 @@ fn run() -> Unit raise {
     (args[1], args[2], args[3])
   } else {
     (
-      "research/water-margin/heroes.tsv", "content/cast/pennants.tsv", "content/cast/ships",
+      "content/cast/heroes.tsv", "content/cast/pennants.tsv", "content/cast/ships",
     )
   }
   let heroes = read_heroes(heroes_path)

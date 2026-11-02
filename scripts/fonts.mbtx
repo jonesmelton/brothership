@@ -1,6 +1,6 @@
 ///|
 // Fetches the game's fonts and subsets them into public/fonts as WOFF2.
-// See docs/typography.md for the choices and docs/visual-design.md for use.
+// Faces and features are in docs/design.md.
 // Atkinson Hyperlegible Next is the player's alternative, loaded only when chosen.
 //
 //   moon run scripts/fonts.mbtx
@@ -9,7 +9,7 @@
 // Latin Extended-A, the pinyin tone vowels and general punctuation, with the
 // figure and small-cap features the stylesheet asks for. The hanzi face keeps
 // only the characters of the 108 conventional names and star names in
-// research/water-margin/heroes.tsv, so add a column here if the game shows
+// content/cast/heroes.tsv, so add a column here if the game shows
 // more hanzi, and the rank insignia, which the Latin sources lack. Needs curl
 // and pyftsubset (fonttools with brotli).
 import {
@@ -25,7 +25,7 @@ const CACHE : String = ".cache/fonts"
 const OUT : String = "public/fonts"
 
 ///|
-const HEROES : String = "research/water-margin/heroes.tsv"
+const HEROES : String = "content/cast/heroes.tsv"
 
 ///|
 const GOOGLE : String = "https://github.com/google/fonts/raw/main/ofl"

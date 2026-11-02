@@ -1,6 +1,6 @@
 // The ship's watch bill: the officers aboard, their rank, where they stand,
 // and the last thing each did. Read as sentences first; the layout only
-// puts them beside a name. See docs/visual-design.md.
+// puts them beside a name. See docs/design.md.
 
 ///|
 /// One officer in the watch bill. Counts are this crossing's unless the ship

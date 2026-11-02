@@ -1,6 +1,6 @@
 // The crossing as the worlds see it, in words and figures. Sentences
 // coarsen and do not tick; the figures in the tables do, and are read only
-// on demand. Units follow research/liveship-travel-math.md, section 11.
+// on demand.
 
 ///|
 fn possessive(name : String) -> String {

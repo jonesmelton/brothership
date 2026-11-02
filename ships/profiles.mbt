@@ -58,8 +58,7 @@ pub fn Profile::default() -> Profile {
 }
 
 ///|
-/// The playtest cast from `content/cast/starting-cast.md`, and the plain
-/// ship the scenarios started with.
+/// The fleet's ships, and the plain ship the scenarios started with.
 pub fn profiles() -> Array[Profile] {
   let base = Route::default()
   [

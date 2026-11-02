@@ -1,7 +1,7 @@
 // The Voyage page's reckoning: the crossing on the ship's clock and the
 // worlds', a map of the worlds, and the figures behind both. The figures are
 // tables a screen reader can read; the drawings repeat them and are hidden
-// from assistive technology. See docs/visual-design.md.
+// from assistive technology. See docs/design.md.
 
 ///|
 /// Where the turns and the ship fall on the hours aboard, in thousandths

@@ -4,7 +4,7 @@
 ///|
 /// A span in words that coarsen with length and do not tick: under an
 /// hour, about an hour, whole hours to 6, the nearest 3 hours to 36, then
-/// whole days. See research/liveship-travel-math.md, section 11.
+/// whole days.
 pub fn about(seconds : Int64) -> String {
   if seconds < 3600L {
     "under an hour"

@@ -1,6 +1,6 @@
 // The ship speaks: which happening earns a line, the prompt that asks a
 // model for it, and the speaker that writes it, gated, into the log.
-// See docs/plans/story-and-speech.md and "model latency" in
+// See docs/architecture.md and "model latency" in
 // docs/architecture.md.
 
 ///|

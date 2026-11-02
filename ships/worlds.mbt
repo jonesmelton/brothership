@@ -1,7 +1,7 @@
 ///|
 /// A settled world, placed where its star is. Worlds are mutually at rest,
 /// so time passes alike at all of them, and none keeps a clock the game
-/// reads. See research/liveship-travel-math.md, section 8.
+/// reads. Worlds are mutually at rest, so their clocks agree.
 pub(all) struct World {
   name : String
   /// The star it circles, as astronomers name it.

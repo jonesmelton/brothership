@@ -1,12 +1,15 @@
-# visual design
+# design
 
-How the game looks, concretely enough to build from. Fonts and their features are in [typography](typography.md); the rules every screen obeys are in [accessibility](accessibility.md). This doc covers the rest: palette, type scale, layout and components. `public/styles.css` implements it.
+How the game looks and is set in type. `public/styles.css` implements this, and `scripts/fonts.mbtx` fetches the faces and subsets them into `public/fonts`. The rules every screen obeys are in [accessibility](accessibility.md).
+
+
+How the game looks, concretely enough to build from. Fonts and their features are in [typography](#typography); the rules every screen obeys are in [accessibility](accessibility.md). This doc covers the rest: palette, type scale, layout and components. `public/styles.css` implements it.
 
 ## direction
 
 The screen is a ship's papers: a registry entry and a log, typeset. The design is done with type, rules and space. It has no panels, glows, gradients, shadows, textures, rounded cards, icons or animated readouts, because those are the science-fiction interface trope the typography already refuses. The only graphics are the voyage track, the progress bars and the reckoning's two drawings, and each repeats a sentence or a table (see [the voyage track](#the-voyage-track), [bars](#bars) and [reckoning](#reckoning)). The reckoning's figures change in place every second, set as an almanac's table, not a readout: no counter rolls, nothing glows, and nothing moves but the digits.
 
-Two voices, as in [typography](typography.md): the book (EB Garamond for names and headings, Newsreader for the ship's own words at text size) and the system (Fira Sans for telemetry sentences, labels, controls and figures).
+Two voices, as in [typography](#typography): the book (EB Garamond for names and headings, Newsreader for the ship's own words at text size) and the system (Fira Sans for telemetry sentences, labels, controls and figures).
 
 ## palette
 
@@ -63,7 +66,7 @@ Sizes are in `rem`, so the whole page follows the system text size. The root sta
 | label, legend | Fira Sans 500 | 1rem | `all-small-caps`, tracked 0.06em, `--quiet` |
 | voyage track label | Fira Sans 500 | 0.875rem | `all-small-caps`, tracked 0.06em, `--quiet`; `aria-hidden` and repeats a sentence |
 | control | Fira Sans 400 | 1rem | pressed 600; `text-autospace: normal` on ship titles |
-| conventional name in a control | Noto Serif TC 500 | 0.95em | Medium at text sizes, per [typography](typography.md) |
+| conventional name in a control | Noto Serif TC 500 | 0.95em | Medium at text sizes, per [typography](#typography) |
 | figures in a table | Fira Sans 400 | 0.9375rem | `tabular-nums lining-nums slashed-zero` |
 
 Small caps are always `all-small-caps` from the font (`smcp`, `c2sc`), with `font-synthesis: none`, and only on EB Garamond and Fira Sans. Newsreader has no small caps, so the serif text never asks for them. Labels stay at 1rem because small caps already read about a third smaller.
@@ -178,7 +181,7 @@ The ship list ("Choose a ship") is the same buttons, each carrying the ship's ti
 
 "Where the ship is" opens with the readout, a `p class="readout"` in the order of a shipping forecast: phase, arrival, hull, drive ("Burn. Occitan in about 12 hours. Hull 97%. Drive 58%, 1 of 5 hands."). The voyage track follows, then the sentences the readout leaves out. Demands come next.
 
-The crossing as the worlds see it follows the demands, in a native `details` that is collapsed by default, its `summary` "Instruments and reckoning". The summary is at least 2.75rem tall. Built in `cmd/browser/reckoning.mbt` from `@ships.reckon` and `@words.reckoning_rows`; the physics and units follow research/liveship-travel-math.md, section 11.
+The crossing as the worlds see it follows the demands, in a native `details` that is collapsed by default, its `summary` "Instruments and reckoning". The summary is at least 2.75rem tall. Built in `cmd/browser/reckoning.mbt` from `@ships.reckon` and `@words.reckoning_rows`; the physics and units are the ones `@ships.reckon` computes.
 
 Underway, in this order:
 
@@ -200,13 +203,159 @@ A player aboard one ship cannot read another's snapshot or story: `GET /api/ship
 
 The Ship page's watch bill, after "The ship". One item per officer aboard: the service number as the name, a compact rank beside it, and "You" on the player's own row. Under it, where they stand ("On the hull, on watch for about 2 hours more."), the post they have spent the most time on this crossing ("3 hours on the hull this crossing."), and their newest action as a sentence with how long ago ("Took the hull 12 minutes ago."). In port, it says the post each officer will take at departure instead of the crossing's hours. Items are ordered with the player first, then by rank, then by service number, so the list is stable. The summary says how many officers are aboard and how many recruits fill out the crew. It is a `ul` with `role="list"`, not a table: the sentences, not columns, are the content.
 
-## not yet designed
+## typography
 
-- A works shelf, as a table like the reckoning's, with tabular lining figures.
-- An in-game scheme toggle, if players ask for one.
+
+EB Garamond for display, Newsreader for the ship's running text, Fira Sans for the interface and data, and Noto Serif CJK TC for the hanzi. Everything here is open-licensed, and the OpenType features were checked in the font files.
+
+## Latin
+
+The game has two voices: a book voice for the novel it comes from, and a system voice for a ship that runs on telemetry. Pair them. A single family can do both, but the pairing below gives the anachronism more room and avoids the wide geometric sans that science-fiction interfaces default to. Do not use Eurostile, Microgramma or Bank Gothic; that is the trope.
+
+### EB Garamond + Newsreader + Fira Sans
+
+| role | font | what it gives you |
+| --- | --- | --- |
+| display | EB Garamond | true small caps in roman and italic; tabular lining by default; oldstyle in tabular and proportional sets; wght 400 to 800 |
+| running text | Newsreader | optical size axis (opsz 6 to 72) and wght 200 to 800 in roman and italic; tabular lining by default; `pnum` for proportional lining; no oldstyle, no small caps |
+| UI, labels and data | Fira Sans | true small caps in roman and italic; all four figure sets; slashed zero |
+
+EB Garamond is a Renaissance book face; Fira Sans is a humanist technical sans from the 2010s. They share a humanist skeleton, so the pairing reads as a decision rather than a collision. Use EB Garamond for the masthead epithet and the headings, where its small caps are used. The ship's own lines are running text at about 19px, so they take Newsreader, whose optical size axis is set to the size of the text by `font-optical-sizing: auto`. Use Fira Sans where the ship speaks as a system: labels, buttons, table text, warnings, and every number that must line up. Tabular lining figures in Fira Sans carry the crossing readouts; a monospace is unnecessary until code or fixed-column editing demands one.
+
+Figure and small-caps behaviour, checked in the Google Fonts builds:
+
+| family | default | tabular lining | tabular oldstyle | proportional oldstyle | small caps |
+| --- | --- | --- | --- | --- | --- |
+| EB Garamond | tabular lining | default or `tnum` | `onum` | `onum` + `pnum` | `smcp`, `c2sc` in roman and italic |
+| Newsreader | tabular lining | default or `tnum` | none | none | none |
+| Fira Sans | proportional lining | `tnum` | `onum` + `tnum` | `onum` | `smcp`, `c2sc` in roman and italic |
+
+The table is the reason for the pairing. EB Garamond's default figures are already tabular, so data can use it without a switch; Newsreader's are too, and `pnum` gives it proportional lining for prose. Fira Sans gives you the full set for labels and prose in the UI. Fira Sans's tabular oldstyle is rare and useful for a table that should feel typeset rather than computed, but use lining figures for telemetry: oldstyle figures in a column of changing numbers make the digits harder to scan.
+
+### CSS
+
+The stack below is EB Garamond + Newsreader + Fira Sans. Change the Latin families together if you pick the Source superfamily; the feature settings stay the same.
+
+```css
+:root {
+  --font-display: "EB Garamond", Georgia, serif;
+  --font-text: "Newsreader", "EB Garamond", Georgia, serif;
+  --font-ui: "Fira Sans", system-ui, sans-serif;
+  --font-han: "Noto Serif CJK TC", "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --weight-display: 400;
+  --weight-text: 400;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --weight-display: 450;
+    --weight-text: 450;
+  }
+}
+
+body {
+  font-family: var(--font-ui);
+  font-synthesis: none;
+}
+
+p,
+.log li {
+  text-wrap: pretty;
+}
+
+.masthead h1 {
+  font-family: var(--font-display);
+  font-weight: var(--weight-display);
+  text-autospace: normal;
+}
+
+.prose {
+  font-family: var(--font-text);
+  font-optical-sizing: auto;
+  font-weight: var(--weight-text);
+  font-variant-numeric: proportional-nums;
+}
+
+.data {
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
+}
+
+.label {
+  font-family: var(--font-ui);
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.04em;
+}
+
+.smallcaps {
+  font-family: var(--font-display);
+  font-variant-caps: all-small-caps;
+}
+
+.han {
+  font-family: var(--font-han);
+  font-size: 0.95em;
+  font-style: normal;
+  font-synthesis: none;
+  letter-spacing: 0;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+```
+
+`font-synthesis: none` is what keeps a missing small-cap or italic from being faked. `font-variant-caps: all-small-caps` uses `smcp` and `c2sc`; with synthesis off, a font that lacks the feature will not get a synthetic one. Newsreader has neither feature, so small caps on Newsreader text render as typed. Check `smcp` and `c2sc` in the build you ship.
+
+Night watch (`prefers-color-scheme: dark`) raises the serif weights to 450. Light type on a dark ground looks thinner, and both EB Garamond and Newsreader have the weight range to take 450. Fira Sans ships at 400, 500 and 600 only, so the sans keeps its design weights. The page heading uses `--weight-display` too.
+
+## Legible type
+
+The Type setting on the Ship page replaces both Latin faces with Atkinson Hyperlegible Next (Braille Institute, OFL, variable weight 200 to 800, roman and italic), subset to the same Latin range by `scripts/fonts.mbtx`. The stylesheet sets `data-face="legible"` on the root, which redefines `--font-display` and `--font-ui`. `--font-han` is untouched, so hanzi keep Noto Serif CJK TC. The font has `tnum`, `pnum`, `case` and `frac` but no `smcp`, `c2sc`, `onum`, `lnum` or `zero`, so small-caps labels display in lowercase and figures are lining without a slashed zero. The two files, 40 KB and 44 KB, are not preloaded and download only when the choice is made.
+
+## Chinese
+
+The game uses Traditional Chinese (Hant) for the hanzi. Keep one script across conventional names, star names, and any other displayed hanzi; do not mix. A Simplified release is a full migration, not a per-string choice. The star names use 陰, and the cast entries use 顧大嫂, 林沖, 宋江. [`pennants.tsv`](../content/cast/pennants.tsv) once mixed scripts (13 rows written from `name_zh` instead of `name_hant`); [`scripts/pennants.mbtx`](../scripts/pennants.mbtx) now reads `name_hant` and validates that every conventional name there matches, so the file stays Traditional. A Traditional Chinese font will render a Simplified codepoint as Simplified, so no font choice fixes this; the source column does.
+
+| face | license | use |
+| --- | --- | --- |
+| Noto Serif CJK TC / Noto Serif TC | OFL, no Reserved Font Name | default; safe to subset and self-host |
+| Source Han Serif TW | OFL, Reserved Font Name 'Source' | same design; rename a subset before redistributing |
+| Chiron Sung HK | OFL | modern TC Song derived from Source Han; more written, less printed; check its glyph forms against your chosen TC standard |
+| Noto Sans CJK TC / Source Han Sans TC | OFL | if the names should read as registry type rather than book type |
+
+Use a Song/Ming face. It is the Chinese book serif, the neutral literary choice, and it will not read as costume. A brush or seal-script face would make the names decorative. A Kai face is a legitimate text style, but next to a technical Latin face it reads as calligraphy; use it only if that is the voice you want. Do not use a Japanese font, even one with broad kanji coverage: the regional glyph forms are wrong for Chinese names, and the difference is visible in characters like 直, 骨 and 類.
+
+The Chinese face and the Latin face do not need to share a designer; they need to share optical weight. Noto Serif CJK TC Regular can look light next to EB Garamond at small sizes. Use Medium (500) for hanzi at 14–20px, especially on a dark background, and Regular for display sizes. Check the pair at the smallest and largest size you ship.
+
+### Setting the names
+
+- Put `lang="zh-Hant"` on every hanzi span. It selects Traditional glyph variants and correct line breaking. Do not rely on the font name alone.
+- Keep the name in one unbreakable span. Chinese names are two to four characters, and a line break inside one is wrong. `white-space: nowrap` on the name, with the surrounding line allowed to wrap.
+- Do not letterspace, italicize, uppercase or synthesize a bold weight. Hanzi are full-width and already spaced; tracking them is the quickest way to make them look like decoration. Use a real weight from the family.
+- Hanzi fill the em square and look larger than Latin lowercase at the same size. Start at `0.95em` beside Latin text, align baselines, and adjust to the Latin cap height. A standalone mark can use a fixed size and `line-height: 1.5`.
+- Use the same ink as the Latin name. No red, seal, box, glow or outline. The science-fiction treatment belongs to the layout (a registry line, a rule, a grid), not to the hanzi.
+- Keep punctuation outside the hanzi span. The names have no punctuation; a Latin gloss takes Latin punctuation.
+- Set `text-autospace: normal` on the element that holds a name beside Latin text: the masthead `h1` and the ship buttons. The browser then adds the gap between hanzi and Latin, including the one between hanzi and a numeral such as `EF-147`. Keep the literal spaces that `title` in `cmd/browser/main.mbt` writes around the hanzi span. `normal` is `insert`, which adds spacing only where no space character already sits, so the gap does not double. `replace` would swap the literal spaces for the autospace width. Chrome 140, Firefox 145 and Safari 18.4 support it; older browsers ignore it and show the literal spaces alone.
+
+### What the hanzi is attached to
+
+Every ship has an English epithet and a Chinese conventional name, and its main title is all three identifiers together: `EF-147 顧大嫂 The Tigress` (pennant, conventional name, epithet). The Chinese conventional name is the `conventional_name` column in [`pennants.tsv`](../content/cast/pennants.tsv) (Traditional, from the `name_hant` column of the Water Margin heroes table); the English epithet is the `epithet` column. The conventional name is not a translation of the epithet (母大蟲), and it is the ship's identifier on a ship card, in a register, and anywhere else the ship is named in Chinese. The star (`地陰星`) is metadata, not a name in either language.
+
+### Accessibility
+
+For the full title, the accessible name is the title in the language of the surrounding text: `EF-147 The Tigress` in English, `EF-147 顧大嫂` in Chinese, with the other language's name part marked `aria-hidden="true"` if announcing both would duplicate. For a short reference, match the accessible name to the language of the surrounding text: `The Tigress` in English, `顧大嫂` in Chinese. If the hanzi is the only visible name, add a visually hidden English label. Put `lang="zh-Hant"` on the hanzi span even when it is hidden from assistive technology, so the language of the text is not ambiguous. Do not put hanzi in an `aria-label` without a language tag.
+
+### Loading
+
+Subset the font to the characters you ship. `scripts/fonts.mbtx` does this from the `name_hant` and `star_zh` columns; rerun it if the game shows hanzi from anywhere else. The 108 `name_hant` values and 108 `star_zh` values from the Water Margin heroes table use 251 unique characters. A subset of Noto Serif CJK TC Regular to those characters is about 85 KB as WOFF2, and the two weights the game uses about 170 KB. That is small enough to self-host and preload the weight used above the fold. Do not hotlink Google Fonts: the game should work offline, and the CSS request is a privacy leak.
+
+Newsreader is Latin only. Its roman subset is 157 KB and its italic 178 KB as WOFF2, both variable with `wght` and `opsz`. The roman is preloaded because the ship's latest line sits above the fold; the italic loads on the first pending sentence.
+
+Noto Serif CJK TC has no Reserved Font Name, so a subset can keep the name. Source Han Serif TW and Source Han Sans TC carry the Reserved Font Name 'Source'; rename a subset before redistributing it. Subsetting counts as a modification under the OFL.
+
+Fallback stack: `"Noto Serif CJK TC", "Songti TC", "PMingLiU", serif`. Test with the webfont disabled; a Japanese fallback will show Japanese glyph forms.
 
 ## Related
 
-- [typography](typography.md): faces, features, hanzi setting, font loading.
-- [accessibility](accessibility.md): the rules this design is subordinate to.
-- [translation](translation.md): titles and accessible names.
+- [translation](translation.md): ship titles and accessible names.
+- [accessibility](accessibility.md): announcements and screen-reader rules.
+- [cast](cast.md): the pipeline that produces ship text.

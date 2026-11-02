@@ -29,7 +29,7 @@ test "time at the worlds coarsens, and agrees with its verb" {
 }
 
 ///|
-test "figures in the units research section 11 asks for" {
+test "figures in the reckoning units" {
   let day = 1.0 / 365.25
   let ys : Array[Double] = [
     0.0,

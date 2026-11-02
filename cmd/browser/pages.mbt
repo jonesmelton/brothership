@@ -1,5 +1,5 @@
 // The check-in's three pages: which one is shown, what is new on each, and
-// the bar of links between them. See docs/visual-design.md.
+// the bar of links between them. See docs/design.md.
 
 ///|
 /// The pages in the order the bar lists them.

@@ -1,9 +1,7 @@
 # cast pipeline
 
 Each ship's cast entry becomes a private **portrait**, and the portrait
-becomes the ship's **faces**: the files the running game reads. This is a
-simpler shape than the pipeline in `research/liveship-cast-pipeline.md`,
-and keeps its prompts and its reasons for them.
+becomes the ship's **faces**: the files the running game reads. The prompts are under `content/cast/prompts/`.
 
 | file | written by | read by | players see it |
 |---|---|---|---|
@@ -13,21 +11,6 @@ and keeps its prompts and its reasons for them.
 | `captain.md` | model, first person | planner, speaker | never directly |
 | `voice.md` | model, first person, spoken | planner, speaker | yes, verbatim lines |
 | `voyage.md` | model, first person | decision-maker, speaker | never |
-
-## changes from the research pipeline
-
-- **`self.md` and `command.md` are one face, `captain.md`.** The research
-  found `self.md` "hardly at all" separated ships' decisions, and the planner
-  always read the two together. `captain.md` keeps the rule that mattered: no
-  conditionals, thresholds or instructions to itself.
-- **`voyage.md` is a face, not a third layer.** It is made from the entry and
-  portrait, in parallel with the others. The mechanics still arrive after
-  the character exists, which was the reason for telling the model late. What it
-  loses is `command.md` as an input, which was itself made from the portrait.
-  Compare decisions on a few ships before relying on this.
-- **A face is a template plus a line in `cast.json`.** Every face shares the
-  preamble in `face.system.md`, so a new kind of content (register entries,
-  letters to brothers) is a new face, not a new layer.
 
 ## the loop
 
@@ -50,8 +33,7 @@ of every face it has no canon file for.
 A ship starts from its pennant alone. `run <pennant>` on a pennant with no
 directory drafts its `entry.md` from a seed the code builds out of what the
 repo already knows: the pennant's row in `pennants.tsv` (conventional name,
-epithet, and the tier its prefix names), the ship's section of
-`starting-cast.md` if it has one, and every line naming the pennant in
+epithet, and the tier its prefix names), every line naming the pennant in
 other ships' canon entries. The draft also gets all 108 pennants and
 epithets, so its relationship lines carry the right pennants. Everything
 else, the source figure's life, episodes, kinships and star, the model
@@ -120,9 +102,7 @@ variable is an error that names the template and line.
 | `face.system.md` | the shared face preamble, `faces/<face>.md`, setting, world rules |
 | `face.user.md` | `entry` and `portrait` |
 
-The setting, world rules, portrait task, face preamble and `voice` task are the
-research pipeline's prompts verbatim, apart from the game's name, the
-portrait's mention of notes, and the naming rule: a ship's title is its
+The setting, world rules, portrait task, face preamble and `voice` task are kept as written, apart from the game's name, the portrait's mention of notes, and the naming rule: a ship's title is its
 pennant, Chinese conventional name and English epithet together, but
 generated ship text uses epithets only. `captain` merges the `self` and `command` tasks.
 `voyage` is the crossing-role task: it says the role is fixed for the crossing

@@ -1,5 +1,5 @@
 // The voyage track: a picture of the phase sentence, never more than it.
-// Hidden from assistive technology. See docs/visual-design.md.
+// Hidden from assistive technology. See docs/design.md.
 
 ///|
 /// One phase of the track, in thousandths: its share of the crossing's

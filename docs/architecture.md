@@ -30,7 +30,7 @@
 Stack: rabbita (frontend), warren (build and dev server), moonback on
 moonbitlang/async (server), moonbit-community/sqlite3 (vendored sqlite,
 async API), moonbitlang/quickcheck (property tests), gaato/openai and
-bobzhang/minijinja (model calls and prompt templates; see `docs/llm-tooling.md`).
+bobzhang/minijinja (model calls and prompt templates).
 
 ## sync
 
@@ -289,5 +289,4 @@ log, so it never calls the model.
 `cmd/audition` flies the Tigress with four scripted officers to a
 departure, a demand, the coast, an arrival and the next port, and gives each moment to
 every ship's character and values, sampled, on the models it is given.
-Replies are cached in `.cache/llm`. See `docs/tools.md` for how to run it
-and `cmd/speak`.
+Replies are cached in `.cache/llm`. Run it with `moon run cmd/audition`; `cmd/speak` flies one ship the same way.

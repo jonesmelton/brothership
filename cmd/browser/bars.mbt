@@ -1,5 +1,5 @@
 // Progress bars: a picture of a sentence beside it, never more than it.
-// Hidden from assistive technology. See docs/visual-design.md.
+// Hidden from assistive technology. See docs/design.md.
 
 ///|
 /// How full a bar is, in thousandths, clamped to 0 through 1000.

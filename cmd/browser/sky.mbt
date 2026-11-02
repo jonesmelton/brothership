@@ -1,5 +1,5 @@
 // The bow sight: the sky ahead as the ship sees it. Rendering only, so it
-// works in floats. See docs/visual-design.md.
+// works in floats. See docs/design.md.
 //
 // A direction θ from the bow is drawn at a radius set by u = ln tan(θ/2).
 // Aberration at rapidity η is tan(θ'/2) = e^-η tan(θ/2), which on that scale

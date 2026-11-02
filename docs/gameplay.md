@@ -202,7 +202,7 @@ dockings (`@ships.leg`).
 The worlds share one rest frame, so the years a crossing takes pass alike
 at origin and destination, and come within a thousandth of a year of the
 leg's light-years whatever the crew do. No world keeps a clock: see
-research/liveship-travel-math.md, section 8.
+the reckoning in `ships/reckoning.mbt`.
 
 ## crafts
 
@@ -417,7 +417,7 @@ Then the ship departs, and the new world gives everything a new meaning.
 
 Which ship a player crews changes the crossing. A ship's kinematics and
 fittings come from its character, and its values decide which work it
-notices. Starting profiles for the playtest cast, from `ships/profiles.mbt`:
+notices. Starting profiles, from `ships/profiles.mbt`:
 
 | ship | accel, g | γ cap | drive hands | wear | repair | values: drive, hull, craft | temperament |
 |---|---|---|---|---|---|---|---|
@@ -432,27 +432,9 @@ with the hull at 80%. The Flea made the most works
 and twice the regard for crafters: its crafters reached rank 3 within six
 crossings while its drivers stayed at rank 1.
 
-## idle grammar
-
-How the loop meets the [research](../research/Idle%20Games%20Research%20Dossier.html):
-
-- **Rate is the emotional number**: arrival forecast, craft progress, hull,
-  and γ for spectacle.
-- **Walls branch into decisions**: a missing input, hull wear capping the
-  drive, a destination out of reach. Each leads to a different post or craft.
-- **Automation is earned relief**: NPC recruits fill ship posts as the ship
-  grows, which eases the public-goods pressure.
-- **Unfolding**: the game starts in port with only the drive post. Crafts open
-  at the first coast, and other ships later.
-- **Crossing as a run**: arrival settles everything and the new world changes
-  its meaning. There is no prestige layer. The season is finite and authored.
-- **Big numbers come from physics**: γ climbs into the tens of thousands, and
-  decades pass at home in an hour. The economy stays small and countable.
-
 ## rules core
 
-Each phase is a stock that changes linearly, so the crossing fits the
-[idle core](../research/idle-core.md) model and stays in `Int64`:
+Each phase is a stock that changes linearly, so the crossing is a set of linear stocks and stays in `Int64`:
 
 - **burn**: rapidity η rises at `a * setting`;
 - **coast**: distance left falls at a constant rate, and the hull erodes at
@@ -479,22 +461,3 @@ The idle core's "no background process" is given up, but not for the
 rules: phase changes and deadlines need no scheduler, because any event,
 including a tick, steps through them. The scheduler on the server exists so
 the ship can speak, dock and depart at the right instant.
-
-## left behind from the research
-
-- **Stepped kinematics** (travel math §4–6): pressure drift, hysteresis and
-  deterministic transcendental functions. Phases with linear stocks replace
-  them.
-- **Crossings of 2 to 8 days.** Too few port calls for one season. Proper
-  time = wall time stays, and acceleration rises to 40,000 g.
-- **The contract and payment formula.** Money doesn't fit near-utopian worlds.
-- **Prestige layers and big-number types.**
-- **Events as the main interaction.**
-
-## out of scope for now
-
-- Works crossing between ships through registers.
-- Authority from rank beyond public standing.
-- Ships meeting in port, and the cross-ship coordinate-time problem that
-  registers and meetings raise. Each ship keeps its own calendar and worlds
-  keep none.

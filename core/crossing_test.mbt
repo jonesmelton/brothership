@@ -492,7 +492,7 @@ test "the burn of the 20 ly plan ends where the coast begins" {
 }
 
 ///|
-/// The research's bound on events per gap: with nobody acting, a crossing
+/// Bound on events per gap: with nobody acting, a crossing
 /// steps through a few dozen boundaries, never thousands. The hull band's
 /// margin is what keeps a ship mending at an edge from making one a tick.
 test "law: an idle crossing has few boundaries" {
