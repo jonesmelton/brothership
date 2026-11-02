@@ -30,6 +30,7 @@ Ships speak only if a `MODEL_API_KEY` is set (a Fly secret in production); witho
 | [content](docs/content.md) | what the ships may and may not say, and how that is enforced |
 | [cast](docs/cast.md) | how a ship's character is made: entry, portrait, faces |
 | [glossary](docs/glossary.md) | terms used in the code and docs |
+| [decisions](docs/decisions.md) | why hard-to-reverse choices were made |
 | [translation](docs/translation.md) | ship names and titles in English and Chinese |
 | [simulator](docs/simulator.md) | the crossing simulator and its scripted crews |
 | [tools](docs/tools.md) | hearing ships choose and speak on real models before players do |

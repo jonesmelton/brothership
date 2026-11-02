@@ -17,7 +17,7 @@ Sighted players get the same game, presented with the same care. We assume every
 
 ### the text is the game
 
-Game state is an event stream and every view of it is rendered from that stream . Every event has a sentence. That sentence is written first, and it is the primary form of the event: what a screen reader speaks, what goes in the log, and what the visual layout is built around. Visual presentation can add to the sentence, such as a bar next to a number or emphasis on a name, but it never says something the sentence doesn't.
+Game state is an event stream and every view of it is rendered from that stream (see [decisions](decisions.md)). Every event has a sentence. That sentence is written first, and it is the primary form of the event: what a screen reader speaks, what goes in the log, and what the visual layout is built around. Visual presentation can add to the sentence, such as a bar next to a number or emphasis on a name, but it never says something the sentence doesn't.
 
 If the log, read top to bottom as plain text, is enough to understand and play the game, the game is accessible in substance. Everything after that is presentation.
 
