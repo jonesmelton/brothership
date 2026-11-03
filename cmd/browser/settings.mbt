@@ -199,9 +199,9 @@ fn settings_page(
   }
   [
     @html.p([@html.a(href="#ship", class="control", back)]),
-    @html.section([@html.h3("Your service number"), ..number]),
+    @html.section([@html.h2("Your service number"), ..number]),
     @html.section([
-      @html.h3("Preferences"),
+      @html.h2("Preferences"),
       @html.p("These are kept in this browser."),
       toggles(
         "hear",
