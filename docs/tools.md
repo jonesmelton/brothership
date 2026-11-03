@@ -123,7 +123,7 @@ were dropped, as they would be on the server.
 ## the server's models
 
 The deployed server's model assignments are the `fly.toml` values in the
-table in the [README](../README.md#meta-models); how they sit in the path
+table in [running the game](running.md#meta-models); how they sit in the path
 from input to shown text, and the fallback when a call fails, are in
 "model latency", "story and speech" and "the ship's mind" in
 [architecture](architecture.md). The boot log prints the models in use
