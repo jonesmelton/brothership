@@ -306,6 +306,38 @@ pub fn Temperament::course(self : Temperament, ship : @core.Ship) -> World {
 }
 
 ///|
+/// Whether the crossing `ship` has just flown went to the nearest world it
+/// could have chosen. `before` is where it came from at the port it left.
+pub fn flew_nearest(ship : @core.Ship, before~ : World?) -> Bool {
+  guard came_from(ship) is Some(from) else { false }
+  let then = {
+    ..ship,
+    crossings: ship.crossings - 1L,
+    from: Some(from.name),
+    came_from: before.map(w => w.name),
+  }
+  Careful.course(then) == origin(ship)
+}
+
+///|
+/// The world a ship leaves for when its model asks for `chosen`: the
+/// temperament's course if `chosen` is the nearest world for a second port
+/// running, or else `chosen`. Models left alone take the nearest whatever the
+/// ship's character, which sends every ship round one loop.
+pub fn Temperament::ranging(
+  self : Temperament,
+  ship : @core.Ship,
+  chosen : World,
+  before~ : World?,
+) -> World {
+  if chosen == Careful.course(ship) && flew_nearest(ship, before~) {
+    self.course(ship)
+  } else {
+    chosen
+  }
+}
+
+///|
 /// The ship's choice of `world` as an event, with the stores that leg needs.
 pub fn bound(ship : @core.Ship, world : World) -> @core.Event {
   Bound(world=world.name, stores=stores_for(ship, world))

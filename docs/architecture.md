@@ -277,7 +277,9 @@ and the hull hands that hold it even. It asks for
 and the port's `Asked` through `Store::cruise`, which does nothing once the
 ship has departed and drops a world not in `@ships.choices`. An unreadable
 course falls back to `Temperament::course`, and an unreadable ask to
-`Temperament::port_ask`. The
+`Temperament::port_ask`. The nearest world named at a second port running
+also gives way to `Temperament::course` (`Temperament::ranging`), and the
+model's thought is dropped, since it argues for the other world. The
 thought is never shown to players; the speaker hears it.
 
 While underway, a ship whose officers are bottom-heavy

@@ -26,6 +26,8 @@ Your hull is at {{ hull }} now, and the yard mends it until you leave.
 
 A crossing is a choice, not a convenience. The nearest world is often the wrong one; when you take a short crossing, your thought says what draws you there besides the short hop.
 
+{{ leaning }} A far world costs you stores and hull, and it gives your crew more hours aboard and more work finished at their crafts before port.
+
 {% if short %}
 You have just flown a short crossing, under eighteen light-years, and you do not fly two short crossings running. The worlds nearer than eighteen light-years are not open to you this crossing; it will be a long one.
 

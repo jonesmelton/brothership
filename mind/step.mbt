@@ -414,14 +414,35 @@ async fn Mind::course(
   let by_temperament = self.profile.temperament.port_ask(state)
   let course_by_temperament = self.profile.temperament.course(state.ship)
   let (course, cruise, ask, why, how) = match chosen {
-    Some(((cruise, why), ask, course)) =>
+    Some(((cruise, why), ask, asked_for)) => {
+      let course = asked_for
+        .map(w => {
+          self.profile.temperament.ranging(
+            state.ship,
+            w,
+            before=left_before(story),
+          )
+        })
+        .unwrap_or(course_by_temperament)
+      // The reason argues for the world the model asked for, and the speaker
+      // would repeat it for the world the ship is really bound for.
+      let overruled = asked_for is Some(w) && w != course
       (
-        course.unwrap_or(course_by_temperament),
+        course,
         cruise,
         ask.unwrap_or(by_temperament),
-        why,
-        "set its course, cruise and ask",
+        if overruled {
+          ""
+        } else {
+          why
+        },
+        if overruled {
+          "set its cruise and ask, its temperament overruling the nearest world"
+        } else {
+          "set its course, cruise and ask"
+        },
       )
+    }
     None => {
       let distance_ly = @ships.origin(state.ship).distance_to(
         course_by_temperament,

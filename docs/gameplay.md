@@ -154,7 +154,11 @@ A minded ship's model chooses in its cruise turn, soon
 after docking, from each world's distance, how soon the ship would leave
 for it, how often and how lately it has docked there, which other ships
 are in port there or bound there, and the hours aboard and hull worn at
-each cruise. The ship then tells the crew. An unminded ship chooses by
+each cruise, and a sentence from its temperament saying where it leans. If
+the model names the nearest open world at a second port running, the ship
+leaves by temperament instead (`Temperament::ranging`), because models left
+alone take the nearest whatever the character. The ship then tells the crew.
+An unminded ship chooses by
 temperament at docking: a bold ship the farthest world, a careful one the
 nearest, a sly one the second farthest, and a social one any, by its seed.
 A minded ship whose mind never chose leaves by temperament once its stores

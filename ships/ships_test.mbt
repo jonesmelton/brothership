@@ -416,3 +416,71 @@ test "left alone, a ship sets its temperament's cruise before it departs" {
   guard s.crossing() is Some(c) else { fail("not underway") }
   assert_eq(c.plan, p.next_plan(distance_ly~, coils=0, cruise~))
 }
+
+///|
+/// The worlds a ship visits if its model always asks for the nearest world
+/// open to it, as `Temperament::ranging` lets that stand.
+fn nearest_every_time(p : @ships.Profile) -> Array[String] {
+  let mut ship = p.ship(seed=1)
+  let mut before : @ships.World? = None
+  let route = [@ships.origin(ship).name]
+  for _ in 0..<10 {
+    let here = @ships.origin(ship)
+    let nearest = @ships.Temperament::Careful.course(ship)
+    let to = p.temperament.ranging(ship, nearest, before~)
+    route.push(to.name)
+    before = @ships.came_from(ship)
+    ship = {
+      ..ship,
+      crossings: ship.crossings + 1,
+      from: Some(to.name),
+      came_from: Some(here.name),
+    }
+  }
+  route
+}
+
+///|
+test "the nearest world twice running gives way to the ship's temperament" {
+  let ps = @ships.profiles()
+  let routes = [ps[1], ps[2], ps[3]].map(nearest_every_time)
+  assert_true(routes[0] != routes[1])
+  assert_true(routes[1] != routes[2])
+  assert_true(routes[0] != routes[2])
+}
+
+///|
+test "a first choice of the nearest world stands" {
+  let p = @ships.profiles()[2]
+  let ship = p.ship(seed=1)
+  let nearest = @ships.Temperament::Careful.course(ship)
+  assert_eq(p.temperament.ranging(ship, nearest, before=None), nearest)
+}
+
+///|
+test "the nearest world stands after a crossing to a farther one" {
+  let p = @ships.profiles()[2]
+  let ship = {
+    ..p.ship(seed=1),
+    crossings: 2,
+    from: Some("Tigray"),
+    came_from: Some("Kerala"),
+  }
+  let nearest = @ships.Temperament::Careful.course(ship)
+  let before = @ships.world_named("Occitan")
+  // From Kerala, having come from Occitan, Oaxaca was nearer than Tigray.
+  assert_eq(p.temperament.ranging(ship, nearest, before~), nearest)
+}
+
+///|
+test "a world other than the nearest always stands" {
+  let p = @ships.profiles()[2]
+  let ship = {
+    ..p.ship(seed=1),
+    crossings: 2,
+    from: Some("Occitan"),
+    came_from: Some("Kerala"),
+  }
+  let far = @ships.world_named("The Three Tyrants").unwrap()
+  assert_eq(p.temperament.ranging(ship, far, before=None), far)
+}

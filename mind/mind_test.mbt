@@ -606,3 +606,81 @@ async test "a world chosen earlier in the port stay stands" {
     .filter(e => e.happening is Bound(_))
   inspect(bound.length(), content="1")
 }
+
+///|
+/// A model that replies with each of `replies` in turn, then the last.
+fn scripted(replies : Array[String]) -> @llm.Backend {
+  let next = Ref(0)
+  @llm.Backend::new("fake", fn(c) {
+    let text = replies[next.val.min(replies.length() - 1)]
+    next.val += 1
+    {
+      model: c.model,
+      text,
+      reasoning: None,
+      finish: Some("stop"),
+      usage: @llm.Usage::zero(),
+      raw: Json::null(),
+    }
+  })
+}
+
+///|
+async test "the nearest world for a second port running gives way to the temperament, and its reason is dropped" {
+  let store = in_port("scorpion")
+  defer store.close()
+  let p = @ships.fleet()[1].profile
+  let mind = @mind.Mind::new(
+    "scorpion",
+    p,
+    voice(),
+    prompts(),
+    model="m",
+    scripted([
+      "{\"course\": \"Occitan\", \"cruise\": \"hard\", \"thought\": \"Close by.\"}",
+      "{\"course\": \"Oaxaca\", \"cruise\": \"easy\", \"thought\": \"Oaxaca again, close by.\"}",
+    ]),
+  )
+  mind.step(store, clock=() => T0 + 10)
+  store.advance("scorpion", now=T0 + 600)
+  let docked = T0 + 400_000
+  store.advance("scorpion", now=docked)
+  let s = store.snapshot("scorpion").unwrap().state
+  assert_true(s.leg is InPort(_))
+  assert_eq(@ships.origin(s.ship).name, "Occitan")
+  mind.step(store, clock=() => docked + 1)
+  let s = store.snapshot("scorpion").unwrap().state
+  debug_inspect(
+    (s.ship.bound, s.ship.cruise),
+    content=(
+      #|(Some("The Three Tyrants"), 600)
+    ),
+  )
+  assert_false(mind.thoughts().last().unwrap().contains("Oaxaca"))
+}
+
+///|
+async test "the cruise prompt gives the ship its leaning" {
+  let store = in_port("scorpion")
+  defer store.close()
+  let p = @ships.fleet()[1].profile
+  let state = store.snapshot("scorpion").unwrap().state
+  let prompts = @mind.Prompts::new(
+    system="",
+    turn="",
+    muster="",
+    cruise="{{ leaning }}",
+    setting="",
+  )
+  let call = prompts.cruise(
+    voice(),
+    values=p.values,
+    model="m",
+    profile=p,
+    state,
+    store.story("scorpion", after=0).unwrap(),
+    thoughts=[],
+    fleet=[],
+  )
+  assert_true(call.user.contains("farthest"), msg=call.user)
+}

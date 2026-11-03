@@ -273,6 +273,17 @@ fn calls(story : Array[@core.Entry]) -> Array[(String, Int64)] {
 }
 
 ///|
+/// Where the ship came from at the port it last left, from its dockings.
+fn left_before(story : Array[@core.Entry]) -> @ships.World? {
+  let legs = story.filter_map(e => {
+    guard e.happening is Docked(landing~, ..) else { None }
+    Some(@ships.landing_leg(landing))
+  })
+  guard legs.length() >= 2 else { None }
+  Some(legs[legs.length() - 2].0)
+}
+
+///|
 /// When the ship last docked at `world`, and how often it has, as a
 /// sentence. The ship's last port is never a choice, so the last visit is
 /// always two crossings ago or more.
@@ -333,6 +344,22 @@ fn fleet_at(world : @ships.World, fleet : Array[@core.State]) -> Array[String] {
       _ => None
     }
   })
+}
+
+///|
+/// Where a ship of this temperament leans, as a sentence for the cruise
+/// prompt. The model still chooses: this only counters its pull to the nearest.
+fn leaning(temperament : @ships.Temperament) -> String {
+  match temperament {
+    Bold =>
+      "You lean toward the farthest world open to you, whatever the long leg costs."
+    Careful =>
+      "You lean toward the nearest world open to you, and the hull you keep by it."
+    Sly =>
+      "You lean toward a far world that is not the obvious one, the farthest being where anyone would look for you."
+    Social =>
+      "You lean toward the world you have seen least of, for the people you would meet there."
+  }
 }
 
 ///|
@@ -398,6 +425,7 @@ pub fn Prompts::cruise(
       None => Json::null()
     },
     "short": Json::boolean(@ships.flew_short(ship)),
+    "leaning": Json(leaning(profile.temperament)),
     "hull": Json("\{ship.hull * 100L / @core.HULL_FULL}%"),
     "launch": strings(@words.where_sentences(state)[1:].to_owned()),
     "crew": Json(port_crew(state)),
