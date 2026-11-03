@@ -4,7 +4,7 @@ A hard science fiction idle RPG where players crew on sentient starships based o
 
 **Play it now: https://brothership.fly.dev**
 
-You sign on as one officer aboard one ship. The ship is a character: written from a figure in the novel, it decides what it needs, asks its crew for help in its own voice, chooses its next world and how fast to get there, remembers who answered, and promotes the officers it trusts. You give it your hours. It gives you a crossing.
+You sign on as one officer aboard one ship. The ship is a character: written from a figure in the novel, it decides what it needs, asks its crew for help in its own voice, chooses its next world and how fast to get there, remembers who answered, and promotes the officers it trusts.
 
 ## How it plays
 
@@ -68,7 +68,7 @@ The game is built screen-reader-first, because idle games and MUDs are genres bl
 
 ## Underway now
 
-Three ships are in service, each with its own character, values and accent colour: EF-147 The Tigress, EF-287 The Flea on the Drum, and HS-212 The Twin-Tailed Scorpion. They fly between five worlds around real stars: Kerala, Oaxaca, Occitan, Tigray and The Three Tyrants. Crossings run whether or not anyone is aboard; a ship with no officers still departs, still arrives, and still chooses where it goes next.
+Three ships are in service, each with its own character, values and accent colour: EF-147 The Tigress, EF-287 The Flea on the Drum, and HS-212 The Twin-Tailed Scorpion. They fly between five worlds around real stars. Crossings run whether or not anyone is aboard; a ship with no officers still departs, still arrives, and still chooses where it goes next.
 
 ## For developers
 
