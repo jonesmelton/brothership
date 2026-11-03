@@ -514,6 +514,12 @@ fn sentences(lines : Array[String]) -> Array[@rabbita.Html] {
   lines.map(line => @html.p(line))
 }
 
+///| A block of a page under one heading is a plain `div.section`, not a
+/// `section`: an unnamed `section` is still a group to macOS VoiceOver,
+/// which announces the group and then, without VO-Shift-Down, steps past
+/// everything in it but its controls. The heading carries the structure;
+/// the div only carries the rule and spacing. See docs/accessibility.md.
+
 ///|
 /// A ship's title as pennant, conventional name and epithet. The
 /// conventional name is hidden from assistive technology, so the accessible
@@ -548,7 +554,8 @@ fn where_section(s : @core.State) -> @rabbita.Html {
     Some(c) if c.phase != Arrived => [track(c)]
     _ => []
   }
-  @html.section(
+  @html.div(
+    class="section",
     [
       @html.h3("Where the ship is"),
       ..readout,
@@ -585,8 +592,8 @@ fn stage_section(model : Model, s : @core.State) -> @rabbita.Html {
       [@html.p(class="pending", "\{ship} is weighing a choice.")]
     _ => []
   }
-  @html.section(
-    class="stage",
+  @html.div(
+    class="section stage",
     [@html.h2("The ship says"), said, ..ask, ..pending],
   )
 }
@@ -953,7 +960,8 @@ fn you_page(
   [
     rank_line(s.rank(you)),
     away_section(model, You, "Since you were here", since),
-    @html.section(
+    @html.div(
+      class="section",
       [
         @html.h3("Your post"),
         ..sentences(@words.you_sentences(s, you)),
@@ -961,7 +969,8 @@ fn you_page(
         ..bars,
       ],
     ),
-    @html.section(
+    @html.div(
+      class="section",
       [
         @html.h3("Choices"),
         ..match s.crossing() {
@@ -993,10 +1002,11 @@ fn voyage_page(
   }
   [
     where_section(s),
-    @html.section([@html.h3("Demands"), ..outlook]),
+    @html.div(class="section", [@html.h3("Demands"), ..outlook]),
     fleet_section(model, s, model.ships),
     reckoning_section(s),
-    @html.section(
+    @html.div(
+      class="section",
       [
         @html.h3("Landfall"),
         ..sentences(
@@ -1045,7 +1055,8 @@ fn ship_page(
     None => []
   }
   [
-    @html.section(
+    @html.div(
+      class="section",
       [@html.h3("The ship"), ..sentences(@words.ship_sentences(s)), ..refit],
     ),
     roster_section(model, s),
@@ -1074,7 +1085,8 @@ fn leaving_section(
         ]),
       ]
   }
-  @html.section(
+  @html.div(
+    class="section",
     [
       @html.h3("Leaving"),
       ..sentences(@words.leaving_sentences(s, model.officer)),
@@ -1104,7 +1116,10 @@ fn away_section(
   } else {
     extra
   }
-  @html.section([@html.h3(heading), @html.ul(lines.map(l => @html.li(l)))])
+  @html.div(class="section", [
+    @html.h3(heading),
+    @html.ul(lines.map(l => @html.li(l))),
+  ])
 }
 
 ///|
@@ -1181,7 +1196,7 @@ fn log_section(model : Model, page : @words.Page) -> @rabbita.Html {
       @html.ul(class="log", attrs=@html.Attrs::build().role("list"), items),
     ]
   }
-  @html.section([@html.h3("Log"), ..log])
+  @html.div(class="section", [@html.h3("Log"), ..log])
 }
 
 ///|

@@ -413,7 +413,8 @@ fn fleet_section(
   } else {
     others.map(l => @html.p(@words.fleet_sentence(l, now=model.now)))
   }
-  @html.section(
+  @html.div(
+    class="section",
     [@html.h3("The fleet"), ..lines, map_figure(s, fleet, model.ship)],
   )
 }
@@ -452,7 +453,7 @@ fn reckoning_section(s : @core.State) -> @rabbita.Html {
     }
     None => [figures("Next leg", @words.next_leg_rows(s))]
   }
-  @html.section([
+  @html.div(class="section", [
     @html.details([@html.summary("Instruments and reckoning"), ..body]),
   ])
 }

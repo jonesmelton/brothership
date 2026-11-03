@@ -230,7 +230,7 @@ fn roster_section(model : Model, s : @core.State) -> @rabbita.Html {
       ],
     )
   })
-  @html.section([
+  @html.div(class="section", [
     @html.h3("Officers"),
     @html.p([@html.text(summary), ..recruits]),
     // Without markers Safari drops list semantics unless asked.

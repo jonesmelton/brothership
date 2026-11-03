@@ -315,7 +315,7 @@ p,
   font-variant-numeric: tabular-nums lining-nums slashed-zero;
 }
 
-.checkin section {
+.checkin .section {
   margin-block-start: 2rem;
   padding-block-start: 1rem;
   border-block-start: 1px solid var(--rule);
@@ -338,7 +338,7 @@ p,
   font-variant-caps: normal;
   letter-spacing: 0;
 }
-.checkin h2.page + section {
+.checkin h2.page + .section {
   margin-block-start: 1rem;
 }
 

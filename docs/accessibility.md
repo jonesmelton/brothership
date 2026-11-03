@@ -42,6 +42,7 @@ Players shouldn't have to catch an announcement to know what's happening. The cu
 Screen reader users move around a page by headings, landmarks, lists and controls, not by reading everything. Visual readers scan by the same structure. So:
 
 - Use native elements: real headings, buttons, lists and tables. Custom widgets are a last resort.
+- No unnamed groups. macOS VoiceOver treats an unnamed `section`, a `fieldset` and similar containers as a group: it steps past everything in the group but its controls unless the player interacts (VO-Shift-Down). A block under a heading is a plain `div` with the heading carrying the structure, and it is a `section` or a `fieldset` only where the group itself is the point (a choice group a player may want to skip as one thing).
 - Keep each screen short and its structure the same every time. Things don't move, reorder or appear in new places without the player asking.
 - Give every screen one obvious place to start reading.
 - Keep tables for actual tabular data, small enough to navigate cell by cell.
