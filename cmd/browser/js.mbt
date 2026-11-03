@@ -60,9 +60,21 @@ extern "js" fn store_hear(hear : String) -> Unit =
   #|(hear) => localStorage.setItem("brothership.hear", hear)
 
 ///|
-/// Move focus to the element with `id`, if the page has one.
+/// Move focus to the element with `id`, if the page has one. Two frames
+/// late on purpose: the element is inserted in the same patch as the focus
+/// request, and focusing it before the browser has painted makes
+/// VoiceOver leave its cursor on the last control instead, so the next
+/// move from the new heading lands on the next control past everything
+/// between. Waiting for the second frame puts the element in the
+/// accessibility tree before it is focused.
 extern "js" fn focus_id(id : String) -> Unit =
-  #|(id) => document.getElementById(id)?.focus()
+  #|(id) => {
+  #|  const el = document.getElementById(id);
+  #|  if (!el) return;
+  #|  requestAnimationFrame(() => requestAnimationFrame(() => {
+  #|    if (el.isConnected) el.focus();
+  #|  }));
+  #|}
 
 ///|
 extern "js" fn set_document_title(title : String) -> Unit =
